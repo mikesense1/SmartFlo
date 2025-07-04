@@ -1,0 +1,216 @@
+Create Solana program structure at /solana/programs/freelance_escrow/src/lib.rs:
+
+use anchor_lang::prelude::*;
+use anchor_spl::token::{self, Token, TokenAccount, Transfer};
+
+declare_id!("Your_Program_ID");
+
+#[program]
+pub mod freelance_escrow {
+    use super::*;
+
+    // Initialize a new freelance contract
+    pub fn create_contract(
+        ctx: Context<CreateContract>,
+        contract_id: String,
+        total_amount: u64,
+        milestone_count: u8,
+    ) -> Result<()> {
+        let contract = &mut ctx.accounts.contract;
+        contract.contract_id = contract_id;
+        contract.freelancer = ctx.accounts.freelancer.key();
+        contract.client = ctx.accounts.client.key();
+        contract.total_amount = total_amount;
+        contract.milestone_count = milestone_count;
+        contract.completed_milestones = 0;
+        contract.amount_released = 0;
+        contract.is_active = false;
+        contract.is_completed = false;
+        Ok(())
+    }
+
+    // Client deposits funds to escrow
+    pub fn deposit_funds(
+        ctx: Context<DepositFunds>,
+        amount: u64,
+    ) -> Result<()> {
+        // Transfer USDC from client to escrow account
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.client_token_account.to_account_info(),
+            to: ctx.accounts.escrow_token_account.to_account_info(),
+            authority: ctx.accounts.client.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+        token::transfer(cpi_ctx, amount)?;
+        
+        // Update contract state
+        let contract = &mut ctx.accounts.contract;
+        contract.is_active = true;
+        contract.escrow_balance += amount;
+        
+        emit!(FundsDeposited {
+            contract_id: contract.contract_id.clone(),
+            amount,
+            timestamp: Clock::get()?.unix_timestamp,
+        });
+        
+        Ok(())
+    }
+
+    // Freelancer submits milestone for approval
+    pub fn submit_milestone(
+        ctx: Context<SubmitMilestone>,
+        milestone_index: u8,
+        proof_uri: String,
+    ) -> Result<()> {
+        let contract = &mut ctx.accounts.contract;
+        require!(contract.is_active, ErrorCode::ContractNotActive);
+        require!(milestone_index < contract.milestone_count, ErrorCode::InvalidMilestone);
+        
+        // Record milestone submission
+        let milestone = &mut ctx.accounts.milestone;
+        milestone.contract = contract.key();
+        milestone.index = milestone_index;
+        milestone.submitted_at = Clock::get()?.unix_timestamp;
+        milestone.proof_uri = proof_uri;
+        milestone.is_approved = false;
+        
+        emit!(MilestoneSubmitted {
+            contract_id: contract.contract_id.clone(),
+            milestone_index,
+            timestamp: milestone.submitted_at,
+        });
+        
+        Ok(())
+    }
+
+    // Client approves milestone and triggers payment
+    pub fn approve_milestone(
+        ctx: Context<ApproveMilestone>,
+        milestone_index: u8,
+    ) -> Result<()> {
+        let contract = &mut ctx.accounts.contract;
+        let milestone = &mut ctx.accounts.milestone;
+        
+        require!(contract.is_active, ErrorCode::ContractNotActive);
+        require!(!milestone.is_approved, ErrorCode::MilestoneAlreadyApproved);
+        
+        // Calculate payment amount for this milestone
+        let milestone_amount = contract.total_amount / contract.milestone_count as u64;
+        
+        // Transfer from escrow to freelancer
+        let seeds = &[
+            b"escrow",
+            contract.contract_id.as_bytes(),
+            &[ctx.bumps.escrow_account],
+        ];
+        let signer = &[&seeds[..]];
+        
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.escrow_token_account.to_account_info(),
+            to: ctx.accounts.freelancer_token_account.to_account_info(),
+            authority: ctx.accounts.escrow_account.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        token::transfer(cpi_ctx, milestone_amount)?;
+        
+        // Update state
+        milestone.is_approved = true;
+        milestone.approved_at = Clock::get()?.unix_timestamp;
+        milestone.payment_amount = milestone_amount;
+        
+        contract.completed_milestones += 1;
+        contract.amount_released += milestone_amount;
+        contract.escrow_balance -= milestone_amount;
+        
+        // Check if contract is complete
+        if contract.completed_milestones == contract.milestone_count {
+            contract.is_completed = true;
+            contract.completed_at = Clock::get()?.unix_timestamp;
+        }
+        
+        emit!(MilestoneApproved {
+            contract_id: contract.contract_id.clone(),
+            milestone_index,
+            amount: milestone_amount,
+            timestamp: Clock::get()?.unix_timestamp,
+        });
+        
+        Ok(())
+    }
+
+    // Emergency dispute resolution (funds returned to client)
+    pub fn dispute_contract(
+        ctx: Context<DisputeContract>,
+        reason: String,
+    ) -> Result<()> {
+        let contract = &mut ctx.accounts.contract;
+        require!(contract.is_active && !contract.is_completed, ErrorCode::InvalidContractState);
+        
+        // Return remaining escrow balance to client
+        let remaining_balance = contract.escrow_balance;
+        if remaining_balance > 0 {
+            // Transfer logic here
+        }
+        
+        contract.is_disputed = true;
+        contract.dispute_reason = reason;
+        
+        Ok(())
+    }
+}
+
+// Account structures
+#[account]
+pub struct FreelanceContract {
+    pub contract_id: String,
+    pub freelancer: Pubkey,
+    pub client: Pubkey,
+    pub total_amount: u64,
+    pub milestone_count: u8,
+    pub completed_milestones: u8,
+    pub amount_released: u64,
+    pub escrow_balance: u64,
+    pub is_active: bool,
+    pub is_completed: bool,
+    pub is_disputed: bool,
+    pub dispute_reason: String,
+    pub created_at: i64,
+    pub completed_at: i64,
+}
+
+#[account]
+pub struct Milestone {
+    pub contract: Pubkey,
+    pub index: u8,
+    pub submitted_at: i64,
+    pub approved_at: i64,
+    pub proof_uri: String,
+    pub is_approved: bool,
+    pub payment_amount: u64,
+}
+
+// Events for monitoring
+#[event]
+pub struct FundsDeposited {
+    pub contract_id: String,
+    pub amount: u64,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct MilestoneSubmitted {
+    pub contract_id: String,
+    pub milestone_index: u8,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct MilestoneApproved {
+    pub contract_id: String,
+    pub milestone_index: u8,
+    pub amount: u64,
+    pub timestamp: i64,
+}
