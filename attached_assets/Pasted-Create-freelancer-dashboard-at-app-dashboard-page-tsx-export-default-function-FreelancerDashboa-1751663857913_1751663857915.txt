@@ -1,0 +1,106 @@
+Create freelancer dashboard at /app/dashboard/page.tsx:
+
+export default function FreelancerDashboard() {
+  const { user } = useUser();
+  const { stats, contracts } = useFreelancerStats(user.id);
+
+  return (
+    <div className="max-w-7xl mx-auto p-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">Welcome back, {user.full_name}</h1>
+        <p className="text-gray-600">Here's your earnings overview</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <StatCard
+          title="Lifetime Earnings"
+          value={`${stats.lifetimeEarnings}`}
+          icon={<DollarSign />}
+          trend="+12% from last month"
+        />
+        <StatCard
+          title="In Escrow"
+          value={`${stats.inEscrow}`}
+          icon={<Lock />}
+          subtitle="Across 3 active contracts"
+        />
+        <StatCard
+          title="Pending Approval"
+          value={`${stats.pendingApproval}`}
+          icon={<Clock />}
+          subtitle="2 milestones submitted"
+        />
+        <StatCard
+          title="Avg Payment Time"
+          value={`${stats.avgPaymentDays} days`}
+          icon={<TrendingDown />}
+          trend="3 days faster than industry"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <ActiveContracts contracts={contracts} />
+        </div>
+        <div>
+          <UpcomingMilestones />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const ActiveContracts = ({ contracts }) => {
+  return (
+    <div className="bg-white rounded-lg shadow">
+      <div className="p-6 border-b">
+        <h2 className="text-xl font-semibold">Active Contracts</h2>
+      </div>
+      <div className="p-6">
+        {contracts.map(contract => (
+          <ContractRow key={contract.id} contract={contract} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const ContractRow = ({ contract }) => {
+  const progress = (contract.completed_milestones / contract.total_milestones) * 100;
+  
+  return (
+    <div className="mb-6 last:mb-0">
+      <div className="flex justify-between items-start mb-2">
+        <div>
+          <h3 className="font-medium">{contract.title}</h3>
+          <p className="text-sm text-gray-600">{contract.client_name}</p>
+        </div>
+        <Link href={`/dashboard/contracts/${contract.id}/milestones`}>
+          <button className="btn-secondary text-sm">
+            Manage
+          </button>
+        </Link>
+      </div>
+      
+      <div className="mb-2">
+        <div className="flex justify-between text-sm mb-1">
+          <span>{contract.completed_milestones} of {contract.total_milestones} milestones</span>
+          <span>${contract.amount_released} of ${contract.total_value}</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div 
+            className="bg-blue-600 h-2 rounded-full transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+      
+      {contract.next_milestone && (
+        <div className="flex items-center text-sm text-gray-600">
+          <Clock className="w-4 h-4 mr-1" />
+          Next: {contract.next_milestone.title} - Due {formatDate(contract.next_milestone.due_date)}
+        </div>
+      )}
+    </div>
+  );
+};

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -6,23 +6,40 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import { 
   Plus, FileText, DollarSign, Clock, CheckCircle, 
-  AlertCircle, Wallet, CreditCard, Activity, Target
+  AlertCircle, Wallet, CreditCard, Activity, Target,
+  TrendingUp, TrendingDown, Lock, Zap, Users
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { paymentTriggers } from "@/lib/payments/smart-triggers";
 import type { Contract, Milestone, Payment } from "@shared/schema";
 
-// Mock user ID for demonstration
-const MOCK_USER_ID = "user-123";
+// Mock user data for demonstration
+const MOCK_USER = {
+  id: "user-123",
+  fullName: "Alex Johnson",
+  email: "alex@freelancer.com",
+  specialization: "Full-Stack Developer",
+  joinedDate: "2024-01-15"
+};
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState("contracts");
+  const [activeTab, setActiveTab] = useState("overview");
+  const [realtimeStats, setRealtimeStats] = useState({
+    lifetimeEarnings: 24750,
+    inEscrow: 6000,
+    pendingApproval: 2800,
+    avgPaymentDays: 1.2,
+    activeContracts: 3,
+    completedProjects: 12
+  });
 
   // Fetch user contracts
   const { data: contracts = [], isLoading: contractsLoading } = useQuery({
-    queryKey: ["/api/users", MOCK_USER_ID, "contracts"],
-    queryFn: () => fetch(`/api/users/${MOCK_USER_ID}/contracts`).then(res => res.json()) as Promise<Contract[]>
+    queryKey: ["/api/users", MOCK_USER.id, "contracts"],
+    queryFn: () => fetch(`/api/users/${MOCK_USER.id}/contracts`).then(res => res.json()) as Promise<Contract[]>
   });
 
   // Create new contract mutation
@@ -34,13 +51,13 @@ export default function Dashboard() {
         body: JSON.stringify(contractData)
       }).then(res => res.json()),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users", MOCK_USER_ID, "contracts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", MOCK_USER.id, "contracts"] });
     }
   });
 
   const handleCreateContract = () => {
     createContractMutation.mutate({
-      creatorId: MOCK_USER_ID,
+      creatorId: MOCK_USER.id,
       title: "Sample Web Development Project",
       clientName: "Tech Startup Inc",
       clientEmail: "client@techstartup.com",
@@ -65,14 +82,34 @@ export default function Dashboard() {
   const totalEarnings = contracts.reduce((sum, c) => sum + parseFloat(c.totalValue || "0"), 0);
   const completedContracts = contracts.filter(c => c.status === "completed").length;
 
+  // Setup real-time payment event listeners
+  useEffect(() => {
+    const handlePaymentEvent = (event: any) => {
+      setRealtimeStats(prev => ({
+        ...prev,
+        lifetimeEarnings: prev.lifetimeEarnings + (event.amount || 0),
+        pendingApproval: Math.max(0, prev.pendingApproval - (event.amount || 0))
+      }));
+    };
+
+    paymentTriggers.addEventListener('milestone_approved', handlePaymentEvent);
+    
+    return () => {
+      paymentTriggers.removeEventListener('milestone_approved', handlePaymentEvent);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+            <div className="flex items-center gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">Welcome back, {MOCK_USER.fullName}</h1>
+                <p className="text-sm text-slate-500">{MOCK_USER.specialization} • Freelancer since {new Date(MOCK_USER.joinedDate).getFullYear()}</p>
+              </div>
             </div>
             <Link href="/create-contract">
               <Button>
@@ -85,51 +122,59 @@ export default function Dashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Overview */}
+        {/* Freelancer Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
+              <CardTitle className="text-sm font-medium">Lifetime Earnings</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${totalEarnings.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Across all contracts</p>
+              <div className="text-2xl font-bold">${realtimeStats.lifetimeEarnings.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground flex items-center">
+                <TrendingUp className="w-3 h-3 mr-1 text-green-600" />
+                +12% from last month
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Contracts</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">In Escrow</CardTitle>
+              <Lock className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{activeContracts.length}</div>
-              <p className="text-xs text-muted-foreground">In progress</p>
+              <div className="text-2xl font-bold text-blue-600">${realtimeStats.inEscrow.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                Across {realtimeStats.activeContracts} active contracts
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
+              <Clock className="h-4 w-4 text-yellow-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{completedContracts}</div>
-              <p className="text-xs text-muted-foreground">Successfully finished</p>
+              <div className="text-2xl font-bold text-yellow-600">${realtimeStats.pendingApproval.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                2 milestones submitted
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Avg Payment Time</CardTitle>
+              <Zap className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {contracts.length > 0 ? Math.round((completedContracts / contracts.length) * 100) : 0}%
-              </div>
-              <p className="text-xs text-muted-foreground">Contract completion</p>
+              <div className="text-2xl font-bold text-green-600">{realtimeStats.avgPaymentDays} days</div>
+              <p className="text-xs text-muted-foreground flex items-center">
+                <TrendingDown className="w-3 h-3 mr-1 text-green-600" />
+                85% faster than industry
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -137,10 +182,154 @@ export default function Dashboard() {
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="contracts">Contracts</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Active Contracts</CardTitle>
+                    <CardDescription>Your current projects and their progress</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {activeContracts.length === 0 ? (
+                      <div className="text-center py-8 text-slate-500">
+                        <FileText className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                        <p>No active contracts yet.</p>
+                        <Link href="/create-contract">
+                          <Button className="mt-4">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Create Your First Contract
+                          </Button>
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {activeContracts.slice(0, 3).map((contract) => (
+                          <div key={contract.id} className="border rounded-lg p-4">
+                            <div className="flex justify-between items-start mb-4">
+                              <div>
+                                <h3 className="font-semibold">{contract.title}</h3>
+                                <p className="text-sm text-slate-600">{contract.clientName}</p>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-lg font-bold">${contract.totalValue}</div>
+                                <Badge className={getStatusColor(contract.status)}>
+                                  {contract.status}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span>Progress</span>
+                                <span>3 of 5 milestones completed</span>
+                              </div>
+                              <Progress value={60} className="h-2" />
+                            </div>
+                            <div className="flex gap-2 mt-4">
+                              <Link href={`/milestone-tracker/${contract.id}`}>
+                                <Button variant="outline" size="sm">
+                                  <Target className="w-4 h-4 mr-2" />
+                                  Track Progress
+                                </Button>
+                              </Link>
+                              <Link href={`/client-payment/${contract.id}`}>
+                                <Button variant="outline" size="sm">
+                                  <DollarSign className="w-4 h-4 mr-2" />
+                                  View Payment
+                                </Button>
+                              </Link>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Upcoming Milestones</CardTitle>
+                    <CardDescription>Your next deliverables</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                          <Clock className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm">Backend Integration</h4>
+                          <p className="text-xs text-slate-600">E-commerce Website</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-slate-500">Due in 3 days</span>
+                            <Badge variant="secondary" className="text-xs">$2,000</Badge>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg">
+                        <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                          <AlertCircle className="w-4 h-4 text-yellow-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm">Final Testing</h4>
+                          <p className="text-xs text-slate-600">Mobile App Project</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-slate-500">Due in 7 days</span>
+                            <Badge variant="secondary" className="text-xs">$1,200</Badge>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg">
+                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm">Design Review</h4>
+                          <p className="text-xs text-slate-600">Brand Identity Project</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-green-600">Submitted</span>
+                            <Badge variant="secondary" className="text-xs">$800</Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Quick Actions</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Link href="/create-contract">
+                      <Button className="w-full justify-start">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create New Contract
+                      </Button>
+                    </Link>
+                    <Button variant="outline" className="w-full justify-start">
+                      <Users className="w-4 h-4 mr-2" />
+                      Browse Client Requests
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start">
+                      <Activity className="w-4 h-4 mr-2" />
+                      View Performance Analytics
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
 
           <TabsContent value="contracts" className="space-y-6">
             {contractsLoading ? (
