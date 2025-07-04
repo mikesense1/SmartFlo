@@ -17,6 +17,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/dashboard/contracts/new" component={CreateContract} />
       <Route path="/create-contract" component={CreateContract} />
       <Route path="/blockchain-status" component={BlockchainStatus} />
       <Route path="/blockchain-test" component={BlockchainTest} />
