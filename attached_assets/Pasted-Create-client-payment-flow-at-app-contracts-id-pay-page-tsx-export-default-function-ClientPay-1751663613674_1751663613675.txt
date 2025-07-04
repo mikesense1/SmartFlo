@@ -1,0 +1,163 @@
+Create client payment flow at /app/contracts/[id]/pay/page.tsx:
+
+export default function ClientPaymentPage({ params }) {
+  const contractId = params.id;
+  const { contract, milestones } = useContract(contractId);
+  const [paymentMethod, setPaymentMethod] = useState(contract.payment_method);
+
+  return (
+    <div className="max-w-4xl mx-auto p-8">
+      <h1 className="text-3xl font-bold mb-8">
+        Fund Contract: {contract.title}
+      </h1>
+
+      <div className="bg-white rounded-lg shadow p-6 mb-8">
+        <h2 className="text-xl font-semibold mb-4">Contract Details</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-gray-600">Freelancer</label>
+            <p className="font-medium">{contract.freelancer_name}</p>
+          </div>
+          <div>
+            <label className="text-gray-600">Total Amount</label>
+            <p className="font-medium">${contract.total_value}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-6 mb-8">
+        <h2 className="text-xl font-semibold mb-4">Payment Milestones</h2>
+        <div className="space-y-3">
+          {milestones.map((milestone) => (
+            <div key={milestone.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+              <div>
+                <p className="font-medium">{milestone.title}</p>
+                <p className="text-sm text-gray-600">Due: {formatDate(milestone.due_date)}</p>
+              </div>
+              <p className="font-semibold">${milestone.amount}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {paymentMethod === 'stripe' ? (
+        <StripePaymentForm 
+          contractId={contractId}
+          amount={contract.total_value}
+          onSuccess={handlePaymentSuccess}
+        />
+      ) : (
+        <CryptoPaymentInstructions
+          contractId={contractId}
+          amount={contract.total_value}
+          escrowAddress={contract.escrow_address}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
+    </div>
+  );
+}
+
+const StripePaymentForm = ({ contractId, amount, onSuccess }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Create payment intent
+    const { clientSecret } = await fetch('/api/payments/create-intent', {
+      method: 'POST',
+      body: JSON.stringify({ contractId, amount })
+    }).then(r => r.json());
+
+    // Confirm payment
+    const result = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card: elements.getElement(CardElement),
+      }
+    });
+
+    if (result.error) {
+      showError(result.error.message);
+    } else {
+      onSuccess(result.paymentIntent);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-xl font-semibold mb-4">Pay with Card</h2>
+      
+      <div className="mb-4">
+        <CardElement className="p-3 border rounded" />
+      </div>
+      
+      <Alert className="mb-4">
+        <Info className="w-4 h-4" />
+        <AlertDescription>
+          Your payment will be held securely and released automatically as milestones are completed.
+        </AlertDescription>
+      </Alert>
+      
+      <button type="submit" className="w-full btn-primary">
+        Fund Contract ${amount}
+      </button>
+    </form>
+  );
+};
+
+const CryptoPaymentInstructions = ({ contractId, amount, escrowAddress, onSuccess }) => {
+  const [txHash, setTxHash] = useState('');
+  const wallet = useWallet();
+
+  const payWithWallet = async () => {
+    try {
+      // Call smart contract to deposit funds
+      const tx = await contractService.depositFunds(contractId, amount);
+      setTxHash(tx);
+      
+      // Monitor for confirmation
+      await waitForConfirmation(tx);
+      onSuccess(tx);
+    } catch (error) {
+      showError('Payment failed: ' + error.message);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-xl font-semibold mb-4">Pay with USDC</h2>
+      
+      {wallet.connected ? (
+        <div>
+          <div className="mb-4 p-4 bg-gray-50 rounded">
+            <p className="text-sm text-gray-600">Send to escrow:</p>
+            <p className="font-mono text-sm break-all">{escrowAddress}</p>
+            <p className="mt-2 font-semibold">{amount} USDC</p>
+          </div>
+          
+          <button onClick={payWithWallet} className="w-full btn-primary">
+            Pay with Wallet
+          </button>
+        </div>
+      ) : (
+        <div>
+          <p className="mb-4">Connect your wallet to pay with USDC</p>
+          <WalletMultiButton className="w-full" />
+        </div>
+      )}
+      
+      {txHash && (
+        <div className="mt-4 p-3 bg-green-50 rounded">
+          <p className="text-sm text-green-800">
+            Payment submitted! 
+            <a href={`https://solscan.io/tx/${txHash}`} className="underline ml-2">
+              View transaction
+            </a>
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};

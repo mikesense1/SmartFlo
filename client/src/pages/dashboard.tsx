@@ -227,6 +227,12 @@ export default function Dashboard() {
                             Track Milestones
                           </Button>
                         </Link>
+                        <Link href={`/client-payment/${contract.id}`}>
+                          <Button variant="outline" size="sm">
+                            <DollarSign className="w-4 h-4 mr-2" />
+                            Fund Contract
+                          </Button>
+                        </Link>
                         <Button variant="outline" size="sm">
                           <FileText className="w-4 h-4 mr-2" />
                           View Contract

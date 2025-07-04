@@ -8,6 +8,7 @@ import Dashboard from "@/pages/dashboard";
 import CreateContract from "@/pages/create-contract";
 import BlockchainStatus from "@/pages/blockchain-status";
 import MilestoneTracker from "@/pages/milestone-tracker";
+import ClientPayment from "@/pages/client-payment";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/create-contract" component={CreateContract} />
       <Route path="/blockchain-status" component={BlockchainStatus} />
       <Route path="/milestone-tracker/:id?" component={MilestoneTracker} />
+      <Route path="/client-payment/:id?" component={ClientPayment} />
       <Route component={NotFound} />
     </Switch>
   );

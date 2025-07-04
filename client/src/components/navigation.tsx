@@ -67,6 +67,9 @@ export default function Navigation() {
                   <Link href="/milestone-tracker" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
                     Milestones
                   </Link>
+                  <Link href="/client-payment" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
+                    Fund Contract
+                  </Link>
 
                 </>
               )}
