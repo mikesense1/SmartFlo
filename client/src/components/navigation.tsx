@@ -61,6 +61,9 @@ export default function Navigation() {
                   <Link href="/dashboard" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
                     Dashboard
                   </Link>
+                  <Link href="/blockchain-status" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
+                    Blockchain
+                  </Link>
 
                 </>
               )}

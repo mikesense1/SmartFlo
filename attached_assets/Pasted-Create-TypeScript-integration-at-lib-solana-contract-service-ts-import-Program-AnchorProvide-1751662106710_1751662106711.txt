@@ -1,0 +1,159 @@
+Create TypeScript integration at /lib/solana/contract-service.ts:
+
+import { Program, AnchorProvider, web3, BN } from '@project-serum/anchor';
+import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
+import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+
+const USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'); // USDC on mainnet
+
+export class FreelanceContractService {
+  private program: Program;
+  private provider: AnchorProvider;
+
+  constructor(provider: AnchorProvider, programId: PublicKey) {
+    this.provider = provider;
+    // Load IDL and create program instance
+  }
+
+  async createContract(
+    contractId: string,
+    clientWallet: PublicKey,
+    freelancerWallet: PublicKey,
+    totalAmount: number,
+    milestones: string[]
+  ) {
+    // Generate PDA for contract account
+    const [contractPDA] = await PublicKey.findProgramAddress(
+      [Buffer.from('contract'), Buffer.from(contractId)],
+      this.program.programId
+    );
+
+    // Generate escrow token account PDA
+    const [escrowPDA] = await PublicKey.findProgramAddress(
+      [Buffer.from('escrow'), Buffer.from(contractId)],
+      this.program.programId
+    );
+
+    const escrowTokenAccount = await getAssociatedTokenAddress(
+      USDC_MINT,
+      escrowPDA,
+      true // allowOwnerOffCurve for PDA
+    );
+
+    // Create contract instruction
+    const tx = await this.program.methods
+      .createContract(contractId, new BN(totalAmount * 1e6), milestones.length)
+      .accounts({
+        contract: contractPDA,
+        freelancer: freelancerWallet,
+        client: clientWallet,
+        escrowAccount: escrowPDA,
+        escrowTokenAccount,
+        tokenMint: USDC_MINT,
+        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+
+    return {
+      transactionId: tx,
+      contractAddress: contractPDA.toString(),
+      escrowAddress: escrowTokenAccount.toString(),
+    };
+  }
+
+  async depositFunds(contractId: string, amount: number) {
+    const [contractPDA] = await PublicKey.findProgramAddress(
+      [Buffer.from('contract'), Buffer.from(contractId)],
+      this.program.programId
+    );
+
+    // Get client's USDC token account
+    const clientTokenAccount = await getAssociatedTokenAddress(
+      USDC_MINT,
+      this.provider.wallet.publicKey
+    );
+
+    const tx = await this.program.methods
+      .depositFunds(new BN(amount * 1e6))
+      .accounts({
+        contract: contractPDA,
+        client: this.provider.wallet.publicKey,
+        clientTokenAccount,
+        escrowTokenAccount: await this.getEscrowTokenAccount(contractId),
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+
+    return tx;
+  }
+
+  async submitMilestone(
+    contractId: string,
+    milestoneIndex: number,
+    proofUri: string
+  ) {
+    const [contractPDA] = await PublicKey.findProgramAddress(
+      [Buffer.from('contract'), Buffer.from(contractId)],
+      this.program.programId
+    );
+
+    const [milestonePDA] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from('milestone'),
+        contractPDA.toBuffer(),
+        Buffer.from([milestoneIndex]),
+      ],
+      this.program.programId
+    );
+
+    const tx = await this.program.methods
+      .submitMilestone(milestoneIndex, proofUri)
+      .accounts({
+        contract: contractPDA,
+        milestone: milestonePDA,
+        freelancer: this.provider.wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    return tx;
+  }
+
+  async approveMilestone(contractId: string, milestoneIndex: number) {
+    // Implementation for approving milestone and releasing payment
+    // This triggers the automatic payment release
+  }
+
+  async listenToContractEvents(contractId: string) {
+    const [contractPDA] = await PublicKey.findProgramAddress(
+      [Buffer.from('contract'), Buffer.from(contractId)],
+      this.program.programId
+    );
+
+    // Set up event listeners
+    this.program.addEventListener('MilestoneApproved', (event) => {
+      if (event.contractId === contractId) {
+        // Update database
+        // Send notifications
+        // Update UI
+      }
+    });
+  }
+}
+
+// Helper functions for the UI
+export async function checkMilestoneStatus(
+  program: Program,
+  contractId: string,
+  milestoneIndex: number
+): Promise<MilestoneStatus> {
+  // Fetch milestone account and return status
+}
+
+export async function getContractBalance(
+  program: Program,
+  contractId: string
+): Promise<number> {
+  // Fetch escrow account balance
+}

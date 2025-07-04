@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import CreateContract from "@/pages/create-contract";
+import BlockchainStatus from "@/pages/blockchain-status";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -14,6 +15,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/create-contract" component={CreateContract} />
+      <Route path="/blockchain-status" component={BlockchainStatus} />
       <Route component={NotFound} />
     </Switch>
   );
