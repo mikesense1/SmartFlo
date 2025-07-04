@@ -802,9 +802,10 @@ export default function CreateContract() {
         clientEmail: clientData.clientEmail,
         totalValue: clientData.projectBudget,
         paymentMethod: selectedPaymentMethod,
+        contractType: "milestone_based",
         startDate: projectData.startDate,
         endDate: projectData.endDate,
-        creatorId: "user-123", // In a real app, get from auth context
+        creatorId: "550e8400-e29b-41d4-a716-446655440000", // Mock UUID for demo
         status: "draft"
       };
 
@@ -849,9 +850,9 @@ export default function CreateContract() {
         },
         body: JSON.stringify({
           contractId: createdContract.id,
-          activityType: "contract_created",
-          description: "Contract created with AI assistance",
-          userId: "user-123"
+          action: "contract_created",
+          actorEmail: clientData.clientEmail,
+          details: { contractTitle: projectData.title, aiGenerated: true }
         }),
       });
       

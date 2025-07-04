@@ -97,7 +97,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/users/:userId/contracts", async (req, res) => {
     try {
-      const contracts = await storage.getContractsByUser(req.params.userId);
+      // Handle both the mock UUID and the old "user-123" format
+      const userId = req.params.userId === "user-123" ? "550e8400-e29b-41d4-a716-446655440000" : req.params.userId;
+      const contracts = await storage.getContractsByUser(userId);
       res.json(contracts);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch contracts" });
