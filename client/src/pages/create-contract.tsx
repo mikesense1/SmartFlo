@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/navigation";
+import { aiContractService } from "@/lib/openai-service";
 
 // Types
 interface ProjectSetupData {
@@ -291,13 +292,17 @@ const ContractGenerationStep = ({
   riskAnalysis,
   isGenerating,
   isAnalyzing,
-  generateContract
+  generateContract,
+  customPrompt,
+  setCustomPrompt
 }: Pick<StepProps, 'projectData' | 'clientData' | 'milestones'> & {
   generatedContract: string;
   riskAnalysis: RiskAnalysis | null;
   isGenerating: boolean;
   isAnalyzing: boolean;
   generateContract: () => Promise<void>;
+  customPrompt: string;
+  setCustomPrompt: (value: string) => void;
 }) => (
   <div className="space-y-6">
     <Card>
@@ -312,28 +317,50 @@ const ContractGenerationStep = ({
       </CardHeader>
       <CardContent>
         {!generatedContract ? (
-          <div className="text-center py-8">
-            <Brain className="w-12 h-12 mx-auto mb-4 text-blue-500" />
-            <Button 
-              onClick={generateContract}
-              disabled={isGenerating}
-              className="mb-4"
-            >
-              {isGenerating ? (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2 animate-spin" />
-                  Generating Contract...
-                </>
-              ) : (
-                <>
-                  <Brain className="w-4 h-4 mr-2" />
-                  Generate Contract with AI
-                </>
-              )}
-            </Button>
-            <p className="text-sm text-slate-500">
-              AI will create a professional contract based on your project details
-            </p>
+          <div className="space-y-6">
+            {/* Custom Prompt Section */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Brain className="w-5 h-5 text-blue-500" />
+                <h4 className="font-medium">Custom AI Instructions (Optional)</h4>
+              </div>
+              <Textarea
+                placeholder="Add specific requirements for your contract (e.g., 'Include a 50% upfront payment clause', 'Add strict deadline penalties', 'Include intellectual property transfer terms')..."
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                rows={4}
+                className="w-full"
+              />
+              <p className="text-sm text-slate-500">
+                Specify any special terms, clauses, or protections you want included in your contract.
+              </p>
+            </div>
+
+            {/* Generate Button */}
+            <div className="text-center py-4 border-t">
+              <Brain className="w-12 h-12 mx-auto mb-4 text-blue-500" />
+              <Button 
+                onClick={generateContract}
+                disabled={isGenerating}
+                className="mb-4"
+                size="lg"
+              >
+                {isGenerating ? (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2 animate-spin" />
+                    Generating Professional Contract...
+                  </>
+                ) : (
+                  <>
+                    <Brain className="w-4 h-4 mr-2" />
+                    Generate Contract with AI
+                  </>
+                )}
+              </Button>
+              <p className="text-sm text-slate-500">
+                AI will create a professional contract based on your project details and custom requirements
+              </p>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
@@ -682,6 +709,7 @@ export default function CreateContract() {
   const [riskAnalysis, setRiskAnalysis] = useState<RiskAnalysis | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState("");
   
   // Payment Setup State
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"stripe" | "usdc">("stripe");
@@ -726,79 +754,39 @@ export default function CreateContract() {
     setIsAnalyzing(true);
     
     try {
-      // Simulate AI contract generation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const contractText = `
-FREELANCE SERVICE AGREEMENT
-
-This agreement is between ${clientData.clientName} ("Client") and the Freelancer for the project: ${projectData.title}.
-
-PROJECT DETAILS:
-- Description: ${projectData.description}
-- Start Date: ${projectData.startDate}
-- End Date: ${projectData.endDate}
-- Total Budget: $${clientData.projectBudget}
-- Payment Method: ${selectedPaymentMethod === "stripe" ? "Traditional Payment" : "USDC Crypto Escrow"}
-
-MILESTONES:
-${milestones.map((milestone, index) => `
-${index + 1}. ${milestone.title}
-   Deliverables: ${milestone.deliverables}
-   Amount: $${milestone.amount}
-   Due Date: ${milestone.dueDate}
-`).join('')}
-
-PAYMENT TERMS:
-- Payments will be released automatically upon milestone completion and approval
-- ${selectedPaymentMethod === "stripe" ? "Processing fees: 2.9% + $0.30" : "Blockchain gas fees apply"}
-- Client has 7 days to review each milestone before automatic approval
-
-This contract is generated with AI protection against common freelancer issues.
-      `;
-      
-      setGeneratedContract(contractText);
-      
-      // Simulate risk analysis
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockRiskAnalysis: RiskAnalysis = {
-        overall: 15,
-        scopeCreepRisk: 20,
-        paymentRisk: 10,
-        ipRisk: 15,
-        suggestions: [
-          {
-            issue: "Project scope could be more specific",
-            fix: "Add detailed acceptance criteria for each milestone",
-            severity: "medium"
-          },
-          {
-            issue: "Payment timeline is appropriate",
-            fix: "Current milestone structure provides good payment security",
-            severity: "low"
-          }
-        ]
+      // Generate contract with OpenAI
+      const contractParams = {
+        projectData,
+        clientData,
+        milestones,
+        paymentMethod: selectedPaymentMethod,
+        customPrompt
       };
+
+      const generatedText = await aiContractService.generateFreelanceContract(contractParams);
+      setGeneratedContract(generatedText);
       
-      setRiskAnalysis(mockRiskAnalysis);
+      // Analyze risks with OpenAI
+      const riskAnalysisResult = await aiContractService.analyzeContractRisks(contractParams);
+      setRiskAnalysis(riskAnalysisResult);
       
       toast({
-        title: "Contract Generated",
-        description: "AI has created your contract with risk analysis",
+        title: "Professional Contract Generated",
+        description: "AI has created your contract with advanced legal protections and risk analysis",
       });
       
     } catch (error) {
+      console.error("Contract generation error:", error);
       toast({
         title: "Generation Failed",
-        description: "Please try again or contact support",
+        description: "Please check your OpenAI API key and try again",
         variant: "destructive",
       });
     } finally {
       setIsGenerating(false);
       setIsAnalyzing(false);
     }
-  }, [projectData, clientData, milestones, selectedPaymentMethod, toast]);
+  }, [projectData, clientData, milestones, selectedPaymentMethod, customPrompt, toast]);
 
   // Final Contract Creation Function
   const finalizeContract = useCallback(async () => {
@@ -855,6 +843,8 @@ This contract is generated with AI protection against common freelancer issues.
           isGenerating={isGenerating}
           isAnalyzing={isAnalyzing}
           generateContract={generateContract}
+          customPrompt={customPrompt}
+          setCustomPrompt={setCustomPrompt}
         />;
       case 5:
         return <PaymentSetupStep 

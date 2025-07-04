@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { aiContractService } from "./openai-service";
 import { 
   insertUserSchema, insertContactSchema, insertContractSchema, 
   insertMilestoneSchema, insertPaymentSchema, insertContractActivitySchema 
@@ -537,6 +538,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(contacts);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch contacts" });
+    }
+  });
+
+  // AI Contract Generation endpoints
+  app.post("/api/ai/generate-contract", async (req, res) => {
+    try {
+      const contractParams = req.body;
+      const generatedContract = await aiContractService.generateFreelanceContract(contractParams);
+      res.json({ contract: generatedContract });
+    } catch (error) {
+      console.error("Contract generation error:", error);
+      res.status(500).json({ 
+        message: "Failed to generate contract",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.post("/api/ai/analyze-risks", async (req, res) => {
+    try {
+      const contractParams = req.body;
+      const riskAnalysis = await aiContractService.analyzeContractRisks(contractParams);
+      res.json({ analysis: riskAnalysis });
+    } catch (error) {
+      console.error("Risk analysis error:", error);
+      res.status(500).json({ 
+        message: "Failed to analyze risks",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
