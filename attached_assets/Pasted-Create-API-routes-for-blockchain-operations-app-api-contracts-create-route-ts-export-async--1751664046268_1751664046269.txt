@@ -1,0 +1,148 @@
+Create API routes for blockchain operations:
+
+// /app/api/contracts/create/route.ts
+export async function POST(request: Request) {
+  const { title, client, milestones, paymentMethod, totalValue } = await request.json();
+  const user = await getUser();
+
+  try {
+    // 1. Create contract in database
+    const { data: contract } = await supabase
+      .from('contracts')
+      .insert({
+        creator_id: user.id,
+        title,
+        client_email: client.email,
+        total_value: totalValue,
+        payment_method: paymentMethod,
+        status: 'draft'
+      })
+      .select()
+      .single();
+
+    // 2. Create milestones
+    const milestonesData = milestones.map((m, index) => ({
+      contract_id: contract.id,
+      title: m.title,
+      description: m.description,
+      amount: m.amount,
+      due_date: m.dueDate,
+      milestone_index: index
+    }));
+
+    await supabase.from('milestones').insert(milestonesData);
+
+    // 3. Deploy smart contract if crypto payment
+    if (paymentMethod === 'usdc') {
+      const provider = getAnchorProvider();
+      const contractService = new FreelanceContractService(provider);
+      
+      const { contractAddress, escrowAddress } = await contractService.createContract(
+        contract.id,
+        client.wallet_address,
+        user.wallet_address,
+        totalValue,
+        milestones
+      );
+
+      await supabase
+        .from('contracts')
+        .update({
+          solana_program_address: contractAddress,
+          escrow_address: escrowAddress
+        })
+        .eq('id', contract.id);
+    }
+
+    // 4. Generate AI contract content
+    const contractContent = await generateContractContent(contract, milestones);
+    
+    await supabase
+      .from('contracts')
+      .update({ content: contractContent })
+      .eq('id', contract.id);
+
+    return NextResponse.json({ contractId: contract.id });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// /app/api/milestones/submit/route.ts
+export async function POST(request: Request) {
+  const { milestoneId, completionNotes, proofUrl } = await request.json();
+  
+  try {
+    const milestone = await getMilestone(milestoneId);
+    const contract = await getContract(milestone.contract_id);
+    
+    // Submit to blockchain if crypto contract
+    if (contract.payment_method === 'usdc') {
+      const provider = getAnchorProvider();
+      const contractService = new FreelanceContractService(provider);
+      
+      const tx = await contractService.submitMilestone(
+        contract.solana_program_address,
+        milestone.milestone_index,
+        proofUrl || completionNotes
+      );
+      
+      await updateMilestoneStatus(milestoneId, 'submitted', tx);
+    } else {
+      // For Stripe contracts, just update status
+      await updateMilestoneStatus(milestoneId, 'submitted');
+    }
+    
+    // Notify client
+    await sendMilestoneSubmissionEmail(contract, milestone);
+    
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// /app/api/milestones/approve/route.ts
+export async function POST(request: Request) {
+  const { milestoneId } = await request.json();
+  const user = await getUser();
+  
+  try {
+    const smartTriggers = new SmartPaymentTriggers(contractService);
+    await smartTriggers.onMilestoneApproved(
+      milestone.contract_id,
+      milestoneId,
+      user.id
+    );
+    
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// /app/api/webhooks/stripe/route.ts
+export async function POST(request: Request) {
+  const sig = request.headers.get('stripe-signature');
+  const body = await request.text();
+  
+  try {
+    const event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+    
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        // Mark contract as funded
+        await markContractFunded(event.data.object.metadata.contractId);
+        break;
+        
+      case 'transfer.created':
+        // Record freelancer payment
+        await recordFreelancerPayment(event.data.object);
+        break;
+    }
+    
+    return NextResponse.json({ received: true });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+}
