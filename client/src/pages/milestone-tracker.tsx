@@ -15,6 +15,7 @@ import {
   Send, Shield, Zap, Target, Wallet
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { submitMilestone, approveMilestone, MilestoneSubmissionData } from "@/lib/payments/smart-triggers";
 
 interface Milestone {
   id: string;
@@ -134,24 +135,34 @@ export default function MilestoneTracker() {
   };
 
   const submitMilestoneMutation = useMutation({
-    mutationFn: async (data: { milestoneId: string; notes: string }) => {
-      // Simulate blockchain submission
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      return { success: true };
+    mutationFn: async (data: { milestoneId: string; notes: string; deliverables?: string[] }) => {
+      if (!selectedMilestone) throw new Error("No milestone selected");
+      
+      const submissionData: MilestoneSubmissionData = {
+        milestoneIndex: parseInt(selectedMilestone.id) - 1, // Convert to 0-based index
+        proofUri: `ipfs://milestone-${selectedMilestone.id}-proof`, // In production, upload to IPFS
+        completionNotes: data.notes,
+        deliverables: data.deliverables || []
+      };
+
+      // Use smart payment triggers for submission
+      const transactionId = await submitMilestone(contractId, selectedMilestone.id, submissionData);
+      
+      return { success: true, transactionId };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast({
         title: "Milestone Submitted!",
-        description: "Your milestone has been submitted for client approval.",
+        description: `Your milestone has been submitted for client approval. Transaction: ${result.transactionId.substring(0, 8)}...`,
       });
       setIsSubmissionModalOpen(false);
       setCompletionNotes("");
       queryClient.invalidateQueries({ queryKey: ["contract", contractId] });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: "Submission Failed",
-        description: "Failed to submit milestone. Please try again.",
+        description: `Failed to submit milestone: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -159,23 +170,31 @@ export default function MilestoneTracker() {
 
   const approveMilestoneMutation = useMutation({
     mutationFn: async (data: { milestoneId: string; notes: string }) => {
-      // Simulate blockchain approval and payment
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      return { success: true, transactionId: "5hG8KL2cJJF97GXTLMwItnnGBDCh5hqAhgg5Q4clMBj" };
+      if (!selectedMilestone) throw new Error("No milestone selected");
+      
+      // Use smart payment triggers for approval and automatic payment release
+      const paymentData = await approveMilestone(
+        contractId,
+        selectedMilestone.id,
+        "client-user-123", // In production, get from auth context
+        "FakeWalletAddress123..." // Mock freelancer wallet
+      );
+      
+      return paymentData;
     },
-    onSuccess: () => {
+    onSuccess: (paymentData) => {
       toast({
         title: "Payment Released!",
-        description: "Milestone approved and payment automatically released via blockchain.",
+        description: `Milestone approved and $${paymentData.amount} automatically released via ${paymentData.paymentMethod.toUpperCase()}. TX: ${paymentData.transactionId.substring(0, 8)}...`,
       });
       setIsApprovalModalOpen(false);
       setApprovalNotes("");
       queryClient.invalidateQueries({ queryKey: ["contract", contractId] });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: "Approval Failed",
-        description: "Failed to approve milestone. Please try again.",
+        description: `Failed to approve milestone: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -270,14 +289,24 @@ export default function MilestoneTracker() {
           </Card>
         </div>
 
-        {/* Payment Method Info */}
-        <Alert className="mb-8">
-          <Zap className="h-4 w-4" />
-          <AlertDescription>
-            Payments are automatically released via {mockContract.paymentMethod === "usdc" ? "USDC cryptocurrency" : "Stripe bank transfer"} 
-            when milestones are approved. Funds are secured in blockchain escrow.
-          </AlertDescription>
-        </Alert>
+        {/* Payment Automation Info */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <Alert>
+            <Zap className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Smart Payment Automation:</strong> Payments are automatically released via {mockContract.paymentMethod === "usdc" ? "USDC cryptocurrency" : "Stripe bank transfer"} 
+              when milestones are approved. Funds are secured in blockchain escrow.
+            </AlertDescription>
+          </Alert>
+          
+          <Alert>
+            <Shield className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Auto-Approval Protection:</strong> Submitted milestones are automatically approved after 7 days if no client response. 
+              Includes blockchain synchronization and dispute resolution.
+            </AlertDescription>
+          </Alert>
+        </div>
 
         {/* Milestones Timeline */}
         <Card>

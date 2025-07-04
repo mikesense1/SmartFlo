@@ -1,0 +1,177 @@
+Create payment automation service at /lib/payments/smart-triggers.ts:
+
+import { FreelanceContractService } from '@/lib/solana/contract-service';
+import { stripe } from '@/lib/stripe';
+import { supabase } from '@/lib/supabase';
+
+export class SmartPaymentTriggers {
+  private contractService: FreelanceContractService;
+  
+  constructor(contractService: FreelanceContractService) {
+    this.contractService = contractService;
+  }
+
+  // Called when freelancer submits milestone
+  async onMilestoneSubmitted(
+    contractId: string,
+    milestoneId: string,
+    proofData: any
+  ) {
+    // 1. Record submission on blockchain
+    const tx = await this.contractService.submitMilestone(
+      contractId,
+      proofData.milestoneIndex,
+      proofData.proofUri
+    );
+
+    // 2. Update database
+    await supabase
+      .from('milestones')
+      .update({
+        status: 'submitted',
+        submitted_at: new Date(),
+        submission_tx: tx
+      })
+      .eq('id', milestoneId);
+
+    // 3. Notify client
+    await this.notifyClient(contractId, milestoneId);
+
+    // 4. Start approval timer (auto-approve after 7 days)
+    await this.scheduleAutoApproval(milestoneId, 7);
+  }
+
+  // Called when client approves milestone
+  async onMilestoneApproved(
+    contractId: string,
+    milestoneId: string,
+    approverId: string
+  ) {
+    const contract = await this.getContract(contractId);
+    const milestone = await this.getMilestone(milestoneId);
+
+    // 1. Execute blockchain approval (triggers automatic payment)
+    if (contract.payment_method === 'usdc') {
+      const tx = await this.contractService.approveMilestone(
+        contractId,
+        milestone.index
+      );
+      
+      // Payment is automatically released by smart contract
+      await this.recordPaymentRelease(milestoneId, tx);
+    }
+
+    // 2. Handle Stripe payments
+    if (contract.payment_method === 'stripe') {
+      await this.releaseStripePayment(contract, milestone);
+    }
+
+    // 3. Update milestone status
+    await supabase
+      .from('milestones')
+      .update({
+        status: 'paid',
+        approved_at: new Date(),
+        approved_by: approverId,
+        payment_released: true
+      })
+      .eq('id', milestoneId);
+
+    // 4. Check if contract is complete
+    await this.checkContractCompletion(contractId);
+  }
+
+  // Stripe payment release
+  private async releaseStripePayment(contract: any, milestone: any) {
+    try {
+      // Capture the held payment
+      const payment = await stripe.paymentIntents.capture(
+        contract.stripe_payment_intent_id,
+        {
+          amount_to_capture: milestone.amount * 100, // Convert to cents
+        }
+      );
+
+      // Transfer to freelancer's Stripe account
+      const transfer = await stripe.transfers.create({
+        amount: milestone.amount * 100 * 0.975, // Deduct 2.5% platform fee
+        currency: 'usd',
+        destination: contract.freelancer_stripe_account,
+        transfer_group: contract.id,
+        metadata: {
+          contract_id: contract.id,
+          milestone_id: milestone.id
+        }
+      });
+
+      return transfer.id;
+    } catch (error) {
+      console.error('Stripe payment release failed:', error);
+      throw error;
+    }
+  }
+
+  // Auto-approval mechanism
+  private async scheduleAutoApproval(milestoneId: string, daysToWait: number) {
+    // In production, use a job queue like BullMQ
+    setTimeout(async () => {
+      const milestone = await this.getMilestone(milestoneId);
+      
+      if (milestone.status === 'submitted') {
+        console.log(`Auto-approving milestone ${milestoneId} after ${daysToWait} days`);
+        await this.onMilestoneApproved(
+          milestone.contract_id,
+          milestoneId,
+          'system_auto_approval'
+        );
+        
+        // Notify both parties
+        await this.sendAutoApprovalNotification(milestone);
+      }
+    }, daysToWait * 24 * 60 * 60 * 1000);
+  }
+
+  // Monitor blockchain events
+  async setupEventListeners() {
+    // Listen for milestone approvals on Solana
+    this.contractService.program.addEventListener(
+      'MilestoneApproved',
+      async (event) => {
+        console.log('Milestone approved on blockchain:', event);
+        
+        // Update database to reflect blockchain state
+        await this.syncBlockchainState(event.contractId);
+        
+        // Send payment confirmation
+        await this.sendPaymentConfirmation(
+          event.contractId,
+          event.milestoneIndex,
+          event.amount
+        );
+      }
+    );
+
+    // Listen for disputes
+    this.contractService.program.addEventListener(
+      'ContractDisputed',
+      async (event) => {
+        await this.handleDispute(event.contractId, event.reason);
+      }
+    );
+  }
+
+  // Sync blockchain state with database
+  private async syncBlockchainState(contractId: string) {
+    const blockchainContract = await this.contractService.getContract(contractId);
+    
+    await supabase
+      .from('contracts')
+      .update({
+        escrow_balance: blockchainContract.escrowBalance / 1e6, // Convert from lamports
+        amount_released: blockchainContract.amountReleased / 1e6,
+        completed_milestones: blockchainContract.completedMilestones,
+        is_completed: blockchainContract.isCompleted
+      })
+      .eq('solana_program_address', contractId);
+  }
+}
