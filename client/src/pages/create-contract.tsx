@@ -68,9 +68,29 @@ export default function CreateContract() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [generatedContract, setGeneratedContract] = useState<string>("");
   const [riskAnalysis, setRiskAnalysis] = useState<RiskAnalysis | null>(null);
-  const [milestones, setMilestones] = useState<MilestoneData[]>([]);
-  const [projectData, setProjectData] = useState<ProjectSetupData | null>(null);
-  const [clientData, setClientData] = useState<ClientDetailsData | null>(null);
+  const [milestones, setMilestones] = useState<MilestoneData[]>([
+    {
+      title: "",
+      deliverables: "",
+      amount: "",
+      dueDate: "",
+      percentage: 0
+    }
+  ]);
+  const [projectData, setProjectData] = useState<ProjectSetupData>({
+    projectType: "website",
+    title: "",
+    description: "",
+    startDate: "",
+    endDate: "",
+    pricingModel: "milestones"
+  });
+  const [clientData, setClientData] = useState<ClientDetailsData>({
+    clientName: "",
+    clientEmail: "",
+    clientCompany: "",
+    projectBudget: ""
+  });
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"stripe" | "usdc">("stripe");
 
   // AI-powered milestone suggestions
@@ -319,7 +339,13 @@ Generated with AI assistance • Legally optimized • Blockchain secured
       <CardContent className="space-y-6">
         <div>
           <label className="text-sm font-medium mb-2 block">Project Type</label>
-          <Select onValueChange={(value) => setProjectData(prev => prev ? {...prev, projectType: value as any} : null)}>
+          <Select 
+            value={projectData.projectType}
+            onValueChange={(value) => setProjectData(prev => ({ 
+              ...prev, 
+              projectType: value as any
+            }))}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select project type" />
             </SelectTrigger>
@@ -337,17 +363,25 @@ Generated with AI assistance • Legally optimized • Blockchain secured
         <div>
           <label className="text-sm font-medium mb-2 block">Project Title</label>
           <Input 
+            value={projectData.title}
             placeholder="e.g., E-commerce Website for Fashion Brand"
-            onChange={(e) => setProjectData(prev => prev ? {...prev, title: e.target.value} : {title: e.target.value} as any)}
+            onChange={(e) => setProjectData(prev => ({ 
+              ...prev, 
+              title: e.target.value
+            }))}
           />
         </div>
 
         <div>
           <label className="text-sm font-medium mb-2 block">Project Description</label>
           <Textarea
+            value={projectData.description}
             placeholder="Brief description of the project scope and requirements..."
             className="min-h-[100px]"
-            onChange={(e) => setProjectData(prev => prev ? {...prev, description: e.target.value} : null)}
+            onChange={(e) => setProjectData(prev => ({ 
+              ...prev, 
+              description: e.target.value
+            }))}
           />
         </div>
 
@@ -356,14 +390,22 @@ Generated with AI assistance • Legally optimized • Blockchain secured
             <label className="text-sm font-medium mb-2 block">Start Date</label>
             <Input 
               type="date" 
-              onChange={(e) => setProjectData(prev => prev ? {...prev, startDate: e.target.value} : null)}
+              value={projectData.startDate}
+              onChange={(e) => setProjectData(prev => ({ 
+                ...prev, 
+                startDate: e.target.value
+              }))}
             />
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">End Date</label>
             <Input 
               type="date"
-              onChange={(e) => setProjectData(prev => prev ? {...prev, endDate: e.target.value} : null)}
+              value={projectData.endDate}
+              onChange={(e) => setProjectData(prev => ({ 
+                ...prev, 
+                endDate: e.target.value
+              }))}
             />
           </div>
         </div>
@@ -371,8 +413,11 @@ Generated with AI assistance • Legally optimized • Blockchain secured
         <div>
           <label className="text-sm font-medium mb-2 block">Pricing Model</label>
           <RadioGroup 
-            onValueChange={(value) => setProjectData(prev => prev ? {...prev, pricingModel: value as any} : null)}
-            defaultValue="milestones"
+            value={projectData.pricingModel}
+            onValueChange={(value) => setProjectData(prev => ({ 
+              ...prev, 
+              pricingModel: value as any
+            }))}
           >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="milestones" id="milestones" />
@@ -401,16 +446,24 @@ Generated with AI assistance • Legally optimized • Blockchain secured
           <div>
             <label className="text-sm font-medium mb-2 block">Client Name</label>
             <Input 
+              value={clientData.clientName}
               placeholder="John Smith"
-              onChange={(e) => setClientData(prev => prev ? {...prev, clientName: e.target.value} : {clientName: e.target.value} as any)}
+              onChange={(e) => setClientData(prev => ({ 
+                ...prev, 
+                clientName: e.target.value
+              }))}
             />
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Client Email</label>
             <Input 
               type="email"
+              value={clientData.clientEmail}
               placeholder="john@company.com"
-              onChange={(e) => setClientData(prev => prev ? {...prev, clientEmail: e.target.value} : null)}
+              onChange={(e) => setClientData(prev => ({ 
+                ...prev, 
+                clientEmail: e.target.value
+              }))}
             />
           </div>
         </div>
@@ -418,8 +471,12 @@ Generated with AI assistance • Legally optimized • Blockchain secured
         <div>
           <label className="text-sm font-medium mb-2 block">Company (Optional)</label>
           <Input 
+            value={clientData.clientCompany}
             placeholder="Company Name"
-            onChange={(e) => setClientData(prev => prev ? {...prev, clientCompany: e.target.value} : null)}
+            onChange={(e) => setClientData(prev => ({ 
+              ...prev, 
+              clientCompany: e.target.value
+            }))}
           />
         </div>
 
@@ -427,8 +484,12 @@ Generated with AI assistance • Legally optimized • Blockchain secured
           <label className="text-sm font-medium mb-2 block">Project Budget ($)</label>
           <Input 
             type="number"
+            value={clientData.projectBudget}
             placeholder="5000"
-            onChange={(e) => setClientData(prev => prev ? {...prev, projectBudget: e.target.value} : null)}
+            onChange={(e) => setClientData(prev => ({ 
+              ...prev, 
+              projectBudget: e.target.value
+            }))}
           />
         </div>
       </CardContent>
