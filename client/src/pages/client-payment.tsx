@@ -14,6 +14,7 @@ import {
   Lock, Globe, Zap, DollarSign
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import Navigation from "@/components/navigation";
 import { initializeContractAutomation } from "@/lib/payments/smart-triggers";
 
 interface Contract {
@@ -189,6 +190,7 @@ export default function ClientPaymentPage() {
   if (paymentComplete) {
     return (
       <div className="min-h-screen bg-slate-50">
+        <Navigation />
         <div className="bg-white border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
@@ -283,6 +285,7 @@ export default function ClientPaymentPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <Navigation />
       {/* Header */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

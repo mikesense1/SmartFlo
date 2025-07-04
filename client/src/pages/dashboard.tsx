@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { paymentTriggers } from "@/lib/payments/smart-triggers";
+import Navigation from "@/components/navigation";
 import type { Contract, Milestone, Payment } from "@shared/schema";
 
 // Mock user data for demonstration
@@ -101,6 +102,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <Navigation />
       {/* Header */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

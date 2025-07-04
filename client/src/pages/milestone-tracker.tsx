@@ -15,6 +15,7 @@ import {
   Send, Shield, Zap, Target, Wallet
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import Navigation from "@/components/navigation";
 import { submitMilestone, approveMilestone, MilestoneSubmissionData } from "@/lib/payments/smart-triggers";
 
 interface Milestone {
@@ -217,6 +218,7 @@ export default function MilestoneTracker() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <Navigation />
       {/* Header */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

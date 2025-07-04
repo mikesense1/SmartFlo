@@ -9,6 +9,7 @@ import {
   Clock, DollarSign, Users, TrendingUp 
 } from "lucide-react";
 import BlockchainPayment from "@/components/blockchain-payment";
+import Navigation from "@/components/navigation";
 import WalletContextProvider from "@/components/wallet-provider";
 
 // Mock contract data for demo
@@ -81,6 +82,7 @@ export default function BlockchainContract() {
   return (
     <WalletContextProvider>
       <div className="min-h-screen bg-slate-50">
+        <Navigation />
         {/* Header */}
         <div className="bg-white border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -20,6 +20,7 @@ import {
   AlertCircle, CheckCircle, ArrowRight, ArrowLeft, Target
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import Navigation from "@/components/navigation";
 
 const projectSetupSchema = z.object({
   projectType: z.enum(["website", "mobile_app", "design", "consulting", "content", "custom"]),
@@ -745,6 +746,7 @@ Generated with AI assistance • Legally optimized • Blockchain secured
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <Navigation />
       {/* Header */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
