@@ -38,9 +38,23 @@ export default function Dashboard() {
   });
 
   // Fetch user contracts
-  const { data: contracts = [], isLoading: contractsLoading } = useQuery({
+  const { data: contracts = [], isLoading: contractsLoading, error: contractsError } = useQuery({
     queryKey: ["/api/users", MOCK_USER.id, "contracts"],
-    queryFn: () => fetch(`/api/users/${MOCK_USER.id}/contracts`).then(res => res.json()) as Promise<Contract[]>
+    queryFn: async () => {
+      const response = await fetch(`/api/users/${MOCK_USER.id}/contracts`, {
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch contracts: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log("Fetched contracts:", data);
+      return data;
+    },
+    refetchInterval: 5000, // Refetch every 5 seconds
+    staleTime: 0 // Always consider data stale
   });
 
   // Create new contract mutation
@@ -340,6 +354,15 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="contracts" className="space-y-6">
+            {contractsError && (
+              <Card className="border-red-200 bg-red-50">
+                <CardContent className="pt-6">
+                  <div className="text-red-800">
+                    Error loading contracts: {contractsError.message}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             {contractsLoading ? (
               <div className="flex items-center justify-center h-64">
                 <div className="text-slate-500">Loading contracts...</div>

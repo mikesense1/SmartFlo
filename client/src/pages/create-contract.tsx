@@ -14,6 +14,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/navigation";
 import { aiContractService } from "@/lib/openai-service";
+import { queryClient } from "@/lib/queryClient";
 
 // Types
 interface ProjectSetupData {
@@ -793,23 +794,111 @@ export default function CreateContract() {
     setIsCreating(true);
     
     try {
-      // Simulate contract creation API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Create the contract with all the gathered data
+      const contractData = {
+        title: projectData.title,
+        projectDescription: projectData.description,
+        clientName: clientData.clientName,
+        clientEmail: clientData.clientEmail,
+        totalValue: clientData.projectBudget,
+        paymentMethod: selectedPaymentMethod,
+        startDate: projectData.startDate,
+        endDate: projectData.endDate,
+        creatorId: "user-123", // In a real app, get from auth context
+        status: "draft"
+      };
+
+      // Create contract via API
+      const contractResponse = await fetch('/api/contracts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(contractData),
+      });
+
+      if (!contractResponse.ok) {
+        throw new Error('Failed to create contract');
+      }
+
+      const createdContract = await contractResponse.json();
+
+      // Create milestones for the contract
+      for (const milestone of milestones) {
+        await fetch('/api/milestones', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contractId: createdContract.id,
+            title: milestone.title,
+            description: milestone.deliverables,
+            amount: milestone.amount,
+            dueDate: milestone.dueDate,
+            status: "pending"
+          }),
+        });
+      }
+
+      // Create activity log entry
+      await fetch('/api/activity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contractId: createdContract.id,
+          activityType: "contract_created",
+          description: "Contract created with AI assistance",
+          userId: "user-123"
+        }),
+      });
+      
+      // Invalidate contracts cache to trigger refresh
+      queryClient.invalidateQueries({
+        queryKey: ["/api/users", "user-123", "contracts"]
+      });
       
       toast({
         title: "Contract Created Successfully!",
-        description: "Contract has been sent to your client for signature",
+        description: "Contract has been saved and is ready to send to your client",
       });
       
-      // In a real app, you would redirect to contract dashboard
-      // For now, just reset the form
+      // Reset form and redirect to dashboard after success
       setTimeout(() => {
         setCurrentStep(1);
         setGeneratedContract("");
         setRiskAnalysis(null);
+        setProjectData({
+          projectType: "website",
+          title: "",
+          description: "",
+          startDate: "",
+          endDate: "",
+          pricingModel: "milestones"
+        });
+        setClientData({
+          clientName: "",
+          clientEmail: "",
+          clientCompany: "",
+          projectBudget: ""
+        });
+        setMilestones([{
+          title: "",
+          deliverables: "",
+          amount: "",
+          dueDate: "",
+          percentage: 0
+        }]);
+        setCustomPrompt("");
+        
+        // Navigate to dashboard
+        window.location.href = '/dashboard';
       }, 2000);
       
     } catch (error) {
+      console.error("Contract creation error:", error);
       toast({
         title: "Creation Failed",
         description: "Please try again or contact support",
@@ -818,7 +907,7 @@ export default function CreateContract() {
     } finally {
       setIsCreating(false);
     }
-  }, [toast]);
+  }, [projectData, clientData, milestones, selectedPaymentMethod, generatedContract, toast]);
 
   const renderStepContent = () => {
     switch (currentStep) {

@@ -63,20 +63,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Contract routes
   app.post("/api/contracts", async (req, res) => {
     try {
+      console.log("Creating contract with data:", req.body);
       const contractData = insertContractSchema.parse(req.body);
       const contract = await storage.createContract(contractData);
+      console.log("Contract created successfully:", contract);
       
       // Log contract creation activity
       await storage.createActivity({
         contractId: contract.id,
         action: "created",
-        actorEmail: req.body.creatorEmail || "system",
+        actorEmail: contractData.clientEmail,
         details: { contractTitle: contract.title }
       });
       
-      res.json({ message: "Contract created successfully", contractId: contract.id });
+      res.json(contract); // Return the full contract object
     } catch (error) {
-      res.status(400).json({ message: "Invalid contract data" });
+      console.error("Contract creation error:", error);
+      res.status(400).json({ message: "Invalid contract data", error: error.message });
     }
   });
 
@@ -168,6 +171,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Activity routes
+  app.post("/api/activity", async (req, res) => {
+    try {
+      const activityData = insertContractActivitySchema.parse(req.body);
+      const activity = await storage.createActivity(activityData);
+      res.json(activity);
+    } catch (error) {
+      console.error("Activity creation error:", error);
+      res.status(400).json({ message: "Invalid activity data", error: error.message });
+    }
+  });
+
   app.get("/api/contracts/:contractId/activity", async (req, res) => {
     try {
       const activities = await storage.getActivityByContract(req.params.contractId);
