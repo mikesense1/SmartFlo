@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { 
   Plus, FileText, DollarSign, Clock, CheckCircle, 
-  AlertCircle, Wallet, CreditCard, Activity
+  AlertCircle, Wallet, CreditCard, Activity, Target
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Contract, Milestone, Payment } from "@shared/schema";
@@ -220,6 +220,18 @@ export default function Dashboard() {
                           <Progress value={60} className="h-2" />
                         </div>
                       )}
+                      <div className="mt-4 pt-4 border-t flex gap-2">
+                        <Link href={`/milestone-tracker/${contract.id}`}>
+                          <Button variant="outline" size="sm">
+                            <Target className="w-4 h-4 mr-2" />
+                            Track Milestones
+                          </Button>
+                        </Link>
+                        <Button variant="outline" size="sm">
+                          <FileText className="w-4 h-4 mr-2" />
+                          View Contract
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}

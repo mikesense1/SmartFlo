@@ -1,0 +1,126 @@
+Create milestone management interface at /app/dashboard/contracts/[id]/milestones/page.tsx:
+
+export default function MilestoneTracker({ contractId }) {
+  const { contract, milestones } = useContract(contractId);
+  
+  return (
+    <div className="milestone-tracker">
+      <div className="contract-header">
+        <h1>{contract.title}</h1>
+        <div className="contract-stats">
+          <Stat 
+            label="Total Value" 
+            value={`$${contract.totalValue}`} 
+          />
+          <Stat 
+            label="Paid" 
+            value={`$${contract.amountReleased}`} 
+          />
+          <Stat 
+            label="In Escrow" 
+            value={`$${contract.escrowBalance}`} 
+          />
+        </div>
+      </div>
+
+      <div className="milestones-timeline">
+        {milestones.map((milestone, index) => (
+          <MilestoneCard
+            key={milestone.id}
+            milestone={milestone}
+            onSubmit={() => submitMilestone(milestone.id)}
+            onApprove={() => approveMilestone(milestone.id)}
+            isClient={currentUser.role === 'client'}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const MilestoneCard = ({ milestone, onSubmit, onApprove, isClient }) => {
+  const getStatusColor = (status: string) => {
+    const colors = {
+      pending: 'gray',
+      in_progress: 'blue',
+      submitted: 'yellow',
+      approved: 'green',
+      paid: 'green'
+    };
+    return colors[status] || 'gray';
+  };
+
+  return (
+    <div className={`milestone-card status-${milestone.status}`}>
+      <div className="milestone-header">
+        <h3>{milestone.title}</h3>
+        <span className={`status-badge ${getStatusColor(milestone.status)}`}>
+          {milestone.status}
+        </span>
+      </div>
+
+      <p>{milestone.description}</p>
+
+      <div className="milestone-footer">
+        <div className="milestone-amount">
+          ${milestone.amount}
+        </div>
+        
+        {milestone.status === 'in_progress' && !isClient && (
+          <button onClick={onSubmit} className="btn-primary">
+            Submit for Approval
+          </button>
+        )}
+        
+        {milestone.status === 'submitted' && isClient && (
+          <div className="approval-actions">
+            <button onClick={onApprove} className="btn-success">
+              Approve & Release Payment
+            </button>
+            <button className="btn-secondary">
+              Request Changes
+            </button>
+          </div>
+        )}
+        
+        {milestone.status === 'paid' && (
+          <div className="payment-info">
+            <CheckCircle className="text-green-500" />
+            <span>Paid on {formatDate(milestone.paidAt)}</span>
+            <a href={`https://solscan.io/tx/${milestone.paymentTx}`}>
+              View Transaction
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Submission modal for freelancers
+const SubmitMilestoneModal = ({ milestone, onSubmit }) => {
+  return (
+    <Modal>
+      <h2>Submit Milestone for Approval</h2>
+      <p>Milestone: {milestone.title}</p>
+      
+      <textarea
+        placeholder="Describe what you've completed..."
+        value={completionNotes}
+      />
+      
+      <FileUpload
+        label="Attach deliverables (optional)"
+        accept=".zip,.pdf,.png,.jpg"
+        onUpload={handleFileUpload}
+      />
+      
+      <button onClick={() => {
+        submitToBlockchain(milestone.id, completionNotes, fileUrl);
+        onSubmit();
+      }}>
+        Submit for Approval
+      </button>
+    </Modal>
+  );
+};
