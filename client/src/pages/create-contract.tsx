@@ -62,6 +62,14 @@ interface RiskAnalysis {
   }>;
 }
 
+const WIZARD_STEPS = [
+  "Project Setup",
+  "Client Details", 
+  "Smart Milestones",
+  "AI Contract & Review",
+  "Payment Setup"
+];
+
 export default function CreateContract() {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
@@ -310,13 +318,7 @@ Generated with AI assistance • Legally optimized • Blockchain secured
     setClientData(prev => ({ ...prev, [field]: value }));
   }, []);
 
-  const steps = [
-    "Project Setup",
-    "Client Details", 
-    "Smart Milestones",
-    "AI Contract & Review",
-    "Payment Setup"
-  ];
+
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -742,7 +744,7 @@ Generated with AI assistance • Legally optimized • Blockchain secured
               </Badge>
             </div>
             <div className="text-sm text-slate-500">
-              Step {currentStep} of {steps.length}
+              Step {currentStep} of {WIZARD_STEPS.length}
             </div>
           </div>
         </div>
@@ -752,7 +754,7 @@ Generated with AI assistance • Legally optimized • Blockchain secured
         {/* Progress Steps */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            {steps.map((step, index) => {
+            {WIZARD_STEPS.map((step, index) => {
               const stepNumber = index + 1;
               const isActive = currentStep === stepNumber;
               const isCompleted = currentStep > stepNumber;
@@ -769,14 +771,14 @@ Generated with AI assistance • Legally optimized • Blockchain secured
                   <span className={`ml-2 text-sm ${isActive ? 'font-medium' : 'text-slate-500'}`}>
                     {step}
                   </span>
-                  {stepNumber < steps.length && (
+                  {stepNumber < WIZARD_STEPS.length && (
                     <ArrowRight className="w-4 h-4 text-slate-300 mx-4" />
                   )}
                 </div>
               );
             })}
           </div>
-          <Progress value={(currentStep / steps.length) * 100} className="h-2" />
+          <Progress value={(currentStep / WIZARD_STEPS.length) * 100} className="h-2" />
         </div>
 
         {/* Step Content */}
@@ -794,7 +796,7 @@ Generated with AI assistance • Legally optimized • Blockchain secured
               Previous
             </Button>
             
-            {currentStep < steps.length && (
+            {currentStep < WIZARD_STEPS.length && (
               <Button 
                 onClick={nextStep}
                 disabled={
