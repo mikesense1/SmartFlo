@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -294,11 +294,21 @@ Generated with AI assistance • Legally optimized • Blockchain secured
     setMilestones(milestones.filter((_, i) => i !== index));
   };
 
-  const updateMilestone = (index: number, field: keyof MilestoneData, value: string | number) => {
-    const updated = [...milestones];
-    updated[index] = { ...updated[index], [field]: value };
-    setMilestones(updated);
-  };
+  const updateMilestone = useCallback((index: number, field: keyof MilestoneData, value: string | number) => {
+    setMilestones(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  }, []);
+
+  const updateProjectData = useCallback((field: keyof ProjectSetupData, value: string) => {
+    setProjectData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const updateClientData = useCallback((field: keyof ClientDetailsData, value: string) => {
+    setClientData(prev => ({ ...prev, [field]: value }));
+  }, []);
 
   const steps = [
     "Project Setup",
@@ -366,10 +376,7 @@ Generated with AI assistance • Legally optimized • Blockchain secured
           <Input 
             value={projectData.title}
             placeholder="e.g., E-commerce Website for Fashion Brand"
-            onChange={(e) => setProjectData(prev => ({ 
-              ...prev, 
-              title: e.target.value
-            }))}
+            onChange={(e) => updateProjectData("title", e.target.value)}
           />
         </div>
 
@@ -379,10 +386,7 @@ Generated with AI assistance • Legally optimized • Blockchain secured
             value={projectData.description}
             placeholder="Brief description of the project scope and requirements..."
             className="min-h-[100px]"
-            onChange={(e) => setProjectData(prev => ({ 
-              ...prev, 
-              description: e.target.value
-            }))}
+            onChange={(e) => updateProjectData("description", e.target.value)}
           />
         </div>
 
@@ -392,10 +396,7 @@ Generated with AI assistance • Legally optimized • Blockchain secured
             <Input 
               type="date" 
               value={projectData.startDate}
-              onChange={(e) => setProjectData(prev => ({ 
-                ...prev, 
-                startDate: e.target.value
-              }))}
+              onChange={(e) => updateProjectData("startDate", e.target.value)}
             />
           </div>
           <div>
@@ -403,10 +404,7 @@ Generated with AI assistance • Legally optimized • Blockchain secured
             <Input 
               type="date"
               value={projectData.endDate}
-              onChange={(e) => setProjectData(prev => ({ 
-                ...prev, 
-                endDate: e.target.value
-              }))}
+              onChange={(e) => updateProjectData("endDate", e.target.value)}
             />
           </div>
         </div>
@@ -415,10 +413,7 @@ Generated with AI assistance • Legally optimized • Blockchain secured
           <label className="text-sm font-medium mb-2 block">Pricing Model</label>
           <RadioGroup 
             value={projectData.pricingModel}
-            onValueChange={(value) => setProjectData(prev => ({ 
-              ...prev, 
-              pricingModel: value as any
-            }))}
+            onValueChange={(value) => updateProjectData("pricingModel", value as any)}
           >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="milestones" id="milestones" />
@@ -449,10 +444,7 @@ Generated with AI assistance • Legally optimized • Blockchain secured
             <Input 
               value={clientData.clientName}
               placeholder="John Smith"
-              onChange={(e) => setClientData(prev => ({ 
-                ...prev, 
-                clientName: e.target.value
-              }))}
+              onChange={(e) => updateClientData("clientName", e.target.value)}
             />
           </div>
           <div>
@@ -461,10 +453,7 @@ Generated with AI assistance • Legally optimized • Blockchain secured
               type="email"
               value={clientData.clientEmail}
               placeholder="john@company.com"
-              onChange={(e) => setClientData(prev => ({ 
-                ...prev, 
-                clientEmail: e.target.value
-              }))}
+              onChange={(e) => updateClientData("clientEmail", e.target.value)}
             />
           </div>
         </div>
@@ -474,10 +463,7 @@ Generated with AI assistance • Legally optimized • Blockchain secured
           <Input 
             value={clientData.clientCompany}
             placeholder="Company Name"
-            onChange={(e) => setClientData(prev => ({ 
-              ...prev, 
-              clientCompany: e.target.value
-            }))}
+            onChange={(e) => updateClientData("clientCompany", e.target.value)}
           />
         </div>
 
@@ -487,10 +473,7 @@ Generated with AI assistance • Legally optimized • Blockchain secured
             type="number"
             value={clientData.projectBudget}
             placeholder="5000"
-            onChange={(e) => setClientData(prev => ({ 
-              ...prev, 
-              projectBudget: e.target.value
-            }))}
+            onChange={(e) => updateClientData("projectBudget", e.target.value)}
           />
         </div>
       </CardContent>
