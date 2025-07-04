@@ -1,0 +1,187 @@
+Create contract builder optimized for freelancers at /app/dashboard/contracts/new/page.tsx:
+
+// Step 1: Quick Project Setup
+const ProjectSetup = () => {
+  return (
+    <div>
+      <h2>What are you building?</h2>
+      <select name="projectType">
+        <option value="website">Website Development</option>
+        <option value="mobile_app">Mobile App</option>
+        <option value="design">Design Work</option>
+        <option value="consulting">Consulting</option>
+        <option value="content">Content Creation</option>
+        <option value="custom">Custom Project</option>
+      </select>
+
+      <input
+        name="projectTitle"
+        placeholder="e.g., E-commerce Website for Fashion Brand"
+      />
+
+      <textarea
+        name="projectDescription"
+        placeholder="Brief description of the project scope..."
+      />
+
+      <div className="grid grid-cols-2 gap-4">
+        <input type="date" name="startDate" label="Start Date" />
+        <input type="date" name="endDate" label="End Date" />
+      </div>
+
+      <RadioGroup name="pricingModel">
+        <Radio value="fixed">Fixed Price</Radio>
+        <Radio value="milestones">Milestone-Based</Radio>
+      </RadioGroup>
+    </div>
+  );
+};
+
+// Step 2: Smart Milestone Creator
+const MilestoneBuilder = () => {
+  const suggestMilestones = async (projectType: string, timeline: number) => {
+    const prompt = `Suggest 3-5 milestones for a ${projectType} project over ${timeline} days.
+    Include:
+    - Clear deliverable for each milestone
+    - Recommended % of total payment
+    - Realistic timeline
+    Format as JSON array.`;
+    
+    const suggestions = await openai.complete(prompt);
+    return JSON.parse(suggestions);
+  };
+
+  return (
+    <div>
+      <h2>Define Payment Milestones</h2>
+      <button onClick={autoSuggestMilestones}>
+        ✨ AI Suggest Milestones
+      </button>
+
+      {milestones.map((milestone, index) => (
+        <div key={index} className="milestone-card">
+          <input
+            placeholder="Milestone title"
+            value={milestone.title}
+          />
+          <textarea
+            placeholder="What will be delivered?"
+            value={milestone.deliverables}
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <input
+              type="number"
+              placeholder="Amount"
+              value={milestone.amount}
+            />
+            <input
+              type="date"
+              placeholder="Due date"
+              value={milestone.dueDate}
+            />
+          </div>
+        </div>
+      ))}
+
+      <button onClick={addMilestone}>+ Add Milestone</button>
+    </div>
+  );
+};
+
+// Step 3: AI Contract Generation with Risk Analysis
+const ContractGeneration = () => {
+  const generateContract = async () => {
+    const prompt = `Create a freelance service agreement for:
+    Project: ${formData.projectTitle}
+    Type: ${formData.projectType}
+    Timeline: ${formData.startDate} to ${formData.endDate}
+    Payment Model: ${formData.pricingModel}
+    Milestones: ${JSON.stringify(formData.milestones)}
+    
+    Include:
+    1. Scope of Work (detailed based on milestones)
+    2. Payment Terms (milestone-triggered releases)
+    3. Intellectual Property (work-for-hire)
+    4. Revisions Policy (specific to project type)
+    5. Communication Expectations
+    6. Termination Clause (protects both parties)
+    7. Late Payment Penalties
+    
+    Tone: Professional but friendly, easy to understand`;
+  };
+
+  const analyzeRisks = async (contract: string) => {
+    // Analyze for common freelancer pain points:
+    // - Scope creep vulnerabilities
+    // - Payment delay risks
+    // - IP ownership clarity
+    // - Revision limit specificity
+    return {
+      scopeCreepRisk: 7.5,
+      paymentRisk: 3.2,
+      ipRisk: 2.1,
+      suggestions: [
+        {
+          issue: "No limit on revisions specified",
+          fix: "Add: 'Price includes up to 2 rounds of revisions'",
+          severity: "high"
+        }
+      ]
+    };
+  };
+
+  return (
+    <div className="grid grid-cols-2 gap-6">
+      <div>
+        <h3>Your Contract</h3>
+        <div className="contract-editor">
+          {/* Rich text editor with generated contract */}
+        </div>
+      </div>
+      
+      <div>
+        <h3>AI Analysis</h3>
+        <RiskScoreCard score={riskAnalysis.overall} />
+        <SuggestionsList suggestions={riskAnalysis.suggestions} />
+        <PlainEnglishToggle />
+      </div>
+    </div>
+  );
+};
+
+// Step 4: Payment Setup
+const PaymentSetup = () => {
+  return (
+    <div>
+      <h2>How do you want to get paid?</h2>
+      
+      <div className="payment-options">
+        <label className="payment-option">
+          <input type="radio" name="paymentMethod" value="stripe" />
+          <div>
+            <h4>Bank Transfer (USD)</h4>
+            <p>2.9% + $0.30 fee • 2-3 day transfer</p>
+            <p>Best for: US clients, traditional businesses</p>
+          </div>
+        </label>
+
+        <label className="payment-option">
+          <input type="radio" name="paymentMethod" value="usdc" />
+          <div>
+            <h4>USDC (Crypto)</h4>
+            <p>0.1% fee • Instant transfer</p>
+            <p>Best for: International clients, crypto-friendly</p>
+          </div>
+        </label>
+      </div>
+
+      <Alert>
+        <AlertCircle />
+        <p>
+          Payments are held in escrow and automatically released when you mark 
+          milestones as complete and client approves.
+        </p>
+      </Alert>
+    </div>
+  );
+};
