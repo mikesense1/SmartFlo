@@ -138,8 +138,22 @@ export default function BlockchainTest() {
     setTestResults([]);
 
     const results: BlockchainTestResult[] = [];
+    let createdContractId: string | null = null;
 
-    for (const test of testEndpoints) {
+    for (let i = 0; i < testEndpoints.length; i++) {
+      const test = { ...testEndpoints[i] };
+      
+      // Update test data with actual contract ID if available
+      if (createdContractId && test.data) {
+        if (test.endpoint.includes('/milestones/submit') || test.endpoint.includes('/milestones/approve')) {
+          test.data = { ...test.data, contractId: createdContractId };
+        } else if (test.endpoint.includes('/contracts/fund')) {
+          test.data = { ...test.data, contractId: createdContractId };
+        } else if (test.endpoint.includes('/blockchain-status')) {
+          test.endpoint = `/api/contracts/${createdContractId}/blockchain-status`;
+        }
+      }
+
       // Add pending state
       const pendingResult: BlockchainTestResult = {
         endpoint: test.endpoint,
@@ -151,6 +165,11 @@ export default function BlockchainTest() {
 
       // Run the test
       const result = await runTest(test);
+      
+      // Capture contract ID from first test (contract creation)
+      if (i === 0 && result.status === 'success' && result.response?.contractId) {
+        createdContractId = result.response.contractId;
+      }
       
       // Update with actual result
       results[results.length - 1] = result;

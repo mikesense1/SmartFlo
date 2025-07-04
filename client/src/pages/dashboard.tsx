@@ -325,6 +325,12 @@ export default function Dashboard() {
                       <Activity className="w-4 h-4 mr-2" />
                       View Performance Analytics
                     </Button>
+                    <Link href="/blockchain-test">
+                      <Button variant="outline" className="w-full justify-start">
+                        <Zap className="w-4 h-4 mr-2" />
+                        Test Blockchain APIs
+                      </Button>
+                    </Link>
                   </CardContent>
                 </Card>
               </div>
