@@ -1,16 +1,89 @@
-import { pgTable, text, serial, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, boolean, decimal, date, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
-  name: text("name").notNull(),
+  fullName: text("full_name").notNull(),
+  freelanceType: text("freelance_type").notNull().default("other"), // 'developer', 'designer', 'writer', 'consultant', 'other'
+  walletAddress: text("wallet_address"),
+  stripeAccountId: text("stripe_account_id"),
+  hourlyRate: decimal("hourly_rate"),
+  subscriptionTier: text("subscription_tier").notNull().default("free"),
+  totalContractsValue: decimal("total_contracts_value").notNull().default("0"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const contracts = pgTable("contracts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  creatorId: uuid("creator_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  clientName: text("client_name").notNull(),
+  clientEmail: text("client_email").notNull(),
+  projectDescription: text("project_description").notNull(),
+  totalValue: decimal("total_value").notNull(),
+  paymentMethod: text("payment_method").notNull(), // 'stripe' or 'usdc'
+  contractType: text("contract_type").notNull(), // 'fixed_price' or 'milestone_based'
+  status: text("status").notNull().default("draft"), // 'draft', 'sent', 'active', 'completed', 'disputed'
+  solanaProgramAddress: text("solana_program_address"),
+  metadataUri: text("metadata_uri"),
+  createdAt: timestamp("created_at").defaultNow(),
+  activatedAt: timestamp("activated_at"),
+  completedAt: timestamp("completed_at"),
+});
+
+export const milestones = pgTable("milestones", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contractId: uuid("contract_id").notNull().references(() => contracts.id),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  amount: decimal("amount").notNull(),
+  dueDate: date("due_date").notNull(),
+  status: text("status").notNull().default("pending"), // 'pending', 'in_progress', 'submitted', 'approved', 'paid'
+  paymentReleased: boolean("payment_released").notNull().default(false),
+  submittedAt: timestamp("submitted_at"),
+  approvedAt: timestamp("approved_at"),
+  approvedBy: text("approved_by"),
+  paymentTx: text("payment_tx"),
+});
+
+export const contractSignatures = pgTable("contract_signatures", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contractId: uuid("contract_id").notNull().references(() => contracts.id),
+  signerEmail: text("signer_email").notNull(),
+  signerRole: text("signer_role").notNull(), // 'freelancer' or 'client'
+  signedAt: timestamp("signed_at").defaultNow(),
+  signatureMethod: text("signature_method").notNull(), // 'wallet' or 'email'
+  signatureData: text("signature_data").notNull(),
+  blockchainTx: text("blockchain_tx"),
+});
+
+export const payments = pgTable("payments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contractId: uuid("contract_id").notNull().references(() => contracts.id),
+  milestoneId: uuid("milestone_id").references(() => milestones.id),
+  amount: decimal("amount").notNull(),
+  method: text("method").notNull(), // 'stripe' or 'usdc'
+  status: text("status").notNull().default("pending"), // 'pending', 'escrowed', 'released', 'refunded'
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  solanaEscrowAccount: text("solana_escrow_account"),
+  releasedTx: text("released_tx"),
+  createdAt: timestamp("created_at").defaultNow(),
+  releasedAt: timestamp("released_at"),
+});
+
+export const contractActivity = pgTable("contract_activity", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contractId: uuid("contract_id").notNull().references(() => contracts.id),
+  action: text("action").notNull(), // 'created', 'sent', 'signed', 'milestone_submitted', etc.
+  actorEmail: text("actor_email").notNull(),
+  details: jsonb("details"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const contacts = pgTable("contacts", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   email: text("email").notNull(),
   message: text("message").notNull(),
@@ -18,7 +91,37 @@ export const contacts = pgTable("contacts", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertContractSchema = createInsertSchema(contracts).omit({
+  id: true,
+  createdAt: true,
+  activatedAt: true,
+  completedAt: true,
+});
+
+export const insertMilestoneSchema = createInsertSchema(milestones).omit({
+  id: true,
+  submittedAt: true,
+  approvedAt: true,
+});
+
+export const insertContractSignatureSchema = createInsertSchema(contractSignatures).omit({
+  id: true,
+  signedAt: true,
+});
+
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  createdAt: true,
+  releasedAt: true,
+});
+
+export const insertContractActivitySchema = createInsertSchema(contractActivity).omit({
   id: true,
   createdAt: true,
 });
@@ -28,7 +131,18 @@ export const insertContactSchema = createInsertSchema(contacts).omit({
   createdAt: true,
 });
 
+// Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type InsertContract = z.infer<typeof insertContractSchema>;
+export type Contract = typeof contracts.$inferSelect;
+export type InsertMilestone = z.infer<typeof insertMilestoneSchema>;
+export type Milestone = typeof milestones.$inferSelect;
+export type InsertContractSignature = z.infer<typeof insertContractSignatureSchema>;
+export type ContractSignature = typeof contractSignatures.$inferSelect;
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type Payment = typeof payments.$inferSelect;
+export type InsertContractActivity = z.infer<typeof insertContractActivitySchema>;
+export type ContractActivity = typeof contractActivity.$inferSelect;
 export type InsertContact = z.infer<typeof insertContactSchema>;
 export type Contact = typeof contacts.$inferSelect;

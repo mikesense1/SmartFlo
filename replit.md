@@ -101,8 +101,20 @@ PayFlow is a modern web application designed to solve the payment delays and dis
 - **Schema Push**: `drizzle-kit push` for development schema updates
 - **Connection**: Environment variable-based database URL configuration
 
+## Recent Changes
+- July 04, 2025: Expanded database schema for full freelance workflow management
+  - Added comprehensive tables: contracts, milestones, payments, signatures, activity tracking
+  - Implemented UUID primary keys for better scalability
+  - Added support for crypto (USDC) and fiat (Stripe) payments
+  - Created complete API endpoints for contract lifecycle management
+- July 04, 2025: Installed core dependencies for blockchain and AI features
+  - Added OpenAI SDK for contract generation
+  - Added Stripe SDK for traditional payments
+  - Added React PDF for contract document generation
+  - Prepared for Solana wallet integration
+
 ## Changelog
-- July 04, 2025. Initial setup
+- July 04, 2025. Initial setup with complete freelance payment platform foundation
 
 ## User Preferences
 

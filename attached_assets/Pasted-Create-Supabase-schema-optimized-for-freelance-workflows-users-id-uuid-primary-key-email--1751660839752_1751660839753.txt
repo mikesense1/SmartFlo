@@ -1,0 +1,77 @@
+Create Supabase schema optimized for freelance workflows:
+
+users:
+- id (uuid, primary key)
+- email (text, unique)
+- full_name (text)
+- freelance_type (text) - 'developer', 'designer', 'writer', 'consultant', 'other'
+- wallet_address (text)
+- stripe_account_id (text)
+- hourly_rate (decimal)
+- subscription_tier (text, default 'free')
+- total_contracts_value (decimal, default 0)
+- created_at (timestamp)
+
+contracts:
+- id (uuid, primary key)
+- creator_id (uuid, foreign key to users)
+- title (text)
+- client_name (text)
+- client_email (text)
+- project_description (text)
+- total_value (decimal)
+- payment_method (text) - 'stripe' or 'usdc'
+- contract_type (text) - 'fixed_price' or 'milestone_based'
+- status (text) - 'draft', 'sent', 'active', 'completed', 'disputed'
+- solana_program_address (text) - address of deployed contract
+- metadata_uri (text) - IPFS/Arweave link
+- created_at (timestamp)
+- activated_at (timestamp)
+- completed_at (timestamp)
+
+milestones:
+- id (uuid, primary key)
+- contract_id (uuid, foreign key)
+- title (text)
+- description (text)
+- amount (decimal)
+- due_date (date)
+- status (text) - 'pending', 'in_progress', 'submitted', 'approved', 'paid'
+- payment_released (boolean, default false)
+- submitted_at (timestamp)
+- approved_at (timestamp)
+- approved_by (text) - email of approver
+- payment_tx (text)
+
+contract_signatures:
+- id (uuid, primary key)
+- contract_id (uuid, foreign key)
+- signer_email (text)
+- signer_role (text) - 'freelancer' or 'client'
+- signed_at (timestamp)
+- signature_method (text) - 'wallet' or 'email'
+- signature_data (text)
+- blockchain_tx (text)
+
+payments:
+- id (uuid, primary key)
+- contract_id (uuid, foreign key)
+- milestone_id (uuid, foreign key, nullable)
+- amount (decimal)
+- method (text) - 'stripe' or 'usdc'
+- status (text) - 'pending', 'escrowed', 'released', 'refunded'
+- stripe_payment_intent_id (text)
+- solana_escrow_account (text)
+- released_tx (text)
+- created_at (timestamp)
+- released_at (timestamp)
+
+contract_activity:
+- id (uuid, primary key)
+- contract_id (uuid, foreign key)
+- action (text) - 'created', 'sent', 'signed', 'milestone_submitted', etc.
+- actor_email (text)
+- details (jsonb)
+- created_at (timestamp)
+
+Add RLS policies and indexes for performance.

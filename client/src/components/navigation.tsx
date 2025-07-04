@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Zap, Menu } from "lucide-react";
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
+  const [location] = useLocation();
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
@@ -30,30 +32,45 @@ export default function Navigation() {
           {/* Desktop Navigation */}
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-8">
-              <button 
-                onClick={() => scrollToSection("features")}
-                className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors"
-              >
-                Features
-              </button>
-              <button 
-                onClick={() => scrollToSection("pricing")}
-                className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors"
-              >
-                Pricing
-              </button>
-              <button 
-                onClick={() => scrollToSection("testimonials")}
-                className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors"
-              >
-                Reviews
-              </button>
+              {location === "/" ? (
+                <>
+                  <button 
+                    onClick={() => scrollToSection("features")}
+                    className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors"
+                  >
+                    Features
+                  </button>
+                  <button 
+                    onClick={() => scrollToSection("pricing")}
+                    className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors"
+                  >
+                    Pricing
+                  </button>
+                  <button 
+                    onClick={() => scrollToSection("testimonials")}
+                    className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors"
+                  >
+                    Reviews
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
+                    Home
+                  </Link>
+                  <Link href="/dashboard" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
+                    Dashboard
+                  </Link>
+                </>
+              )}
               <Button variant="ghost" className="text-slate-600 hover:text-slate-900">
                 Sign In
               </Button>
-              <Button className="bg-primary hover:bg-primary/90">
-                Start Free Trial
-              </Button>
+              <Link href="/dashboard">
+                <Button className="bg-primary hover:bg-primary/90">
+                  {location === "/" ? "Start Free Trial" : "Dashboard"}
+                </Button>
+              </Link>
             </div>
           </div>
           
