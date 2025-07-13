@@ -11,7 +11,7 @@ export default function Footer() {
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <Zap className="w-5 h-5 text-white" />
               </div>
-              <span className="ml-2 text-xl font-bold">PayFlow</span>
+              <span className="ml-2 text-xl font-bold">SmartFlo</span>
             </div>
             <p className="text-slate-400 mb-6">
               Automated milestone-based payments for freelancers. Get paid faster with AI contracts and smart escrow.

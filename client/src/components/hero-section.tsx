@@ -55,7 +55,7 @@ export default function HeroSection() {
         <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
           <img 
             src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1200&h=600" 
-            alt="PayFlow dashboard interface showing milestone-based payments and contract management" 
+            alt="SmartFlo dashboard interface showing milestone-based payments and contract management" 
             className="w-full h-auto"
           />
         </div>

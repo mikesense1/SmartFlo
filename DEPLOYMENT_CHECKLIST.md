@@ -1,4 +1,4 @@
-# PayFlow Deployment Checklist
+# SmartFlo Deployment Checklist
 
 ## Pre-Deployment Steps
 
@@ -12,7 +12,7 @@
 - [ ] Create new GitHub repository
 - [ ] Initialize Git: `git init`
 - [ ] Add all files: `git add .`
-- [ ] Commit: `git commit -m "Initial commit: PayFlow platform"`
+- [ ] Commit: `git commit -m "Initial commit: SmartFlo platform"`
 - [ ] Add remote: `git remote add origin https://github.com/USERNAME/REPO.git`
 - [ ] Push: `git push -u origin main`
 

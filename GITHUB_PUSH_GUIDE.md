@@ -1,4 +1,4 @@
-# Pushing PayFlow from Replit to GitHub - Detailed Guide
+# Pushing SmartFlo from Replit to GitHub - Detailed Guide
 
 ## Step 1: Create GitHub Repository
 
@@ -6,7 +6,7 @@
 2. **Click the "+" icon** in the top right corner
 3. **Select "New repository"**
 4. **Fill in repository details:**
-   - Repository name: `payflow-app` (or your preferred name)
+   - Repository name: `smartflo-app` (or your preferred name)
    - Description: `Automated freelance payment platform with AI contracts and blockchain escrow`
    - Visibility: Choose Public or Private
    - **Important:** Do NOT check "Initialize this repository with a README" (since you already have files)
@@ -48,7 +48,7 @@ git add .
 
 ### Create Initial Commit
 ```bash
-git commit -m "Initial commit: PayFlow freelance payment platform with blockchain integration"
+git commit -m "Initial commit: SmartFlo freelance payment platform with blockchain integration"
 ```
 
 ## Step 4: Connect to GitHub Repository
@@ -64,7 +64,7 @@ git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
 
 **Example:**
 ```bash
-git remote add origin https://github.com/johnsmith/payflow-app.git
+git remote add origin https://github.com/johnsmith/smartflo-app.git
 ```
 
 ### Verify Remote Connection
@@ -151,7 +151,7 @@ git config --global user.email "your.email@example.com"
 # Initialize and commit
 git init
 git add .
-git commit -m "Initial commit: PayFlow freelance payment platform"
+git commit -m "Initial commit: SmartFlo freelance payment platform"
 
 # Connect to GitHub (replace with your details)
 git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
@@ -170,4 +170,4 @@ Once your code is on GitHub, you can proceed with Vercel deployment:
 4. Add environment variables
 5. Deploy!
 
-Your PayFlow application will then be live and accessible worldwide.
+Your SmartFlo application will then be live and accessible worldwide.

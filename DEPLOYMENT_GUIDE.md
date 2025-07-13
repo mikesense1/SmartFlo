@@ -1,4 +1,4 @@
-# PayFlow Deployment Guide
+# SmartFlo Deployment Guide
 
 ## Step 1: Prepare Code for GitHub
 
@@ -17,12 +17,12 @@ Verify all build scripts and configurations are production-ready.
 ```bash
 git init
 git add .
-git commit -m "Initial commit: PayFlow freelance payment platform"
+git commit -m "Initial commit: SmartFlo freelance payment platform"
 ```
 
 ### 2.2 Create GitHub Repository
 1. Go to GitHub.com and create a new repository
-2. Name it something like "payflow-app" or "freelance-payment-platform"
+2. Name it something like "smartflo-app" or "freelance-payment-platform"
 3. Keep it public or private based on your preference
 4. Don't initialize with README (since you already have code)
 

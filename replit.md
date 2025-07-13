@@ -1,8 +1,8 @@
-# PayFlow - Automated Freelance Payment Platform
+# SmartFlo - Automated Freelance Payment Platform
 
 ## Overview
 
-PayFlow is a modern web application designed to solve the payment delays and disputes that plague freelancers. The platform combines AI-generated contracts with milestone-based payments and smart escrow protection to create a seamless payment experience for both freelancers and clients.
+SmartFlo is a modern web application designed to solve the payment delays and disputes that plague freelancers. The platform combines AI-generated contracts with milestone-based payments and smart escrow protection to create a seamless payment experience for both freelancers and clients.
 
 ## System Architecture
 
@@ -102,6 +102,11 @@ PayFlow is a modern web application designed to solve the payment delays and dis
 - **Connection**: Environment variable-based database URL configuration
 
 ## Recent Changes
+- July 13, 2025: Rebranded entire application from PayFlow to SmartFlo
+  - Updated all branding across frontend components (navigation, footer, hero section)
+  - Modified all documentation files (README.md, deployment guides, platform overview)
+  - Updated HTML meta tags and titles for SEO
+  - Maintained consistent branding across all user-facing elements
 - July 13, 2025: Prepared application for GitHub and Vercel deployment
   - Created comprehensive deployment guides and checklists
   - Added .gitignore file with proper exclusions for security

@@ -1,8 +1,8 @@
-# PayFlow - Complete Freelance Payment Platform
+# SmartFlo - Complete Freelance Payment Platform
 
 ## Overview
 
-PayFlow is a comprehensive freelance contract and payment platform that combines AI-generated contracts with blockchain-secured milestone payments. The platform eliminates payment delays and disputes through automated escrow, smart contracts, and instant payment release.
+SmartFlo is a comprehensive freelance contract and payment platform that combines AI-generated contracts with blockchain-secured milestone payments. The platform eliminates payment delays and disputes through automated escrow, smart contracts, and instant payment release.
 
 ## 🎯 Core Value Proposition
 
@@ -223,4 +223,4 @@ contractActivity: id, contractId, action, actorEmail, details, createdAt
 
 ---
 
-**PayFlow represents the future of freelance payments - combining the reliability of traditional finance with the innovation of blockchain technology to create a seamless, secure, and instant payment experience for the modern freelance economy.**
+**SmartFlo represents the future of freelance payments - combining the reliability of traditional finance with the innovation of blockchain technology to create a seamless, secure, and instant payment experience for the modern freelance economy.**

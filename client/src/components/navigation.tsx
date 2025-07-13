@@ -25,7 +25,7 @@ export default function Navigation() {
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <Zap className="w-5 h-5 text-white" />
               </div>
-              <span className="ml-2 text-xl font-bold text-slate-900">PayFlow</span>
+              <span className="ml-2 text-xl font-bold text-slate-900">SmartFlo</span>
             </div>
           </div>
           

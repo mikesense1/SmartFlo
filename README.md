@@ -1,4 +1,4 @@
-# PayFlow - Automated Freelance Payment Platform
+# SmartFlo - Automated Freelance Payment Platform
 
 A modern web application that solves payment delays and disputes for freelancers through AI-generated contracts, milestone-based payments, and smart escrow protection.
 
@@ -43,8 +43,8 @@ A modern web application that solves payment delays and disputes for freelancers
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-username/payflow-app.git
-cd payflow-app
+git clone https://github.com/your-username/smartflo-app.git
+cd smartflo-app
 ```
 
 2. Install dependencies:
