@@ -1,6 +1,6 @@
 import { Program, AnchorProvider, web3, BN } from '@project-serum/anchor';
 import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
-import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { Token, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 const USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'); // USDC on mainnet
 const USDC_MINT_DEVNET = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'); // USDC on devnet
@@ -66,7 +66,9 @@ export class FreelanceContractService {
       this.program.programId
     );
 
-    const escrowTokenAccount = await getAssociatedTokenAddress(
+    const escrowTokenAccount = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
       this.usdcMint,
       escrowPDA,
       true // allowOwnerOffCurve for PDA
@@ -101,7 +103,9 @@ export class FreelanceContractService {
     );
 
     // Get client's USDC token account
-    const clientTokenAccount = await getAssociatedTokenAddress(
+    const clientTokenAccount = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
       this.usdcMint,
       this.provider.wallet.publicKey
     );
@@ -178,13 +182,17 @@ export class FreelanceContractService {
       this.program.programId
     );
 
-    const escrowTokenAccount = await getAssociatedTokenAddress(
+    const escrowTokenAccount = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
       this.usdcMint,
       escrowPDA,
       true
     );
 
-    const freelancerTokenAccount = await getAssociatedTokenAddress(
+    const freelancerTokenAccount = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
       this.usdcMint,
       freelancerWallet
     );
@@ -211,7 +219,9 @@ export class FreelanceContractService {
       this.program.programId
     );
 
-    return await getAssociatedTokenAddress(
+    return await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
       this.usdcMint,
       escrowPDA,
       true

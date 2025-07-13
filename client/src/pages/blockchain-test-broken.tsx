@@ -223,9 +223,9 @@ export default function BlockchainTest() {
             
             <Button 
               onClick={runAllTests} 
-            disabled={isRunning}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg"
-          >
+              disabled={isRunning}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg"
+            >
             {isRunning ? (
               <>
                 <Activity className="w-5 h-5 mr-2 animate-spin" />

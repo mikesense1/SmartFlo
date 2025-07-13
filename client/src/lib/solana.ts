@@ -1,6 +1,6 @@
 import { Connection, PublicKey, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { Program, AnchorProvider, web3, BN } from '@project-serum/anchor';
-import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from '@solana/spl-token';
+import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
 
 // Program ID (replace with your deployed program ID)
 export const FREELANCE_ESCROW_PROGRAM_ID = new PublicKey("Your_Program_ID");
@@ -95,13 +95,17 @@ export class SolanaContractManager {
     const [escrowPDA] = this.getEscrowPDA(contractId);
     
     // Get client's USDC token account
-    const clientTokenAccount = await getAssociatedTokenAddress(
+    const clientTokenAccount = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
       USDC_MINT,
       this.provider.wallet.publicKey
     );
 
     // Get escrow's USDC token account
-    const escrowTokenAccount = await getAssociatedTokenAddress(
+    const escrowTokenAccount = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
       USDC_MINT,
       escrowPDA,
       true
@@ -166,13 +170,17 @@ export class SolanaContractManager {
     const [escrowPDA] = this.getEscrowPDA(contractId);
 
     // Get token accounts
-    const escrowTokenAccount = await getAssociatedTokenAddress(
+    const escrowTokenAccount = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
       USDC_MINT,
       escrowPDA,
       true
     );
 
-    const freelancerTokenAccount = await getAssociatedTokenAddress(
+    const freelancerTokenAccount = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
       USDC_MINT,
       freelancerPublicKey
     );
@@ -203,13 +211,17 @@ export class SolanaContractManager {
     const [escrowPDA] = this.getEscrowPDA(contractId);
 
     // Get token accounts
-    const escrowTokenAccount = await getAssociatedTokenAddress(
+    const escrowTokenAccount = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
       USDC_MINT,
       escrowPDA,
       true
     );
 
-    const clientTokenAccount = await getAssociatedTokenAddress(
+    const clientTokenAccount = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
       USDC_MINT,
       this.provider.wallet.publicKey
     );

@@ -102,6 +102,12 @@ PayFlow is a modern web application designed to solve the payment delays and dis
 - **Connection**: Environment variable-based database URL configuration
 
 ## Recent Changes
+- July 13, 2025: Updated security dependencies and resolved compatibility issues
+  - Downgraded @solana/spl-token from 0.4.13 to 0.1.8 for security compliance
+  - Added @solana/buffer-layout-utils and bigint-buffer dependencies
+  - Updated all Solana imports to use older API with Token.getAssociatedTokenAddress()
+  - Fixed blockchain integration compatibility with downgraded dependency versions
+  - Verified API server functionality and database operations remain intact
 - July 13, 2025: Successfully migrated to PostgreSQL database for production readiness
   - Migrated all storage operations from in-memory to PostgreSQL using Drizzle ORM
   - Fixed user ID consistency across frontend and backend components
