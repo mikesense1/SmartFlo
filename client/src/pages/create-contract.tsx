@@ -9,7 +9,8 @@ import { Progress } from "@/components/ui/progress";
 import { 
   Brain, Wallet, Plus, Trash2, 
   FileText, Sparkles, Shield,
-  CheckCircle, ArrowRight, ArrowLeft, Target, Users
+  CheckCircle, ArrowRight, ArrowLeft, Target, Users,
+  CreditCard, Zap, Globe, Lock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/navigation";
@@ -486,10 +487,10 @@ const PaymentSetupStep = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Wallet className="w-5 h-5" />
-          Payment Method
+          Payment Method Selection
         </CardTitle>
         <CardDescription>
-          Choose how you want to receive payments for this project
+          Choose how your client will pay you. Both methods include milestone-based payments and automatic release upon approval.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -507,11 +508,11 @@ const PaymentSetupStep = ({
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                    <Wallet className="w-6 h-6 text-purple-600" />
+                    <CreditCard className="w-6 h-6 text-purple-600" />
                   </div>
                   <div>
-                    <h3 className="font-medium">Traditional Payment</h3>
-                    <p className="text-sm text-slate-500">Bank transfer, credit card</p>
+                    <h3 className="font-medium">USD Payments (Stripe)</h3>
+                    <p className="text-sm text-slate-500">Credit card, bank transfer, ACH</p>
                   </div>
                 </div>
                 <div className={`w-5 h-5 rounded-full border-2 ${
@@ -527,15 +528,19 @@ const PaymentSetupStep = ({
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-600">Processing Fee:</span>
-                  <span>2.9% + $0.30</span>
+                  <span className="text-red-600">2.9% + $0.30</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Settlement:</span>
-                  <span>2-7 business days</span>
+                  <span className="text-slate-600">Settlement Time:</span>
+                  <span className="text-amber-600">2-7 business days</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">Dispute Protection:</span>
                   <span className="text-green-600">✓ Included</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Client Requirements:</span>
+                  <span className="text-green-600">Credit/Debit Card</span>
                 </div>
               </div>
             </div>
@@ -552,11 +557,11 @@ const PaymentSetupStep = ({
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <Shield className="w-6 h-6 text-green-600" />
+                    <Zap className="w-6 h-6 text-green-600" />
                   </div>
                   <div>
-                    <h3 className="font-medium">Crypto Escrow (USDC)</h3>
-                    <p className="text-sm text-slate-500">Blockchain-secured payments</p>
+                    <h3 className="font-medium">Crypto Payments (USDC)</h3>
+                    <p className="text-sm text-slate-500">Stable cryptocurrency on Solana</p>
                   </div>
                 </div>
                 <div className={`w-5 h-5 rounded-full border-2 ${
@@ -572,15 +577,19 @@ const PaymentSetupStep = ({
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-600">Processing Fee:</span>
-                  <span>~$0.50 gas fee</span>
+                  <span className="text-green-600">~$0.50 gas fee</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Settlement:</span>
+                  <span className="text-slate-600">Settlement Time:</span>
                   <span className="text-green-600">Instant</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">Smart Escrow:</span>
                   <span className="text-green-600">✓ Automatic</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Client Requirements:</span>
+                  <span className="text-amber-600">Crypto Wallet</span>
                 </div>
               </div>
             </div>
@@ -589,25 +598,60 @@ const PaymentSetupStep = ({
           {/* Payment Method Benefits */}
           <div className="bg-slate-50 p-4 rounded-lg">
             <h4 className="font-medium mb-2">
-              {selectedPaymentMethod === "stripe" ? "Traditional Payment Benefits" : "Crypto Escrow Benefits"}
+              {selectedPaymentMethod === "stripe" ? "Why Clients Choose USD Payments" : "Why Clients Choose Crypto Payments"}
             </h4>
             <ul className="text-sm text-slate-600 space-y-1">
               {selectedPaymentMethod === "stripe" ? (
                 <>
-                  <li>• Familiar payment process for clients</li>
-                  <li>• Credit card and bank transfer support</li>
-                  <li>• Built-in fraud protection</li>
-                  <li>• Automatic invoice generation</li>
+                  <li>• No crypto wallet required - use existing bank accounts</li>
+                  <li>• Pay with credit card, debit card, or bank transfer</li>
+                  <li>• Familiar checkout process with purchase protection</li>
+                  <li>• Automatic invoicing and payment tracking</li>
+                  <li>• Perfect for traditional businesses and individuals</li>
                 </>
               ) : (
                 <>
-                  <li>• Funds held securely in smart contract</li>
-                  <li>• Automatic release upon milestone approval</li>
-                  <li>• Transparent, immutable payment history</li>
-                  <li>• Lower fees and instant settlements</li>
+                  <li>• Funds secured in tamper-proof smart contract escrow</li>
+                  <li>• Instant payment release when work is approved</li>
+                  <li>• Complete transparency - all transactions publicly visible</li>
+                  <li>• Significantly lower fees (~$0.50 vs 3%+)</li>
+                  <li>• Perfect for crypto-native businesses and international clients</li>
                 </>
               )}
             </ul>
+          </div>
+
+          {/* Additional Payment Method Info */}
+          <div className={`p-4 rounded-lg border-l-4 ${
+            selectedPaymentMethod === "stripe" 
+              ? "bg-purple-50 border-purple-400" 
+              : "bg-green-50 border-green-400"
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                selectedPaymentMethod === "stripe" 
+                  ? "bg-purple-100" 
+                  : "bg-green-100"
+              }`}>
+                {selectedPaymentMethod === "stripe" ? (
+                  <Wallet className="w-4 h-4 text-purple-600" />
+                ) : (
+                  <Shield className="w-4 h-4 text-green-600" />
+                )}
+              </div>
+              <div className="flex-1">
+                <h5 className="font-medium text-sm mb-1">
+                  {selectedPaymentMethod === "stripe" ? "Client Payment Process" : "Client Payment Process"}
+                </h5>
+                <p className="text-sm text-slate-600">
+                  {selectedPaymentMethod === "stripe" ? (
+                    "Your client will receive a secure payment link and can pay instantly with their credit card or bank account. No crypto knowledge required."
+                  ) : (
+                    "Your client will connect their crypto wallet (like Phantom or MetaMask) and send USDC tokens to the smart contract. Funds are held securely until milestones are approved."
+                  )}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </CardContent>
