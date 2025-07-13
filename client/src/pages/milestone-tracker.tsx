@@ -57,61 +57,47 @@ export default function MilestoneTracker() {
   const [approvalNotes, setApprovalNotes] = useState("");
   const [currentUserRole] = useState<"freelancer" | "client">("freelancer"); // Mock user role
 
-  // Mock data for demonstration
+  // Fetch contract data
+  const { data: contract, isLoading: contractLoading } = useQuery({
+    queryKey: ["/api/contracts", contractId],
+    enabled: contractId !== "demo-contract",
+  });
+
+  // Fetch milestones for this contract
+  const { data: milestones = [], isLoading: milestonesLoading } = useQuery({
+    queryKey: ["/api/contracts", contractId, "milestones"],
+    enabled: contractId !== "demo-contract",
+  });
+
+  // Mock data for demo/fallback only
   const mockContract: Contract = {
     id: contractId,
-    title: "E-commerce Website Development",
-    clientName: "TechCorp Inc.",
-    totalValue: "8000",
-    amountReleased: "2000",
-    escrowBalance: "6000",
+    title: "Demo Contract",
+    clientName: "Demo Client",
+    totalValue: "5000",
+    amountReleased: "0",
+    escrowBalance: "5000",
     status: "active",
     paymentMethod: "usdc"
   };
 
   const mockMilestones: Milestone[] = [
     {
-      id: "1",
-      title: "Design & Planning",
-      description: "Complete wireframes, mockups, and project architecture",
-      amount: "2000",
-      dueDate: "2025-01-15",
-      status: "paid",
-      completionNotes: "Delivered complete design system with responsive layouts",
-      submittedAt: "2025-01-10",
-      approvedAt: "2025-01-12",
-      paidAt: "2025-01-12",
-      paymentTx: "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi",
-      deliverables: ["wireframes.pdf", "mockups.sketch", "style-guide.pdf"]
-    },
-    {
-      id: "2", 
-      title: "Frontend Development",
-      description: "HTML/CSS/JS implementation with responsive design",
-      amount: "2800",
-      dueDate: "2025-02-01",
-      status: "submitted",
-      completionNotes: "Completed responsive frontend with all requested features. Includes mobile optimization and cross-browser testing.",
-      submittedAt: "2025-01-30",
-      deliverables: ["frontend-demo.zip", "testing-report.pdf"]
-    },
-    {
-      id: "3",
-      title: "Backend Integration",
-      description: "API development, database setup, and core functionality",
-      amount: "2000",
-      dueDate: "2025-02-15",
-      status: "in_progress"
-    },
-    {
-      id: "4",
-      title: "Testing & Launch",
-      description: "QA testing, deployment, and final optimizations",
-      amount: "1200",
-      dueDate: "2025-03-01",
+      id: "demo-1",
+      title: "Demo Milestone",
+      description: "This is a demonstration milestone",
+      amount: "5000",
+      dueDate: "2025-08-01",
       status: "pending"
     }
   ];
+
+  // Use real data if available, otherwise fall back to mock data
+  const displayContract = contract || mockContract;
+  const displayMilestones = milestones.length > 0 ? milestones.map(m => ({
+    ...m,
+    status: m.status as "pending" | "in_progress" | "submitted" | "approved" | "paid"
+  })) : mockMilestones;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -158,7 +144,8 @@ export default function MilestoneTracker() {
       });
       setIsSubmissionModalOpen(false);
       setCompletionNotes("");
-      queryClient.invalidateQueries({ queryKey: ["contract", contractId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contracts", contractId, "milestones"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contracts", contractId] });
     },
     onError: (error) => {
       toast({
@@ -190,7 +177,8 @@ export default function MilestoneTracker() {
       });
       setIsApprovalModalOpen(false);
       setApprovalNotes("");
-      queryClient.invalidateQueries({ queryKey: ["contract", contractId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contracts", contractId, "milestones"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contracts", contractId] });
     },
     onError: (error) => {
       toast({
@@ -211,10 +199,29 @@ export default function MilestoneTracker() {
     setIsApprovalModalOpen(true);
   };
 
-  const completedMilestones = mockMilestones.filter(m => m.status === "paid").length;
-  const totalProgress = (completedMilestones / mockMilestones.length) * 100;
-  const amountReleased = parseFloat(mockContract.amountReleased);
-  const totalValue = parseFloat(mockContract.totalValue);
+  const completedMilestones = displayMilestones.filter(m => m.status === "paid").length;
+  const totalProgress = displayMilestones.length > 0 ? (completedMilestones / displayMilestones.length) * 100 : 0;
+  const amountReleased = parseFloat(displayContract.amountReleased || "0");
+  const totalValue = parseFloat(displayContract.totalValue || "0");
+
+  // Show loading state while fetching data
+  if ((contractLoading || milestonesLoading) && contractId !== "demo-contract") {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Navigation />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Card>
+            <CardContent className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-slate-600">Loading contract and milestones...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -231,12 +238,12 @@ export default function MilestoneTracker() {
                 </Button>
               </Link>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">{mockContract.title}</h1>
-                <p className="text-sm text-slate-500">Contract with {mockContract.clientName}</p>
+                <h1 className="text-xl font-bold text-slate-900">{displayContract.title}</h1>
+                <p className="text-sm text-slate-500">Contract with {displayContract.clientName}</p>
               </div>
             </div>
-            <Badge className={getStatusColor(mockContract.status)}>
-              {mockContract.status}
+            <Badge className={getStatusColor(displayContract.status)}>
+              {displayContract.status}
             </Badge>
           </div>
         </div>
@@ -273,7 +280,7 @@ export default function MilestoneTracker() {
               <Shield className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">${parseFloat(mockContract.escrowBalance).toLocaleString()}</div>
+              <div className="text-2xl font-bold text-blue-600">${parseFloat(displayContract.escrowBalance || "0").toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">Secured by blockchain</p>
             </CardContent>
           </Card>
@@ -284,7 +291,7 @@ export default function MilestoneTracker() {
               <Target className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{completedMilestones}/{mockMilestones.length}</div>
+              <div className="text-2xl font-bold">{completedMilestones}/{displayMilestones.length}</div>
               <Progress value={totalProgress} className="mt-2" />
               <p className="text-xs text-muted-foreground mt-1">Milestones completed</p>
             </CardContent>
@@ -296,7 +303,7 @@ export default function MilestoneTracker() {
           <Alert>
             <Zap className="h-4 w-4" />
             <AlertDescription>
-              <strong>Smart Payment Automation:</strong> Payments are automatically released via {mockContract.paymentMethod === "usdc" ? "USDC cryptocurrency" : "Stripe bank transfer"} 
+              <strong>Smart Payment Automation:</strong> Payments are automatically released via {displayContract.paymentMethod === "usdc" ? "USDC cryptocurrency" : "Stripe bank transfer"} 
               when milestones are approved. Funds are secured in blockchain escrow.
             </AlertDescription>
           </Alert>
@@ -322,8 +329,21 @@ export default function MilestoneTracker() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {mockMilestones.map((milestone, index) => (
-              <div key={milestone.id}>
+            {displayMilestones.length === 0 ? (
+              <div className="text-center py-12">
+                <Target className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-slate-900 mb-2">No Milestones Found</h3>
+                <p className="text-slate-500 mb-4">This contract doesn't have any milestones yet.</p>
+                <Link href="/create-contract">
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create New Contract
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              displayMilestones.map((milestone, index) => (
+                <div key={milestone.id}>
                 <Card className="relative">
                   <CardHeader>
                     <div className="flex justify-between items-start">
@@ -420,13 +440,14 @@ export default function MilestoneTracker() {
                   </CardContent>
                 </Card>
                 
-                {index < mockMilestones.length - 1 && (
+                {index < displayMilestones.length - 1 && (
                   <div className="flex justify-center my-4">
                     <div className="w-px h-8 bg-slate-200"></div>
                   </div>
                 )}
               </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
       </div>

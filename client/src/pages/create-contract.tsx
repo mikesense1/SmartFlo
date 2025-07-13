@@ -905,6 +905,11 @@ export default function CreateContract() {
         queryKey: ["/api/users", "user-123", "contracts"]
       });
       
+      // Invalidate milestone cache for the new contract
+      queryClient.invalidateQueries({
+        queryKey: ["/api/contracts", result.id, "milestones"]
+      });
+      
       toast({
         title: "Contract Created Successfully!",
         description: "Contract has been saved and is ready to send to your client",
