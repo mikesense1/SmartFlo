@@ -849,7 +849,7 @@ export default function CreateContract() {
         contractType: "milestone_based",
         startDate: projectData.startDate,
         endDate: projectData.endDate,
-        creatorId: "550e8400-e29b-41d4-a716-446655440000", // Mock UUID for demo
+        creatorId: "5db53622-f397-41f4-9746-4b567a24fcfb", // Demo user from database
         status: "draft"
       };
 

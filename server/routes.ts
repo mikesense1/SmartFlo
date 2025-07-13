@@ -98,7 +98,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users/:userId/contracts", async (req, res) => {
     try {
       // Handle both the mock UUID and the old "user-123" format
-      const userId = req.params.userId === "user-123" ? "550e8400-e29b-41d4-a716-446655440000" : req.params.userId;
+      const userId = req.params.userId === "user-123" ? "5db53622-f397-41f4-9746-4b567a24fcfb" : req.params.userId;
       const contracts = await storage.getContractsByUser(userId);
       res.json(contracts);
     } catch (error) {
