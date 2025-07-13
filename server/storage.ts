@@ -37,190 +37,132 @@ export interface IStorage {
   getActivityByContract(contractId: string): Promise<ContractActivity[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private contacts: Map<string, Contact>;
-  private contracts: Map<string, Contract>;
-  private milestones: Map<string, Milestone>;
-  private payments: Map<string, Payment>;
-  private activities: Map<string, ContractActivity>;
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
+export class DatabaseStorage implements IStorage {
   constructor() {
-    this.users = new Map();
-    this.contacts = new Map();
-    this.contracts = new Map();
-    this.milestones = new Map();
-    this.payments = new Map();
-    this.activities = new Map();
-  }
-
-  private generateId(): string {
-    return crypto.randomUUID();
+    // No initialization needed for database storage
   }
 
   // User operations
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.email === email,
-    );
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.generateId();
-    const user: User = { 
-      freelanceType: "other",
-      walletAddress: null,
-      stripeAccountId: null,
-      hourlyRate: null,
-      subscriptionTier: "free",
-      totalContractsValue: "0",
-      ...insertUser, 
-      id, 
-      createdAt: new Date() 
-    };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
   // Contact operations
   async createContact(insertContact: InsertContact): Promise<Contact> {
-    const id = this.generateId();
-    const contact: Contact = { 
-      ...insertContact, 
-      id, 
-      createdAt: new Date() 
-    };
-    this.contacts.set(id, contact);
+    const [contact] = await db
+      .insert(contacts)
+      .values(insertContact)
+      .returning();
     return contact;
   }
 
   async getContacts(): Promise<Contact[]> {
-    return Array.from(this.contacts.values());
+    return await db.select().from(contacts);
   }
 
   // Contract operations
   async getContract(id: string): Promise<Contract | undefined> {
-    return this.contracts.get(id);
+    const [contract] = await db.select().from(contracts).where(eq(contracts.id, id));
+    return contract || undefined;
   }
 
   async getContractsByUser(userId: string): Promise<Contract[]> {
-    return Array.from(this.contracts.values()).filter(
-      (contract) => contract.creatorId === userId
-    );
+    return await db.select().from(contracts).where(eq(contracts.creatorId, userId));
   }
 
   async createContract(insertContract: InsertContract): Promise<Contract> {
-    const id = this.generateId();
-    const contract: Contract = {
-      status: "draft",
-      solanaProgramAddress: null,
-      metadataUri: null,
-      ...insertContract,
-      id,
-      createdAt: new Date(),
-      activatedAt: null,
-      completedAt: null,
-    };
-    this.contracts.set(id, contract);
+    const [contract] = await db
+      .insert(contracts)
+      .values(insertContract)
+      .returning();
     return contract;
   }
 
   async updateContract(id: string, updates: Partial<Contract>): Promise<Contract | undefined> {
-    const contract = this.contracts.get(id);
-    if (!contract) return undefined;
-    
-    const updatedContract = { ...contract, ...updates };
-    this.contracts.set(id, updatedContract);
-    return updatedContract;
+    const [contract] = await db
+      .update(contracts)
+      .set(updates)
+      .where(eq(contracts.id, id))
+      .returning();
+    return contract || undefined;
   }
 
   // Milestone operations
   async getMilestonesByContract(contractId: string): Promise<Milestone[]> {
-    return Array.from(this.milestones.values()).filter(
-      (milestone) => milestone.contractId === contractId
-    );
+    return await db.select().from(milestones).where(eq(milestones.contractId, contractId));
   }
 
   async createMilestone(insertMilestone: InsertMilestone): Promise<Milestone> {
-    const id = this.generateId();
-    const milestone: Milestone = {
-      status: "pending",
-      paymentReleased: false,
-      ...insertMilestone,
-      id,
-      submittedAt: null,
-      approvedAt: null,
-      approvedBy: null,
-      paymentTx: null,
-    };
-    this.milestones.set(id, milestone);
+    const [milestone] = await db
+      .insert(milestones)
+      .values(insertMilestone)
+      .returning();
     return milestone;
   }
 
   async updateMilestone(id: string, updates: Partial<Milestone>): Promise<Milestone | undefined> {
-    const milestone = this.milestones.get(id);
-    if (!milestone) return undefined;
-    
-    const updatedMilestone = { ...milestone, ...updates };
-    this.milestones.set(id, updatedMilestone);
-    return updatedMilestone;
+    const [milestone] = await db
+      .update(milestones)
+      .set(updates)
+      .where(eq(milestones.id, id))
+      .returning();
+    return milestone || undefined;
   }
 
   // Payment operations
   async getPaymentsByContract(contractId: string): Promise<Payment[]> {
-    return Array.from(this.payments.values()).filter(
-      (payment) => payment.contractId === contractId
-    );
+    return await db.select().from(payments).where(eq(payments.contractId, contractId));
   }
 
   async createPayment(insertPayment: InsertPayment): Promise<Payment> {
-    const id = this.generateId();
-    const payment: Payment = {
-      status: "pending",
-      milestoneId: null,
-      stripePaymentIntentId: null,
-      solanaEscrowAccount: null,
-      releasedTx: null,
-      ...insertPayment,
-      id,
-      createdAt: new Date(),
-      releasedAt: null,
-    };
-    this.payments.set(id, payment);
+    const [payment] = await db
+      .insert(payments)
+      .values(insertPayment)
+      .returning();
     return payment;
   }
 
   async updatePayment(id: string, updates: Partial<Payment>): Promise<Payment | undefined> {
-    const payment = this.payments.get(id);
-    if (!payment) return undefined;
-    
-    const updatedPayment = { ...payment, ...updates };
-    this.payments.set(id, updatedPayment);
-    return updatedPayment;
+    const [payment] = await db
+      .update(payments)
+      .set(updates)
+      .where(eq(payments.id, id))
+      .returning();
+    return payment || undefined;
   }
 
   // Activity tracking
   async createActivity(insertActivity: InsertContractActivity): Promise<ContractActivity> {
-    const id = this.generateId();
-    const activity: ContractActivity = {
-      details: null,
-      ...insertActivity,
-      id,
-      createdAt: new Date(),
-    };
-    this.activities.set(id, activity);
+    const [activity] = await db
+      .insert(contractActivity)
+      .values(insertActivity)
+      .returning();
     return activity;
   }
 
   async getActivityByContract(contractId: string): Promise<ContractActivity[]> {
-    return Array.from(this.activities.values())
-      .filter((activity) => activity.contractId === contractId)
-      .sort((a, b) => b.createdAt!.getTime() - a.createdAt!.getTime());
+    return await db.select()
+      .from(contractActivity)
+      .where(eq(contractActivity.contractId, contractId))
+      .orderBy(contractActivity.createdAt);
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

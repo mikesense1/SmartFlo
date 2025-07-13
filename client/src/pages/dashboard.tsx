@@ -17,13 +17,13 @@ import { paymentTriggers } from "@/lib/payments/smart-triggers";
 import Navigation from "@/components/navigation";
 import type { Contract, Milestone, Payment } from "@shared/schema";
 
-// Mock user data for demonstration
-const MOCK_USER = {
-  id: "user-123",
-  fullName: "Alex Johnson",
-  email: "alex@freelancer.com",
+// Demo user data from database
+const DEMO_USER = {
+  id: "5db53622-f397-41f4-9746-4b567a24fcfb",
+  fullName: "Demo User",
+  email: "demo@payflow.com",
   specialization: "Full-Stack Developer",
-  joinedDate: "2024-01-15"
+  joinedDate: "2025-07-13"
 };
 
 export default function Dashboard() {
@@ -39,9 +39,9 @@ export default function Dashboard() {
 
   // Fetch user contracts
   const { data: contracts = [], isLoading: contractsLoading, error: contractsError } = useQuery({
-    queryKey: ["/api/users", MOCK_USER.id, "contracts"],
+    queryKey: ["/api/users", DEMO_USER.id, "contracts"],
     queryFn: async () => {
-      const response = await fetch(`/api/users/${MOCK_USER.id}/contracts`, {
+      const response = await fetch(`/api/users/${DEMO_USER.id}/contracts`, {
         headers: {
           'Cache-Control': 'no-cache'
         }
@@ -66,13 +66,13 @@ export default function Dashboard() {
         body: JSON.stringify(contractData)
       }).then(res => res.json()),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users", MOCK_USER.id, "contracts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", DEMO_USER.id, "contracts"] });
     }
   });
 
   const handleCreateContract = () => {
     createContractMutation.mutate({
-      creatorId: MOCK_USER.id,
+      creatorId: DEMO_USER.id,
       title: "Sample Web Development Project",
       clientName: "Tech Startup Inc",
       clientEmail: "client@techstartup.com",
@@ -123,8 +123,8 @@ export default function Dashboard() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">Welcome back, {MOCK_USER.fullName}</h1>
-                <p className="text-sm text-slate-500">{MOCK_USER.specialization} • Freelancer since {new Date(MOCK_USER.joinedDate).getFullYear()}</p>
+                <h1 className="text-2xl font-bold text-slate-900">Welcome back, {DEMO_USER.fullName}</h1>
+                <p className="text-sm text-slate-500">{DEMO_USER.specialization} • Freelancer since {new Date(DEMO_USER.joinedDate).getFullYear()}</p>
               </div>
             </div>
             <Link href="/create-contract">
