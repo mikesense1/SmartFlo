@@ -1,7 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, Clock, Users } from "lucide-react";
+import { Link } from "wouter";
 
 export default function HeroSection() {
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <section className="relative gradient-hero pt-16 pb-20 sm:pt-24 sm:pb-28">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -17,18 +25,21 @@ export default function HeroSection() {
             Set milestones, get client approval, receive instant payments. No more chasing invoices or waiting 45 days to get paid.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Button 
-              size="lg" 
-              className="bg-primary hover:bg-primary/90 text-white px-8 py-4 text-lg font-semibold shadow-lg"
-            >
-              Start Getting Paid Faster
-            </Button>
+            <Link href="/dashboard">
+              <Button 
+                size="lg" 
+                className="bg-primary hover:bg-primary/90 text-white px-8 py-4 text-lg font-semibold shadow-lg w-full sm:w-auto"
+              >
+                Start Getting Paid Faster
+              </Button>
+            </Link>
             <Button 
               variant="outline" 
               size="lg"
-              className="border-slate-300 text-slate-700 px-8 py-4 text-lg font-semibold hover:bg-white"
+              onClick={() => scrollToSection("features")}
+              className="border-slate-300 text-slate-700 px-8 py-4 text-lg font-semibold hover:bg-white w-full sm:w-auto"
             >
-              Watch Demo
+              See How It Works
             </Button>
           </div>
           

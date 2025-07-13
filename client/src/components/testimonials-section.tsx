@@ -5,7 +5,7 @@ const testimonials = [
     name: "Sarah Chen",
     role: "Graphic Designer",
     image: "https://images.unsplash.com/photo-1494790108755-2616b612b882?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100",
-    quote: "I used to wait 30-60 days for payments. Now I get paid the same day my work is approved. PayFlow has completely changed my cash flow."
+    quote: "I used to wait 30-60 days for payments. Now I get paid the same day my work is approved. SmartFlo has completely changed my cash flow."
   },
   {
     name: "Marcus Rodriguez",
