@@ -122,11 +122,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Milestone routes
   app.post("/api/milestones", async (req, res) => {
     try {
+      console.log("Creating milestone with data:", req.body);
       const milestoneData = insertMilestoneSchema.parse(req.body);
       const milestone = await storage.createMilestone(milestoneData);
       res.json({ message: "Milestone created successfully", milestoneId: milestone.id });
     } catch (error) {
-      res.status(400).json({ message: "Invalid milestone data" });
+      console.error("Milestone creation error:", error);
+      res.status(400).json({ message: "Invalid milestone data", error: error.message });
     }
   });
 

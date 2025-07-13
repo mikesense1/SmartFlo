@@ -383,23 +383,41 @@ const ContractGenerationStep = ({
               </div>
             </div>
 
-            <Button 
-              onClick={generateContract}
-              variant="outline"
-              disabled={isGenerating}
-            >
-              {isGenerating ? (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2 animate-spin" />
-                  Regenerating...
-                </>
-              ) : (
-                <>
-                  <Brain className="w-4 h-4 mr-2" />
-                  Regenerate Contract
-                </>
-              )}
-            </Button>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Custom Instructions for AI (Optional)
+                </label>
+                <Textarea
+                  placeholder="e.g., 'Include clause about intellectual property rights' or 'Make the payment terms more strict'"
+                  value={customPrompt}
+                  onChange={(e) => setCustomPrompt(e.target.value)}
+                  className="min-h-[80px]"
+                />
+                <p className="text-xs text-slate-500">
+                  Provide specific instructions to customize your contract generation
+                </p>
+              </div>
+              
+              <Button 
+                onClick={generateContract}
+                variant="outline"
+                disabled={isGenerating}
+                className="w-full"
+              >
+                {isGenerating ? (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2 animate-spin" />
+                    Regenerating...
+                  </>
+                ) : (
+                  <>
+                    <Brain className="w-4 h-4 mr-2" />
+                    Regenerate Contract with AI
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>
@@ -870,20 +888,27 @@ export default function CreateContract() {
 
       // Create milestones for the contract
       for (const milestone of milestones) {
-        await fetch('/api/milestones', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contractId: createdContract.id,
-            title: milestone.title,
-            description: milestone.deliverables,
-            amount: milestone.amount,
-            dueDate: milestone.dueDate,
-            status: "pending"
-          }),
-        });
+        if (milestone.title && milestone.deliverables && milestone.amount && milestone.dueDate) {
+          const milestoneResponse = await fetch('/api/milestones', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              contractId: createdContract.id,
+              title: milestone.title,
+              description: milestone.deliverables,
+              amount: milestone.amount,
+              dueDate: milestone.dueDate
+            }),
+          });
+
+          if (!milestoneResponse.ok) {
+            const errorData = await milestoneResponse.json();
+            console.error('Milestone creation failed:', errorData);
+            throw new Error(`Failed to create milestone: ${milestone.title}`);
+          }
+        }
       }
 
       // Create activity log entry
@@ -902,12 +927,12 @@ export default function CreateContract() {
       
       // Invalidate contracts cache to trigger refresh
       queryClient.invalidateQueries({
-        queryKey: ["/api/users", "user-123", "contracts"]
+        queryKey: ["/api/users", "5db53622-f397-41f4-9746-4b567a24fcfb", "contracts"]
       });
       
       // Invalidate milestone cache for the new contract
       queryClient.invalidateQueries({
-        queryKey: ["/api/contracts", result.id, "milestones"]
+        queryKey: ["/api/contracts", createdContract.id, "milestones"]
       });
       
       toast({
@@ -951,7 +976,7 @@ export default function CreateContract() {
       console.error("Contract creation error:", error);
       toast({
         title: "Creation Failed",
-        description: "Please try again or contact support",
+        description: error.message || "Please try again or contact support",
         variant: "destructive",
       });
     } finally {
