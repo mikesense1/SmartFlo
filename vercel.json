@@ -1,4 +1,7 @@
 {
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/public",
+  "framework": "vite",
   "functions": {
     "api/**/*.js": {
       "runtime": "nodejs18.x"
@@ -10,23 +13,7 @@
       "destination": "/api/$1"
     },
     {
-      "source": "/dashboard",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/create-contract",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/blockchain-status",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/milestone-tracker/(.*)",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/client-payment/(.*)",
+      "source": "/(dashboard|create-contract|blockchain-status|milestone-tracker|client-payment).*",
       "destination": "/index.html"
     }
   ]
