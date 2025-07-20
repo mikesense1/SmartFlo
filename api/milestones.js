@@ -1,0 +1,62 @@
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+module.exports = async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  if (req.method === 'POST') {
+    try {
+      const {
+        contractId,
+        title,
+        description,
+        amount,
+        dueDate
+      } = req.body;
+
+      const query = `
+        INSERT INTO milestones (
+          id, contract_id, title, description, amount, due_date, 
+          status, created_at
+        )
+        VALUES (
+          gen_random_uuid(), $1, $2, $3, $4, $5, 'pending', NOW()
+        )
+        RETURNING *
+      `;
+
+      const values = [
+        contractId,
+        title,
+        description,
+        parseFloat(amount) || 0,
+        dueDate
+      ];
+
+      const result = await pool.query(query, values);
+      res.status(201).json(result.rows[0]);
+      
+    } catch (error) {
+      console.error('Milestone creation error:', error);
+      res.status(500).json({ 
+        error: 'Failed to create milestone',
+        details: error.message 
+      });
+    }
+  } else {
+    res.status(405).json({ error: 'Method not allowed' });
+  }
+};
