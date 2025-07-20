@@ -970,8 +970,8 @@ export default function CreateContract() {
         }]);
         setCustomPrompt("");
         
-        // Navigate to dashboard - using hash routing to avoid Vercel SPA issues
-        window.location.href = '/#/dashboard';
+        // Navigate to dashboard
+        window.location.href = '/dashboard';
       }, 2000);
       
     } catch (error) {
