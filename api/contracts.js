@@ -48,8 +48,6 @@ module.exports = async function handler(req, res) {
         totalValue,
         paymentMethod,
         contractType,
-        startDate,
-        endDate,
         creatorId,
         status
       } = req.body;
@@ -57,11 +55,10 @@ module.exports = async function handler(req, res) {
       const query = `
         INSERT INTO contracts (
           id, title, project_description, client_name, client_email, 
-          total_value, payment_method, contract_type, start_date, 
-          end_date, creator_id, status, created_at
+          total_value, payment_method, contract_type, creator_id, status, created_at
         )
         VALUES (
-          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW()
+          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()
         )
         RETURNING *
       `;
@@ -74,8 +71,6 @@ module.exports = async function handler(req, res) {
         parseFloat(totalValue) || 0,
         paymentMethod,
         contractType,
-        startDate,
-        endDate,
         creatorId,
         status || 'draft'
       ];
