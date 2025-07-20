@@ -970,8 +970,8 @@ export default function CreateContract() {
         }]);
         setCustomPrompt("");
         
-        // Navigate to dashboard
-        window.location.href = '/dashboard';
+        // Navigate to home page (dashboard route needs SPA configuration)
+        window.location.href = '/';
       }, 2000);
       
     } catch (error) {
