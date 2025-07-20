@@ -3,7 +3,7 @@ const { Pool } = require('pg');
 // Configure database connection for Vercel
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
+  ssl: process.env.DATABASE_URL?.includes('localhost') ? false : {
     rejectUnauthorized: false
   }
 });
@@ -67,9 +67,15 @@ module.exports = async function handler(req, res) {
       
     } catch (error) {
       console.error('Contract creation error:', error);
+      console.error('DATABASE_URL exists:', !!process.env.DATABASE_URL);
+      console.error('DATABASE_URL preview:', process.env.DATABASE_URL?.substring(0, 20) + '...');
       res.status(500).json({ 
         error: 'Failed to create contract',
-        details: error.message 
+        details: error.message,
+        debug: {
+          hasDbUrl: !!process.env.DATABASE_URL,
+          errorCode: error.code
+        }
       });
     }
   } else {

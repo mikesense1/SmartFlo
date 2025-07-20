@@ -3,7 +3,7 @@ const { Pool } = require('pg');
 // Configure database connection for Vercel
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
+  ssl: process.env.DATABASE_URL?.includes('localhost') ? false : {
     rejectUnauthorized: false
   }
 });
