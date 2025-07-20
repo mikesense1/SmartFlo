@@ -48,11 +48,18 @@ export class AIContractService {
       });
 
       if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server error: ${response.status}`);
       }
 
       const data = await response.json();
-      return data.contract;
+      
+      // Handle both local server response and Vercel function response
+      if (data.success && data.contract) {
+        return data.contract; // Vercel function returns simple string
+      }
+      
+      return data.contract || 'Contract generated successfully';
     } catch (error) {
       console.error("Contract generation error:", error);
       throw new Error("Failed to generate contract with AI");
