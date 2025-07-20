@@ -881,7 +881,9 @@ export default function CreateContract() {
       });
 
       if (!contractResponse.ok) {
-        throw new Error('Failed to create contract');
+        const errorText = await contractResponse.text();
+        console.error('Contract API Error:', contractResponse.status, errorText);
+        throw new Error(`Failed to create contract (${contractResponse.status}): ${errorText}`);
       }
 
       const createdContract = await contractResponse.json();
@@ -904,9 +906,9 @@ export default function CreateContract() {
           });
 
           if (!milestoneResponse.ok) {
-            const errorData = await milestoneResponse.json();
-            console.error('Milestone creation failed:', errorData);
-            throw new Error(`Failed to create milestone: ${milestone.title}`);
+            const errorText = await milestoneResponse.text();
+            console.error('Milestone API Error:', milestoneResponse.status, errorText);
+            throw new Error(`Failed to create milestone "${milestone.title}" (${milestoneResponse.status}): ${errorText}`);
           }
         }
       }
@@ -974,9 +976,26 @@ export default function CreateContract() {
       
     } catch (error) {
       console.error("Contract creation error:", error);
+      let errorMessage = "Unknown error occurred";
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      
+      // More specific error messaging
+      if (errorMessage.includes('Failed to create contract')) {
+        errorMessage = "Contract creation failed. Please check your project details and try again.";
+      } else if (errorMessage.includes('Failed to create milestone')) {
+        errorMessage = "Contract created but milestone setup failed. Please contact support.";
+      } else if (errorMessage.includes('fetch')) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      }
+      
       toast({
         title: "Creation Failed",
-        description: error.message || "Please try again or contact support",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
