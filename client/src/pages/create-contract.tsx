@@ -970,8 +970,8 @@ export default function CreateContract() {
         }]);
         setCustomPrompt("");
         
-        // Navigate to home page with success message - dashboard route needs server configuration
-        window.location.href = '/?success=contract-created';
+        // Navigate to dashboard
+        window.location.href = '/dashboard';
       }, 2000);
       
     } catch (error) {

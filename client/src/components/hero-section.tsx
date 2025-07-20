@@ -25,12 +25,12 @@ export default function HeroSection() {
             Set milestones, get client approval, receive instant payments. No more chasing invoices or waiting 45 days to get paid.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Link href="/create-contract">
+            <Link href="/dashboard">
               <Button 
                 size="lg" 
                 className="bg-primary hover:bg-primary/90 text-white px-8 py-4 text-lg font-semibold shadow-lg w-full sm:w-auto"
               >
-                Create Your First Contract
+                Start Getting Paid Faster
               </Button>
             </Link>
             <Button 
