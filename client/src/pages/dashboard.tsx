@@ -37,11 +37,12 @@ export default function Dashboard() {
     completedProjects: 12
   });
 
-  // Fetch user contracts
+  // Fetch user contracts - using direct contracts API for now
   const { data: contracts = [], isLoading: contractsLoading, error: contractsError } = useQuery({
-    queryKey: ["/api/users", DEMO_USER.id, "contracts"],
+    queryKey: ["/api/contracts", "user", DEMO_USER.id],
     queryFn: async () => {
-      const response = await fetch(`/api/users/${DEMO_USER.id}/contracts`, {
+      // Use general contracts API and filter by user ID client-side as fallback
+      const response = await fetch('/api/contracts', {
         headers: {
           'Cache-Control': 'no-cache'
         }
@@ -50,8 +51,11 @@ export default function Dashboard() {
         throw new Error(`Failed to fetch contracts: ${response.status}`);
       }
       const data = await response.json();
-      console.log("Fetched contracts:", data);
-      return data;
+      console.log("Fetched all contracts:", data);
+      // Filter by creator_id on client side for now
+      const userContracts = Array.isArray(data) ? data.filter(contract => contract.creator_id === DEMO_USER.id) : [];
+      console.log("User contracts:", userContracts);
+      return userContracts;
     },
     refetchInterval: 5000, // Refetch every 5 seconds
     staleTime: 0 // Always consider data stale

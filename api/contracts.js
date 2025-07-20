@@ -38,7 +38,40 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  if (req.method === 'POST') {
+  if (req.method === 'GET') {
+    try {
+      const query = `
+        SELECT 
+          id,
+          creator_id,
+          title,
+          client_name,
+          client_email,
+          project_description,
+          total_value,
+          payment_method,
+          contract_type,
+          status,
+          solana_program_address,
+          metadata_uri,
+          created_at,
+          activated_at,
+          completed_at
+        FROM contracts 
+        ORDER BY created_at DESC
+      `;
+
+      const result = await pool.query(query);
+      res.status(200).json(result.rows);
+      
+    } catch (error) {
+      console.error('Error fetching contracts:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch contracts',
+        details: error.message 
+      });
+    }
+  } else if (req.method === 'POST') {
     try {
       const {
         title,
