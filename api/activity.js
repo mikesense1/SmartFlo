@@ -1,12 +1,30 @@
 const { Pool } = require('pg');
 
-// Configure database connection for Vercel
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('localhost') ? false : {
-    rejectUnauthorized: false
-  }
-});
+// Configure database connection for Vercel - with fallback for immediate functionality
+let dbConfig;
+
+if (process.env.DATABASE_URL) {
+  dbConfig = {
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL.includes('localhost') ? false : {
+      rejectUnauthorized: false
+    }
+  };
+} else {
+  // Fallback to environment variables if DATABASE_URL is missing
+  dbConfig = {
+    host: process.env.PGHOST || 'localhost',
+    port: process.env.PGPORT || 5432,
+    database: process.env.PGDATABASE || 'postgres',
+    user: process.env.PGUSER || 'postgres',
+    password: process.env.PGPASSWORD || '',
+    ssl: process.env.NODE_ENV === 'production' ? {
+      rejectUnauthorized: false
+    } : false
+  };
+}
+
+const pool = new Pool(dbConfig);
 
 module.exports = async function handler(req, res) {
   // Set CORS headers
