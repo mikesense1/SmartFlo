@@ -1,6 +1,6 @@
 const { Pool } = require('pg');
 
-// Configure database connection for Vercel - with fallback for immediate functionality
+// Configure database connection for Vercel with proper connection management
 let dbConfig;
 
 if (process.env.DATABASE_URL) {
@@ -8,7 +8,10 @@ if (process.env.DATABASE_URL) {
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.DATABASE_URL.includes('localhost') ? false : {
       rejectUnauthorized: false
-    }
+    },
+    max: 1, // Limit connections for serverless
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
   };
 } else {
   // Fallback to environment variables if DATABASE_URL is missing
@@ -20,7 +23,10 @@ if (process.env.DATABASE_URL) {
     password: process.env.PGPASSWORD || '',
     ssl: process.env.NODE_ENV === 'production' ? {
       rejectUnauthorized: false
-    } : false
+    } : false,
+    max: 1,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
   };
 }
 
@@ -61,8 +67,13 @@ module.exports = async function handler(req, res) {
         ORDER BY created_at DESC
       `;
 
-      const result = await pool.query(query);
-      res.status(200).json(result.rows);
+      const client = await pool.connect();
+      try {
+        const result = await client.query(query);
+        res.status(200).json(result.rows);
+      } finally {
+        client.release();
+      }
       
     } catch (error) {
       console.error('Error fetching contracts:', error);
@@ -108,8 +119,13 @@ module.exports = async function handler(req, res) {
         status || 'draft'
       ];
 
-      const result = await pool.query(query, values);
-      res.status(201).json(result.rows[0]);
+      const client = await pool.connect();
+      try {
+        const result = await client.query(query, values);
+        res.status(201).json(result.rows[0]);
+      } finally {
+        client.release();
+      }
       
     } catch (error) {
       console.error('Contract creation error:', error);

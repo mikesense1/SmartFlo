@@ -37,28 +37,35 @@ export default function Dashboard() {
     completedProjects: 12
   });
 
-  // Fetch user contracts - using direct contracts API for now
+  // Fetch user contracts with error handling and retry logic
   const { data: contracts = [], isLoading: contractsLoading, error: contractsError } = useQuery({
     queryKey: ["/api/contracts", "user", DEMO_USER.id],
     queryFn: async () => {
-      // Use general contracts API and filter by user ID client-side as fallback
-      const response = await fetch('/api/contracts', {
-        headers: {
-          'Cache-Control': 'no-cache'
+      try {
+        const response = await fetch('/api/contracts', {
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch contracts: ${response.status}`);
         }
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to fetch contracts: ${response.status}`);
+        const data = await response.json();
+        console.log("Fetched all contracts:", data);
+        // Filter by creator_id on client side for now
+        const userContracts = Array.isArray(data) ? data.filter(contract => contract.creator_id === DEMO_USER.id) : [];
+        console.log("User contracts:", userContracts);
+        return userContracts;
+      } catch (error) {
+        console.error("Contract fetch error:", error);
+        // Return empty array on error to prevent crash
+        return [];
       }
-      const data = await response.json();
-      console.log("Fetched all contracts:", data);
-      // Filter by creator_id on client side for now
-      const userContracts = Array.isArray(data) ? data.filter(contract => contract.creator_id === DEMO_USER.id) : [];
-      console.log("User contracts:", userContracts);
-      return userContracts;
     },
-    refetchInterval: 5000, // Refetch every 5 seconds
-    staleTime: 0 // Always consider data stale
+    retry: 3,
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+    refetchInterval: 10000, // Reduced frequency to prevent connection overload
+    staleTime: 5000
   });
 
   // Create new contract mutation
