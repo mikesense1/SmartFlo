@@ -1,16 +1,5 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist/public",
-  "framework": "vite",
-  "functions": {
-    "api/server.js": {
-      "runtime": "@vercel/node@3.0.7"
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/server.js"
-    }
-  ]
+  "framework": "vite"
 }
