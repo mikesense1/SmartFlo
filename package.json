@@ -50,6 +50,7 @@
     "@solana/wallet-adapter-solflare": "^0.6.32",
     "@solana/wallet-adapter-torus": "^0.11.32",
     "@tanstack/react-query": "^5.60.5",
+    "@vercel/node": "^5.3.6",
     "bigint-buffer": "^1.1.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

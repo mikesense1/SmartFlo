@@ -559,17 +559,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug endpoint to test OpenAI API key
+  app.get("/api/debug/openai-status", async (req, res) => {
+    try {
+      const hasApiKey = !!process.env.OPENAI_API_KEY;
+      const keyLength = process.env.OPENAI_API_KEY?.length || 0;
+      const keyPrefix = process.env.OPENAI_API_KEY?.substring(0, 7) || "none";
+      
+      res.json({
+        hasApiKey,
+        keyLength,
+        keyPrefix,
+        environment: process.env.NODE_ENV || "unknown",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        error: "Debug endpoint failed",
+        message: error.message 
+      });
+    }
+  });
+
   // AI Contract Generation endpoints
   app.post("/api/ai/generate-contract", async (req, res) => {
     try {
+      console.log("=== AI Contract Generation Request ===");
+      console.log("OpenAI API Key exists:", !!process.env.OPENAI_API_KEY);
+      console.log("OpenAI API Key length:", process.env.OPENAI_API_KEY?.length || 0);
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
+      
       const contractParams = req.body;
+      console.log("Calling aiContractService.generateFreelanceContract...");
+      
       const generatedContract = await aiContractService.generateFreelanceContract(contractParams);
+      console.log("Contract generated successfully, length:", generatedContract.length);
+      
       res.json({ contract: generatedContract });
     } catch (error) {
-      console.error("Contract generation error:", error);
+      console.error("=== Contract Generation Error ===");
+      console.error("Error type:", error.constructor.name);
+      console.error("Error message:", error.message);
+      console.error("Full error:", error);
+      
+      // Check for specific OpenAI errors
+      if (error.message?.includes('API key')) {
+        console.error("This appears to be an API key issue");
+      }
+      
       res.status(500).json({ 
         message: "Failed to generate contract",
-        error: error instanceof Error ? error.message : "Unknown error"
+        error: error instanceof Error ? error.message : "Unknown error",
+        debug: {
+          hasApiKey: !!process.env.OPENAI_API_KEY,
+          errorType: error.constructor.name
+        }
       });
     }
   });
