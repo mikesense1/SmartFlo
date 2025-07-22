@@ -61,6 +61,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Contract routes
+  app.get("/api/contracts", async (req, res) => {
+    try {
+      console.log("Fetching contracts from storage...");
+      const contracts = await storage.getContracts();
+      console.log(`Successfully retrieved ${contracts.length} contracts`);
+      res.json(contracts);
+    } catch (error) {
+      console.error("Error fetching contracts:", error);
+      // Return empty array to prevent dashboard crash
+      res.json([]);
+    }
+  });
+
   app.post("/api/contracts", async (req, res) => {
     try {
       console.log("Creating contract with data:", req.body);
