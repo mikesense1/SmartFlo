@@ -127,7 +127,7 @@ export default function Dashboard() {
   };
 
   const activeContracts = contracts.filter(c => c.status === "active");
-  const totalEarnings = contracts.reduce((sum, c) => sum + parseFloat(c.totalValue || "0"), 0);
+  const totalEarnings = contracts.reduce((sum, c) => sum + parseFloat(c.totalValue || c.total_value || "0"), 0);
   const completedContracts = contracts.filter(c => c.status === "completed").length;
 
   // Setup real-time payment event listeners
@@ -442,7 +442,7 @@ export default function Dashboard() {
                         <div>
                           <CardTitle className="text-lg">{contract.title}</CardTitle>
                           <CardDescription>
-                            {contract.clientName} • {contract.clientEmail}
+                            {contract.clientName || contract.client_name} • {contract.clientEmail || contract.client_email}
                           </CardDescription>
                         </div>
                         <Badge className={getStatusColor(contract.status)}>
@@ -454,12 +454,12 @@ export default function Dashboard() {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <div className="text-sm text-slate-500">Total Value</div>
-                          <div className="text-xl font-semibold">${parseFloat(contract.totalValue).toLocaleString()}</div>
+                          <div className="text-xl font-semibold">${parseFloat(contract.totalValue || contract.total_value || "0").toLocaleString()}</div>
                         </div>
                         <div>
                           <div className="text-sm text-slate-500">Payment Method</div>
                           <div className="flex items-center gap-2">
-                            {contract.paymentMethod === "stripe" ? (
+                            {(contract.paymentMethod || contract.payment_method) === "stripe" ? (
                               <>
                                 <CreditCard className="w-4 h-4" />
                                 <span>Credit Card</span>
@@ -474,14 +474,14 @@ export default function Dashboard() {
                         </div>
                         <div>
                           <div className="text-sm text-slate-500">Type</div>
-                          <div className="capitalize">{contract.contractType.replace("_", " ")}</div>
+                          <div className="capitalize">{(contract.contractType || contract.contract_type || "milestone_based").replace("_", " ")}</div>
                         </div>
                       </div>
                       <div className="mt-4">
                         <div className="text-sm text-slate-500 mb-2">Project Description</div>
-                        <p className="text-sm text-slate-700">{contract.projectDescription}</p>
+                        <p className="text-sm text-slate-700">{contract.projectDescription || contract.project_description}</p>
                       </div>
-                      {contract.contractType === "milestone_based" && (
+                      {(contract.contractType || contract.contract_type) === "milestone_based" && (
                         <div className="mt-4">
                           <div className="flex justify-between items-center mb-2">
                             <span className="text-sm text-slate-500">Progress</span>

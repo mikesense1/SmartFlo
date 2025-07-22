@@ -101,7 +101,13 @@ SmartFlo is a modern web application designed to solve the payment delays and di
 - **Schema Push**: `drizzle-kit push` for development schema updates
 - **Connection**: Environment variable-based database URL configuration
 
-## Recent Changes
+## Recent Changes  
+- July 22, 2025: Fixed dashboard blank screen issue for production deployment
+  - Added loading spinner to prevent blank screen during initial data fetch
+  - Fixed API field name compatibility between development (camelCase) and production (snake_case)
+  - Handle both creator_id/creatorId, client_name/clientName, total_value/totalValue field formats
+  - Disabled automatic polling to reduce server load and connection issues
+  - Added comprehensive error handling with graceful fallbacks for dashboard stability
 - July 13, 2025: Rebranded entire application from PayFlow to SmartFlo
   - Updated all branding across frontend components (navigation, footer, hero section)
   - Modified all documentation files (README.md, deployment guides, platform overview)
