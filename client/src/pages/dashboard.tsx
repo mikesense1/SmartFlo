@@ -65,11 +65,12 @@ export default function Dashboard() {
           return [];
         }
         
-        // Filter by creator_id on client side for now
+        // Filter by creator_id on client side - handle both field name formats
         const userContracts = data.filter(contract => 
-          contract && contract.creator_id === DEMO_USER.id
+          contract && (contract.creator_id === DEMO_USER.id || contract.creatorId === DEMO_USER.id)
         );
         console.log("User contracts filtered:", userContracts.length);
+        console.log("Sample contract fields:", data[0] ? Object.keys(data[0]) : "No contracts");
         return userContracts;
         
       } catch (error) {
@@ -80,11 +81,13 @@ export default function Dashboard() {
     },
     retry: 2, // Reduce retries to prevent connection overload
     retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 5000),
-    refetchInterval: 30000, // Less frequent polling
-    staleTime: 10000,
+    refetchInterval: false, // Disable automatic polling to reduce server load
+    staleTime: 60000,
     // Ensure the query doesn't cause the dashboard to go blank on errors
     throwOnError: false,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    // Add error boundary to catch any remaining issues
+    suspense: false
   });
 
   // Create new contract mutation
@@ -143,6 +146,23 @@ export default function Dashboard() {
       paymentTriggers.removeEventListener('milestone_approved', handlePaymentEvent);
     };
   }, []);
+
+  // Show loading spinner only on initial page load
+  if (contractsLoading && contracts.length === 0) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Navigation />
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
+          <div className="flex items-center justify-center h-96">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <div className="text-slate-600">Loading your dashboard...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
