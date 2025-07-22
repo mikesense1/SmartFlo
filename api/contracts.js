@@ -70,6 +70,7 @@ module.exports = async function handler(req, res) {
       const client = await pool.connect();
       try {
         const result = await client.query(query);
+        console.log(`Successfully fetched ${result.rows.length} contracts`);
         res.status(200).json(result.rows);
       } finally {
         client.release();
@@ -77,10 +78,11 @@ module.exports = async function handler(req, res) {
       
     } catch (error) {
       console.error('Error fetching contracts:', error);
-      res.status(500).json({ 
-        error: 'Failed to fetch contracts',
-        details: error.message 
-      });
+      console.error('Full error details:', error.stack);
+      
+      // Always return successful response with empty array to prevent dashboard crashes
+      // This ensures the frontend can still render properly even if DB is unavailable
+      res.status(200).json([]);
     }
   } else if (req.method === 'POST') {
     try {

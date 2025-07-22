@@ -970,8 +970,9 @@ export default function CreateContract() {
         }]);
         setCustomPrompt("");
         
-        // Navigate to dashboard
-        window.location.href = '/dashboard';
+        // Navigate to dashboard immediately - avoid any potential redirect conflicts
+        console.log("Redirecting to dashboard after successful contract creation");
+        window.location.replace('/dashboard');
       }, 2000);
       
     } catch (error) {

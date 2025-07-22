@@ -37,35 +37,54 @@ export default function Dashboard() {
     completedProjects: 12
   });
 
-  // Fetch user contracts with error handling and retry logic
+  // Fetch user contracts with improved error handling and graceful fallbacks
   const { data: contracts = [], isLoading: contractsLoading, error: contractsError } = useQuery({
     queryKey: ["/api/contracts", "user", DEMO_USER.id],
     queryFn: async () => {
       try {
+        console.log("Fetching user contracts...");
         const response = await fetch('/api/contracts', {
+          method: 'GET',
           headers: {
+            'Content-Type': 'application/json',
             'Cache-Control': 'no-cache'
           }
         });
+        
         if (!response.ok) {
-          throw new Error(`Failed to fetch contracts: ${response.status}`);
+          console.warn(`Contract fetch returned ${response.status}, using fallback data`);
+          // Return empty array but don't throw error to prevent blank dashboard
+          return [];
         }
+        
         const data = await response.json();
-        console.log("Fetched all contracts:", data);
+        console.log("Successfully fetched contracts:", data);
+        
+        if (!Array.isArray(data)) {
+          console.warn("Invalid contract data format, using fallback");
+          return [];
+        }
+        
         // Filter by creator_id on client side for now
-        const userContracts = Array.isArray(data) ? data.filter(contract => contract.creator_id === DEMO_USER.id) : [];
-        console.log("User contracts:", userContracts);
+        const userContracts = data.filter(contract => 
+          contract && contract.creator_id === DEMO_USER.id
+        );
+        console.log("User contracts filtered:", userContracts.length);
         return userContracts;
+        
       } catch (error) {
-        console.error("Contract fetch error:", error);
-        // Return empty array on error to prevent crash
+        console.error("Contract fetch error (using fallback):", error);
+        // Always return empty array instead of throwing to prevent dashboard crash
         return [];
       }
     },
-    retry: 3,
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-    refetchInterval: 10000, // Reduced frequency to prevent connection overload
-    staleTime: 5000
+    retry: 2, // Reduce retries to prevent connection overload
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 5000),
+    refetchInterval: 30000, // Less frequent polling
+    staleTime: 10000,
+    // Ensure the query doesn't cause the dashboard to go blank on errors
+    throwOnError: false,
+    refetchOnWindowFocus: false
   });
 
   // Create new contract mutation
