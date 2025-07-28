@@ -23,6 +23,7 @@ import { calculateTotalWithFees, formatCurrency, getPaymentMethodName, type Paym
 interface ProjectSetupData {
   projectType: "website" | "mobile_app" | "design" | "consulting" | "content" | "custom";
   scopeOfWork: string;
+  customScopeOfWork?: string; // For "Other" option
   title: string;
   description: string;
   startDate: string;
@@ -35,6 +36,7 @@ interface ClientDetailsData {
   clientEmail: string;
   clientCompany?: string;
   projectBudget: string;
+  hourlyRate?: string; // For hourly rate contracts
 }
 
 interface ContractPricing {
@@ -97,7 +99,8 @@ const SCOPE_OF_WORK_OPTIONS = [
   "Virtual Assistant",
   "Project Management",
   "Quality Assurance Testing",
-  "Custom Software Solution"
+  "Custom Software Solution",
+  "Other"
 ];
 
 // Step Components - moved outside main component to prevent recreation
@@ -148,6 +151,18 @@ const ProjectSetupStep = ({ projectData, updateProjectData }: Pick<StepProps, 'p
           </SelectContent>
         </Select>
       </div>
+
+      {/* Custom Scope of Work Input - Shows when "Other" is selected */}
+      {projectData.scopeOfWork === "Other" && (
+        <div>
+          <label className="text-sm font-medium mb-2 block">Custom Scope of Work</label>
+          <Input 
+            value={projectData.customScopeOfWork || ""}
+            placeholder="Please specify your type of work..."
+            onChange={(e) => updateProjectData("customScopeOfWork", e.target.value)}
+          />
+        </div>
+      )}
 
       <div>
         <label className="text-sm font-medium mb-2 block">Project Description</label>
@@ -202,7 +217,7 @@ const ProjectSetupStep = ({ projectData, updateProjectData }: Pick<StepProps, 'p
   </Card>
 );
 
-const ClientDetailsStep = ({ clientData, updateClientData }: Pick<StepProps, 'clientData' | 'updateClientData'>) => (
+const ClientDetailsStep = ({ clientData, updateClientData, projectData }: Pick<StepProps, 'clientData' | 'updateClientData' | 'projectData'>) => (
   <Card>
     <CardHeader>
       <CardTitle className="flex items-center gap-2">
@@ -243,14 +258,29 @@ const ClientDetailsStep = ({ clientData, updateClientData }: Pick<StepProps, 'cl
         />
       </div>
 
-      <div>
-        <label className="text-sm font-medium mb-2 block">Project Budget ($)</label>
-        <Input 
-          type="number"
-          value={clientData.projectBudget}
-          placeholder="5000"
-          onChange={(e) => updateClientData("projectBudget", e.target.value)}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-medium mb-2 block">Project Budget ($)</label>
+          <Input 
+            type="number"
+            value={clientData.projectBudget}
+            placeholder="5000"
+            onChange={(e) => updateClientData("projectBudget", e.target.value)}
+          />
+        </div>
+        
+        {/* Hourly Rate Input - Shows when "hourly" pricing model is selected */}
+        {projectData.pricingModel === "hourly" && (
+          <div>
+            <label className="text-sm font-medium mb-2 block">Hourly Rate ($)</label>
+            <Input 
+              type="number"
+              value={clientData.hourlyRate || ""}
+              placeholder="75"
+              onChange={(e) => updateClientData("hourlyRate", e.target.value)}
+            />
+          </div>
+        )}
       </div>
     </CardContent>
   </Card>
@@ -881,7 +911,8 @@ export default function CreateContract() {
     clientName: "",
     clientEmail: "",
     clientCompany: "",
-    projectBudget: ""
+    projectBudget: "",
+    hourlyRate: ""
   });
   
   // AI Contract Generation State
@@ -1077,7 +1108,8 @@ export default function CreateContract() {
           clientName: "",
           clientEmail: "",
           clientCompany: "",
-          projectBudget: ""
+          projectBudget: "",
+          hourlyRate: ""
         });
         setMilestones([{
           title: "",
@@ -1127,7 +1159,7 @@ export default function CreateContract() {
       case 1:
         return <ProjectSetupStep projectData={projectData} updateProjectData={updateProjectData} />;
       case 2:
-        return <ClientDetailsStep clientData={clientData} updateClientData={updateClientData} />;
+        return <ClientDetailsStep clientData={clientData} updateClientData={updateClientData} projectData={projectData} />;
       case 3:
         return <MilestoneBuilderStep 
           milestones={milestones} 
