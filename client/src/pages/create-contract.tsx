@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/navigation";
 import { aiContractService } from "@/lib/openai-service";
 import { queryClient } from "@/lib/queryClient";
-import { calculateTotalWithFees, formatCurrency, getPaymentMethodName, type PaymentMethod } from "@shared/pricing";
+import { calculateTotalWithFees, formatCurrency, getPaymentMethodName, getFeeBreakdown, type PaymentMethod } from "@shared/pricing";
 
 // Types
 interface ProjectSetupData {
@@ -697,8 +697,8 @@ const PaymentSetupStep = ({
   milestones,
   clientData
 }: {
-  selectedPaymentMethod: "stripe" | "usdc";
-  setSelectedPaymentMethod: (method: "stripe" | "usdc") => void;
+  selectedPaymentMethod: PaymentMethod;
+  setSelectedPaymentMethod: (method: PaymentMethod) => void;
   milestones: MilestoneData[];
   clientData: ClientDetailsData;
 }) => {
@@ -709,7 +709,13 @@ const PaymentSetupStep = ({
 
   // Calculate fees for each payment method
   const usdcFees = calculateTotalWithFees(totalContractValue * 100, "usdc");
-  const cardFees = calculateTotalWithFees(totalContractValue * 100, "card");
+  const stripeAchFees = calculateTotalWithFees(totalContractValue * 100, "stripe_ach");
+  const stripeCardFees = calculateTotalWithFees(totalContractValue * 100, "stripe_card");
+  
+  // Get fee breakdowns for display
+  const usdcBreakdown = getFeeBreakdown("usdc", totalContractValue * 100);
+  const achBreakdown = getFeeBreakdown("stripe_ach", totalContractValue * 100);
+  const cardBreakdown = getFeeBreakdown("stripe_card", totalContractValue * 100);
 
   return (
   <div className="space-y-6">
@@ -725,15 +731,15 @@ const PaymentSetupStep = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Traditional Payment Option */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Stripe Credit Card Option */}
             <div 
               className={`border-2 rounded-lg p-6 cursor-pointer transition-all ${
-                selectedPaymentMethod === "stripe" 
+                selectedPaymentMethod === "stripe_card" 
                   ? "border-blue-500 bg-blue-50" 
                   : "border-slate-200 hover:border-slate-300"
               }`}
-              onClick={() => setSelectedPaymentMethod("stripe")}
+              onClick={() => setSelectedPaymentMethod("stripe_card")}
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -741,24 +747,28 @@ const PaymentSetupStep = ({
                     <CreditCard className="w-6 h-6 text-purple-600" />
                   </div>
                   <div>
-                    <h3 className="font-medium">USD Payments (Stripe)</h3>
-                    <p className="text-sm text-slate-500">Credit card, bank transfer, ACH</p>
+                    <h3 className="font-medium">Credit/Debit Card</h3>
+                    <p className="text-sm text-slate-500">Visa, Mastercard, Amex</p>
                   </div>
                 </div>
                 <div className={`w-5 h-5 rounded-full border-2 ${
-                  selectedPaymentMethod === "stripe" 
+                  selectedPaymentMethod === "stripe_card" 
                     ? "border-blue-500 bg-blue-500" 
                     : "border-slate-300"
                 }`}>
-                  {selectedPaymentMethod === "stripe" && (
+                  {selectedPaymentMethod === "stripe_card" && (
                     <CheckCircle className="w-5 h-5 text-white" />
                   )}
                 </div>
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Processing Fee:</span>
-                  <span className="text-red-600">{cardFees.feePercentage.toFixed(1)}% + $0.30</span>
+                  <span className="text-slate-600">Stripe Fee:</span>
+                  <span className="text-red-600">{cardBreakdown.stripeRate} + $0.30</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">SmartFlo Fee:</span>
+                  <span className="text-red-600">{cardBreakdown.smartfloRate}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">Settlement Time:</span>
@@ -779,21 +789,88 @@ const PaymentSetupStep = ({
                 <div className="text-sm space-y-1">
                   <div className="flex justify-between">
                     <span>Contract Amount:</span>
-                    <span>{formatCurrency(cardFees.contractAmount)}</span>
+                    <span>{formatCurrency(stripeCardFees.contractAmount)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Transaction Fee:</span>
-                    <span>{formatCurrency(cardFees.transactionFee)}</span>
+                    <span>Total Fee:</span>
+                    <span>{formatCurrency(stripeCardFees.transactionFee)}</span>
                   </div>
                   <div className="flex justify-between font-medium">
-                    <span>Client Pays Total:</span>
-                    <span>{formatCurrency(cardFees.totalAmount)}</span>
+                    <span>Client Pays:</span>
+                    <span>{formatCurrency(stripeCardFees.totalAmount)}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Crypto Payment Option */}
+            {/* Stripe ACH Option */}
+            <div 
+              className={`border-2 rounded-lg p-6 cursor-pointer transition-all ${
+                selectedPaymentMethod === "stripe_ach" 
+                  ? "border-purple-500 bg-purple-50" 
+                  : "border-slate-200 hover:border-slate-300"
+              }`}
+              onClick={() => setSelectedPaymentMethod("stripe_ach")}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                    <Globe className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">ACH Bank Transfer</h3>
+                    <p className="text-sm text-slate-500">Direct bank transfer</p>
+                  </div>
+                </div>
+                <div className={`w-5 h-5 rounded-full border-2 ${
+                  selectedPaymentMethod === "stripe_ach" 
+                    ? "border-purple-500 bg-purple-500" 
+                    : "border-slate-300"
+                }`}>
+                  {selectedPaymentMethod === "stripe_ach" && (
+                    <CheckCircle className="w-5 h-5 text-white" />
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Stripe Fee:</span>
+                  <span className="text-red-600">{achBreakdown.stripeRate} (max $5)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">SmartFlo Fee:</span>
+                  <span className="text-red-600">{achBreakdown.smartfloRate}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Settlement Time:</span>
+                  <span className="text-amber-600">3-5 business days</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Dispute Protection:</span>
+                  <span className="text-green-600">✓ Included</span>
+                </div>
+              </div>
+              
+              {/* Fee Display */}
+              <div className="mt-4 pt-4 border-t bg-slate-50 p-3 rounded">
+                <div className="text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span>Contract Amount:</span>
+                    <span>{formatCurrency(stripeAchFees.contractAmount)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Total Fee:</span>
+                    <span>{formatCurrency(stripeAchFees.transactionFee)}</span>
+                  </div>
+                  <div className="flex justify-between font-medium">
+                    <span>Client Pays:</span>
+                    <span>{formatCurrency(stripeAchFees.totalAmount)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* USDC Crypto Option */}
             <div 
               className={`border-2 rounded-lg p-6 cursor-pointer transition-all ${
                 selectedPaymentMethod === "usdc" 
@@ -824,8 +901,8 @@ const PaymentSetupStep = ({
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Transaction Fee:</span>
-                  <span className="text-green-600">{usdcFees.feePercentage.toFixed(1)}% (max $100)</span>
+                  <span className="text-slate-600">SmartFlo Fee:</span>
+                  <span className="text-red-600">{usdcBreakdown.rate} (max $100)</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">Settlement Time:</span>
@@ -849,11 +926,11 @@ const PaymentSetupStep = ({
                     <span>{formatCurrency(usdcFees.contractAmount)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Transaction Fee:</span>
+                    <span>Total Fee:</span>
                     <span>{formatCurrency(usdcFees.transactionFee)}</span>
                   </div>
                   <div className="flex justify-between font-medium">
-                    <span>Client Pays Total:</span>
+                    <span>Client Pays:</span>
                     <span>{formatCurrency(usdcFees.totalAmount)}</span>
                   </div>
                 </div>
@@ -1017,7 +1094,7 @@ export default function CreateContract() {
   const [customPrompt, setCustomPrompt] = useState("");
   
   // Payment Setup State
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"stripe" | "usdc">("stripe");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>("stripe_card");
   const [isCreating, setIsCreating] = useState(false);
 
   const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 5));
@@ -1105,10 +1182,9 @@ export default function CreateContract() {
 
       // Calculate total including fees based on payment method
       let totalContractValue = milestoneTotal;
-      if (selectedPaymentMethod === "stripe") {
-        // For Stripe, add the transaction fees to the contract total
-        const paymentMethod = "card"; // Stripe uses card fees
-        const feesCalculation = calculateTotalWithFees(milestoneTotal * 100, paymentMethod);
+      if (selectedPaymentMethod.startsWith("stripe_")) {
+        // For Stripe methods, add the transaction fees to the contract total
+        const feesCalculation = calculateTotalWithFees(milestoneTotal * 100, selectedPaymentMethod);
         totalContractValue = feesCalculation.totalAmount / 100; // Convert back to dollars
       }
 

@@ -84,32 +84,38 @@ export const PRICING_PLANS: PricingPlan[] = [
   }
 ];
 
-export type PaymentMethod = "usdc" | "ach" | "card";
+export type PaymentMethod = "usdc" | "stripe_ach" | "stripe_card";
 
 export interface TransactionFeeConfig {
   method: PaymentMethod;
   feePercentage: number; // as decimal (e.g., 0.015 for 1.5%)
   feeCap?: number; // in cents, undefined means no cap
-  baseStripeFee?: number; // for card payments, in cents
-  stripePercentage?: number; // for card payments, as decimal
+  baseStripeFee?: number; // for stripe payments, in cents
+  stripePercentage?: number; // for stripe payments, as decimal
+  smartfloFee: number; // SmartFlo additional fee as decimal
 }
 
 export const TRANSACTION_FEE_CONFIG: Record<PaymentMethod, TransactionFeeConfig> = {
   usdc: {
     method: "usdc",
     feePercentage: 0.015, // 1.5%
-    feeCap: 10000 // $100 cap
+    feeCap: 10000, // $100 cap
+    smartfloFee: 0 // No additional fee for USDC
   },
-  ach: {
-    method: "ach", 
-    feePercentage: 0.02, // 2%
-    feeCap: 20000 // $200 cap
+  stripe_ach: {
+    method: "stripe_ach", 
+    feePercentage: 0.008, // 0.8% Stripe ACH fee
+    feeCap: 500, // $5.00 cap per Stripe
+    baseStripeFee: 0, // No fixed fee for ACH
+    stripePercentage: 0.008, // 0.8% Stripe ACH
+    smartfloFee: 0.005 // 0.5% SmartFlo fee
   },
-  card: {
-    method: "card",
-    feePercentage: 0.005, // 0.5% additional
-    baseStripeFee: 30, // $0.30
-    stripePercentage: 0.035 // 3.5% (updated from 2.9%)
+  stripe_card: {
+    method: "stripe_card",
+    feePercentage: 0.029, // 2.9% Stripe card fee
+    baseStripeFee: 30, // $0.30 Stripe fixed fee
+    stripePercentage: 0.029, // 2.9% Stripe card fee
+    smartfloFee: 0.005 // 0.5% SmartFlo fee
     // No cap for card payments
   }
 };
@@ -132,13 +138,18 @@ export function calculateTransactionFee(
 
   let fee = 0;
 
-  if (paymentMethod === "card") {
-    // Card fees: Stripe fee + our additional fee
+  if (paymentMethod === "stripe_card") {
+    // Stripe Card fees: Stripe percentage + fixed fee + SmartFlo fee
     const stripeFee = (amountCents * (config.stripePercentage || 0)) + (config.baseStripeFee || 0);
-    const additionalFee = amountCents * config.feePercentage;
-    fee = stripeFee + additionalFee;
+    const smartfloFee = amountCents * config.smartfloFee;
+    fee = stripeFee + smartfloFee;
+  } else if (paymentMethod === "stripe_ach") {
+    // Stripe ACH fees: Stripe percentage (with cap) + SmartFlo fee
+    const stripeAchFee = Math.min(amountCents * (config.stripePercentage || 0), config.feeCap || Infinity);
+    const smartfloFee = amountCents * config.smartfloFee;
+    fee = stripeAchFee + smartfloFee;
   } else {
-    // USDC and ACH: percentage with cap
+    // USDC: percentage with cap, no SmartFlo fee
     fee = amountCents * config.feePercentage;
     
     if (config.feeCap && fee > config.feeCap) {
@@ -190,8 +201,51 @@ export function formatCurrency(cents: number): string {
 export function getPaymentMethodName(method: PaymentMethod): string {
   const names = {
     usdc: "USDC (Crypto)",
-    ach: "ACH (Bank Transfer)", 
-    card: "Credit/Debit Card"
+    stripe_ach: "ACH Bank Transfer", 
+    stripe_card: "Credit/Debit Card"
   };
   return names[method] || method;
+}
+
+/**
+ * Get fee breakdown details for display
+ * @param method - Payment method
+ * @param amountCents - Amount in cents
+ * @returns Fee breakdown object
+ */
+export function getFeeBreakdown(method: PaymentMethod, amountCents: number) {
+  const config = TRANSACTION_FEE_CONFIG[method];
+  const calculation = calculateTotalWithFees(amountCents, method);
+  
+  if (method === "stripe_card") {
+    const stripeFee = (amountCents * (config.stripePercentage || 0)) + (config.baseStripeFee || 0);
+    const smartfloFee = amountCents * config.smartfloFee;
+    
+    return {
+      stripeFee,
+      smartfloFee,
+      totalFee: calculation.transactionFee,
+      stripeRate: `${((config.stripePercentage || 0) * 100).toFixed(1)}%`,
+      smartfloRate: `${(config.smartfloFee * 100).toFixed(1)}%`,
+      fixedFee: config.baseStripeFee || 0
+    };
+  } else if (method === "stripe_ach") {
+    const stripeAchFee = Math.min(amountCents * (config.stripePercentage || 0), config.feeCap || Infinity);
+    const smartfloFee = amountCents * config.smartfloFee;
+    
+    return {
+      stripeFee: stripeAchFee,
+      smartfloFee,
+      totalFee: calculation.transactionFee,
+      stripeRate: `${((config.stripePercentage || 0) * 100).toFixed(1)}%`,
+      smartfloRate: `${(config.smartfloFee * 100).toFixed(1)}%`,
+      feeCap: config.feeCap
+    };
+  } else {
+    return {
+      totalFee: calculation.transactionFee,
+      rate: `${(config.feePercentage * 100).toFixed(1)}%`,
+      feeCap: config.feeCap
+    };
+  }
 }
