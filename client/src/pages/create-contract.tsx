@@ -462,7 +462,9 @@ const ContractGenerationStep = ({
   generateContract,
   customPrompt,
   setCustomPrompt,
-  selectedPaymentMethod
+  selectedPaymentMethod,
+  finalizeContract,
+  isCreating
 }: Pick<StepProps, 'projectData' | 'clientData' | 'milestones'> & {
   generatedContract: string;
   riskAnalysis: RiskAnalysis | null;
@@ -472,6 +474,8 @@ const ContractGenerationStep = ({
   customPrompt: string;
   setCustomPrompt: (value: string) => void;
   selectedPaymentMethod: "stripe" | "usdc";
+  finalizeContract: () => Promise<void>;
+  isCreating: boolean;
 }) => (
   <div className="space-y-6">
     <Card>
@@ -577,24 +581,44 @@ const ContractGenerationStep = ({
                 </p>
               </div>
               
-              <Button 
-                onClick={generateContract}
-                variant="outline"
-                disabled={isGenerating}
-                className="w-full"
-              >
-                {isGenerating ? (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2 animate-spin" />
-                    Regenerating...
-                  </>
-                ) : (
-                  <>
-                    <Brain className="w-4 h-4 mr-2" />
-                    Regenerate Contract with AI
-                  </>
-                )}
-              </Button>
+              <div className="grid grid-cols-2 gap-4">
+                <Button 
+                  onClick={generateContract}
+                  variant="outline"
+                  disabled={isGenerating}
+                  className="w-full"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2 animate-spin" />
+                      Regenerating...
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="w-4 h-4 mr-2" />
+                      Regenerate Contract
+                    </>
+                  )}
+                </Button>
+                
+                <Button 
+                  onClick={finalizeContract}
+                  disabled={isCreating || isGenerating}
+                  className="w-full"
+                >
+                  {isCreating ? (
+                    <>
+                      <Sparkles className="w-5 h-5 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-5 h-5 mr-2" />
+                      Create & Send Contract
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -670,15 +694,11 @@ const ContractGenerationStep = ({
 const PaymentSetupStep = ({ 
   selectedPaymentMethod,
   setSelectedPaymentMethod,
-  finalizeContract,
-  isCreating,
   milestones,
   clientData
 }: {
   selectedPaymentMethod: "stripe" | "usdc";
   setSelectedPaymentMethod: (method: "stripe" | "usdc") => void;
-  finalizeContract: () => Promise<void>;
-  isCreating: boolean;
   milestones: MilestoneData[];
   clientData: ClientDetailsData;
 }) => {
@@ -927,24 +947,24 @@ const PaymentSetupStep = ({
             </div>
           </div>
 
-          <Button 
-            onClick={finalizeContract}
-            className="w-full"
-            size="lg"
-            disabled={isCreating}
-          >
-            {isCreating ? (
-              <>
-                <Sparkles className="w-5 h-5 mr-2 animate-spin" />
-                Creating Contract...
-              </>
-            ) : (
-              <>
-                <FileText className="w-5 h-5 mr-2" />
-                Create Contract & Send to Client
-              </>
-            )}
-          </Button>
+          <div className="flex gap-4">
+            <Button 
+              variant="outline"
+              onClick={() => {/* Will be handled by parent navigation */}}
+              className="flex-1"
+              size="lg"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              Back to Milestones
+            </Button>
+            <Button 
+              className="flex-1"
+              size="lg"
+            >
+              <Brain className="w-5 h-5 mr-2" />
+              Continue to AI Contract Generation
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -1243,8 +1263,6 @@ export default function CreateContract() {
         return <PaymentSetupStep 
           selectedPaymentMethod={selectedPaymentMethod}
           setSelectedPaymentMethod={setSelectedPaymentMethod}
-          finalizeContract={finalizeContract}
-          isCreating={isCreating}
           milestones={milestones}
           clientData={clientData}
         />;
@@ -1261,6 +1279,8 @@ export default function CreateContract() {
           customPrompt={customPrompt}
           setCustomPrompt={setCustomPrompt}
           selectedPaymentMethod={selectedPaymentMethod}
+          finalizeContract={finalizeContract}
+          isCreating={isCreating}
         />;
       default:
         return null;
