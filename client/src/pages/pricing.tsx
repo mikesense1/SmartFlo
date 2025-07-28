@@ -121,8 +121,8 @@ const TRANSACTION_FEES = [
   },
   {
     method: "Credit/Debit Cards",
-    fee: "Stripe + 0.5%",
-    cap: "No cap",
+    fee: "3.5%",
+    cap: "+ $0.30 per transaction",
     description: "Instant payments via Stripe with industry-standard processing"
   }
 ];

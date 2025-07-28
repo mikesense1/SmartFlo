@@ -109,7 +109,7 @@ export const TRANSACTION_FEE_CONFIG: Record<PaymentMethod, TransactionFeeConfig>
     method: "card",
     feePercentage: 0.005, // 0.5% additional
     baseStripeFee: 30, // $0.30
-    stripePercentage: 0.029 // 2.9%
+    stripePercentage: 0.035 // 3.5% (updated from 2.9%)
     // No cap for card payments
   }
 };
