@@ -23,10 +23,14 @@ export const contracts = pgTable("contracts", {
   clientEmail: text("client_email").notNull(),
   projectDescription: text("project_description").notNull(),
   totalValue: decimal("total_value").notNull(),
-  paymentMethod: text("payment_method").notNull(), // 'stripe' or 'usdc'
+  paymentMethod: text("payment_method").notNull(), // 'stripe_card', 'stripe_ach', or 'usdc'
   contractType: text("contract_type").notNull(), // 'fixed_price' or 'milestone_based'
   status: text("status").notNull().default("draft"), // 'draft', 'sent', 'active', 'completed', 'disputed'
   solanaProgramAddress: text("solana_program_address"),
+  escrowAddress: text("escrow_address"),
+  blockchainNetwork: text("blockchain_network"),
+  deploymentTx: text("deployment_tx"),
+  blockchainStatus: text("blockchain_status").default("pending"), // 'pending', 'deployed', 'active', 'completed'
   metadataUri: text("metadata_uri"),
   createdAt: timestamp("created_at").defaultNow(),
   activatedAt: timestamp("activated_at"),
@@ -64,7 +68,7 @@ export const payments = pgTable("payments", {
   contractId: uuid("contract_id").notNull().references(() => contracts.id),
   milestoneId: uuid("milestone_id").references(() => milestones.id),
   amount: decimal("amount").notNull(),
-  method: text("method").notNull(), // 'stripe' or 'usdc'
+  method: text("method").notNull(), // 'stripe_card', 'stripe_ach', or 'usdc'
   status: text("status").notNull().default("pending"), // 'pending', 'escrowed', 'released', 'refunded'
   stripePaymentIntentId: text("stripe_payment_intent_id"),
   solanaEscrowAccount: text("solana_escrow_account"),

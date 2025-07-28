@@ -1269,10 +1269,34 @@ export default function CreateContract() {
         queryKey: ["/api/contracts", createdContract.id, "milestones"]
       });
       
-      toast({
-        title: "Contract Created Successfully!",
-        description: "Contract has been saved and is ready to send to your client",
-      });
+      // Check blockchain deployment status
+      try {
+        const blockchainResponse = await fetch(`/api/contracts/${createdContract.id}/blockchain-status`);
+        if (blockchainResponse.ok) {
+          const blockchainStatus = await blockchainResponse.json();
+          console.log("Blockchain deployment status:", blockchainStatus);
+          
+          if (blockchainStatus.status === "deployed") {
+            console.log(`Smart contract deployed at: ${blockchainStatus.contractAddress}`);
+            
+            toast({
+              title: "Smart Contract Deployed!",
+              description: `Contract created with blockchain escrow at ${blockchainStatus.contractAddress?.slice(0, 8)}...`,
+            });
+          } else {
+            toast({
+              title: "Contract Created Successfully!",
+              description: "Contract saved. Smart contract deployment in progress...",
+            });
+          }
+        }
+      } catch (blockchainError) {
+        console.warn("Could not check blockchain status:", blockchainError);
+        toast({
+          title: "Contract Created Successfully!",
+          description: "Contract has been saved and is ready to send to your client",
+        });
+      }
       
       // Reset form and redirect to dashboard after success
       setTimeout(() => {

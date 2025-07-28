@@ -102,6 +102,14 @@ SmartFlo is a modern web application designed to solve the payment delays and di
 - **Connection**: Environment variable-based database URL configuration
 
 ## Recent Changes  
+- July 28, 2025: Implemented blockchain smart contract deployment for all payment methods
+  - All contracts automatically deploy as smart contracts regardless of payment method (Stripe Card, Stripe ACH, USDC)
+  - Enhanced payment method selection with three distinct options showing transparent fee breakdowns
+  - Integrated blockchain deployment service with automated smart contract creation upon contract finalization
+  - Added blockchain status monitoring and payment automation for milestone-based releases
+  - Updated database schema to track smart contract addresses, escrow accounts, and deployment status
+  - Created hybrid Stripe-blockchain integration for traditional payment methods with blockchain escrow
+  - Enhanced contract creation to show blockchain deployment status and smart contract addresses
 - July 28, 2025: Implemented comprehensive pricing structure and transaction fee system
   - Updated pricing plans: Free (2 contracts/month), Pro ($29/month, 10 contracts), Business ($79/month, unlimited), Enterprise (custom)
   - Added transaction fees: USDC 1.5% (capped $100), ACH 2% (capped $200), Cards 3.5% + $0.30

@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { aiContractService } from "./openai-service";
+import { blockchainService } from "./blockchain-service";
 import { 
   insertUserSchema, insertContactSchema, insertContractSchema, 
   insertMilestoneSchema, insertPaymentSchema, insertContractActivitySchema 
@@ -89,6 +90,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         actorEmail: contractData.clientEmail,
         details: { contractTitle: contract.title }
       });
+      
+      // Automatically deploy smart contract for all payment methods
+      try {
+        console.log(`Deploying smart contract for contract ${contract.id}`);
+        await blockchainService.deployContractBlockchain(contract.id);
+        console.log(`Smart contract deployed successfully for contract ${contract.id}`);
+      } catch (blockchainError) {
+        console.error(`Smart contract deployment failed for contract ${contract.id}:`, blockchainError);
+        // Contract creation succeeds even if blockchain deployment fails
+        // Frontend can show deployment status and retry if needed
+      }
       
       res.json(contract); // Return the full contract object
     } catch (error) {
@@ -477,29 +489,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/contracts/:contractId/blockchain-status", async (req, res) => {
     try {
       const { contractId } = req.params;
-      
-      const contract = await storage.getContract(contractId);
-      if (!contract) {
-        return res.status(404).json({ error: "Contract not found" });
-      }
-      
-      // Mock blockchain status
-      const blockchainStatus = {
-        contractAddress: `solana_contract_${contractId}`,
-        escrowAddress: `escrow_${contractId}`,
-        escrowBalance: contract.paymentMethod === 'usdc' ? parseFloat(contract.totalValue) : 0,
-        amountReleased: 0,
-        isActive: contract.status === 'funded',
-        lastSyncAt: new Date().toISOString(),
-        network: "devnet"
-      };
-      
-      res.json(blockchainStatus);
-      
+      const status = await blockchainService.getBlockchainStatus(contractId);
+      res.json(status);
     } catch (error) {
       console.error("Failed to get blockchain status:", error);
       res.status(500).json({ 
         error: "Failed to get blockchain status",
+        details: error.message 
+      });
+    }
+  });
+
+  // Deploy smart contract manually (if auto-deployment failed)
+  app.post("/api/contracts/:contractId/deploy-blockchain", async (req, res) => {
+    try {
+      const { contractId } = req.params;
+      console.log(`Manual blockchain deployment requested for contract ${contractId}`);
+      
+      await blockchainService.deployContractBlockchain(contractId);
+      
+      res.json({ 
+        success: true, 
+        message: "Smart contract deployed successfully" 
+      });
+    } catch (error) {
+      console.error("Manual blockchain deployment failed:", error);
+      res.status(500).json({ 
+        error: "Blockchain deployment failed",
+        details: error.message 
+      });
+    }
+  });
+
+  // Stripe payment confirmation webhook
+  app.post("/api/webhooks/stripe/:contractId", async (req, res) => {
+    try {
+      const { contractId } = req.params;
+      const { paymentIntentId, status } = req.body;
+      
+      if (status === "succeeded") {
+        console.log(`Stripe payment confirmed for contract ${contractId}`);
+        await blockchainService.handleStripePaymentConfirmation(paymentIntentId, contractId);
+        
+        res.json({ 
+          success: true, 
+          message: "Payment confirmed and smart contract activated" 
+        });
+      } else {
+        res.json({ message: "Payment not yet confirmed" });
+      }
+    } catch (error) {
+      console.error("Stripe webhook processing failed:", error);
+      res.status(500).json({ 
+        error: "Webhook processing failed",
+        details: error.message 
+      });
+    }
+  });
+
+  // Milestone approval with blockchain payment
+  app.post("/api/contracts/:contractId/milestones/:milestoneId/approve", async (req, res) => {
+    try {
+      const { contractId, milestoneId } = req.params;
+      const { approved, approvedBy } = req.body;
+      
+      console.log(`Processing milestone ${milestoneId} approval: ${approved ? 'approved' : 'rejected'}`);
+      
+      await blockchainService.processMilestoneCompletion(
+        contractId,
+        milestoneId,
+        approved,
+        approvedBy || "client"
+      );
+      
+      // Check if contract is fully completed
+      await blockchainService.checkContractCompletion(contractId);
+      
+      res.json({ 
+        success: true, 
+        message: approved ? "Milestone approved and payment released" : "Milestone rejected" 
+      });
+    } catch (error) {
+      console.error("Milestone approval failed:", error);
+      res.status(500).json({ 
+        error: "Milestone approval failed",
         details: error.message 
       });
     }

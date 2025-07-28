@@ -24,6 +24,7 @@ export interface IStorage {
   updateContract(id: string, updates: Partial<Contract>): Promise<Contract | undefined>;
   
   // Milestone operations
+  getMilestone(id: string): Promise<Milestone | undefined>;
   getMilestonesByContract(contractId: string): Promise<Milestone[]>;
   createMilestone(milestone: InsertMilestone): Promise<Milestone>;
   updateMilestone(id: string, updates: Partial<Milestone>): Promise<Milestone | undefined>;
@@ -111,6 +112,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Milestone operations
+  async getMilestone(id: string): Promise<Milestone | undefined> {
+    const [milestone] = await db.select().from(milestones).where(eq(milestones.id, id));
+    return milestone || undefined;
+  }
+
   async getMilestonesByContract(contractId: string): Promise<Milestone[]> {
     return await db.select().from(milestones).where(eq(milestones.contractId, contractId));
   }
