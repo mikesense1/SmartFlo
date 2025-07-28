@@ -290,8 +290,30 @@ const MilestoneBuilderStep = ({
   milestones, 
   updateMilestone, 
   addMilestone, 
-  removeMilestone
-}: Pick<StepProps, 'milestones' | 'updateMilestone' | 'addMilestone' | 'removeMilestone'>) => (
+  removeMilestone,
+  clientData
+}: Pick<StepProps, 'milestones' | 'updateMilestone' | 'addMilestone' | 'removeMilestone' | 'clientData'>) => {
+  
+  // Calculate milestone amount based on percentage
+  const calculateMilestoneAmount = (percentage: number): string => {
+    const budget = parseFloat(clientData.projectBudget) || 0;
+    return Math.round(budget * (percentage / 100)).toString();
+  };
+
+  // Calculate total contract amount from all milestones
+  const getTotalContractAmount = (): number => {
+    return milestones.reduce((total, milestone) => {
+      const amount = parseFloat(milestone.amount) || 0;
+      return total + amount;
+    }, 0);
+  };
+
+  // Get total percentage
+  const getTotalPercentage = (): number => {
+    return milestones.reduce((total, milestone) => total + (milestone.percentage || 0), 0);
+  };
+
+  return (
   <Card>
     <CardHeader>
       <CardTitle className="flex items-center gap-2">
@@ -356,11 +378,22 @@ const MilestoneBuilderStep = ({
                     // Add % symbol back on blur
                     const numValue = parseInt(e.target.value) || 0;
                     updateMilestone(index, "percentage", numValue);
+                    // Auto-calculate amount based on percentage
+                    if (numValue > 0) {
+                      const calculatedAmount = calculateMilestoneAmount(numValue);
+                      updateMilestone(index, "amount", calculatedAmount);
+                    }
                   }}
                   onChange={(e) => {
                     // Allow only numeric input
                     const value = e.target.value.replace(/[^0-9]/g, '');
-                    updateMilestone(index, "percentage", parseInt(value) || 0);
+                    const numValue = parseInt(value) || 0;
+                    updateMilestone(index, "percentage", numValue);
+                    // Auto-calculate amount based on percentage in real-time
+                    if (numValue > 0) {
+                      const calculatedAmount = calculateMilestoneAmount(numValue);
+                      updateMilestone(index, "amount", calculatedAmount);
+                    }
                   }}
                 />
               </div>
@@ -381,9 +414,42 @@ const MilestoneBuilderStep = ({
         <Plus className="w-4 h-4 mr-2" />
         Add Milestone
       </Button>
+
+      {/* Summary Section */}
+      <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <h4 className="font-medium text-blue-900 mb-2">Contract Summary</h4>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-blue-700">Project Budget:</span>
+            <span className="font-medium ml-2">${clientData.projectBudget || '0'}</span>
+          </div>
+          <div>
+            <span className="text-blue-700">Total Percentage:</span>
+            <span className={`font-medium ml-2 ${getTotalPercentage() === 100 ? 'text-green-600' : getTotalPercentage() > 100 ? 'text-red-600' : 'text-blue-900'}`}>
+              {getTotalPercentage()}%
+            </span>
+          </div>
+          <div>
+            <span className="text-blue-700">Contract Total:</span>
+            <span className="font-medium ml-2">${getTotalContractAmount().toLocaleString()}</span>
+          </div>
+          <div>
+            <span className="text-blue-700">Remaining:</span>
+            <span className="font-medium ml-2">
+              ${(parseFloat(clientData.projectBudget) - getTotalContractAmount() || 0).toLocaleString()}
+            </span>
+          </div>
+        </div>
+        {getTotalPercentage() !== 100 && (
+          <div className="mt-2 text-xs text-amber-600">
+            💡 Tip: Total percentage should equal 100% for complete project coverage
+          </div>
+        )}
+      </div>
     </CardContent>
   </Card>
-);
+  );
+};
 
 const ContractGenerationStep = ({ 
   projectData, 
@@ -1004,13 +1070,18 @@ export default function CreateContract() {
     setIsCreating(true);
     
     try {
+      // Calculate total contract value from milestones
+      const totalContractValue = milestones.reduce((total, milestone) => {
+        return total + (parseFloat(milestone.amount) || 0);
+      }, 0);
+
       // Create the contract with all the gathered data
       const contractData = {
         title: projectData.title,
         projectDescription: projectData.description,
         clientName: clientData.clientName,
         clientEmail: clientData.clientEmail,
-        totalValue: clientData.projectBudget,
+        totalValue: totalContractValue.toString(),
         paymentMethod: selectedPaymentMethod,
         contractType: "milestone_based",
         startDate: projectData.startDate,
@@ -1166,6 +1237,7 @@ export default function CreateContract() {
           updateMilestone={updateMilestone}
           addMilestone={addMilestone}
           removeMilestone={removeMilestone}
+          clientData={clientData}
         />;
       case 4:
         return <PaymentSetupStep 
