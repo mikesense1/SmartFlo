@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/navigation";
 import { aiContractService } from "@/lib/openai-service";
 import { queryClient } from "@/lib/queryClient";
+import { calculateTotalWithFees, formatCurrency, getPaymentMethodName, type PaymentMethod } from "@shared/pricing";
 
 // Types
 interface ProjectSetupData {
@@ -34,6 +35,13 @@ interface ClientDetailsData {
   clientEmail: string;
   clientCompany?: string;
   projectBudget: string;
+}
+
+interface ContractPricing {
+  contractAmount: number;
+  transactionFee: number;
+  totalAmount: number;
+  feePercentage: number;
 }
 
 interface MilestoneData {
@@ -357,7 +365,8 @@ const ContractGenerationStep = ({
   isAnalyzing,
   generateContract,
   customPrompt,
-  setCustomPrompt
+  setCustomPrompt,
+  selectedPaymentMethod
 }: Pick<StepProps, 'projectData' | 'clientData' | 'milestones'> & {
   generatedContract: string;
   riskAnalysis: RiskAnalysis | null;
@@ -366,6 +375,7 @@ const ContractGenerationStep = ({
   generateContract: () => Promise<void>;
   customPrompt: string;
   setCustomPrompt: (value: string) => void;
+  selectedPaymentMethod: "stripe" | "usdc";
 }) => (
   <div className="space-y-6">
     <Card>
@@ -565,13 +575,28 @@ const PaymentSetupStep = ({
   selectedPaymentMethod,
   setSelectedPaymentMethod,
   finalizeContract,
-  isCreating
+  isCreating,
+  milestones,
+  clientData
 }: {
   selectedPaymentMethod: "stripe" | "usdc";
   setSelectedPaymentMethod: (method: "stripe" | "usdc") => void;
   finalizeContract: () => Promise<void>;
   isCreating: boolean;
-}) => (
+  milestones: MilestoneData[];
+  clientData: ClientDetailsData;
+}) => {
+  // Calculate total contract value
+  const totalContractValue = milestones.reduce((sum, milestone) => {
+    return sum + parseFloat(milestone.amount || "0");
+  }, 0);
+
+  // Calculate fees for each payment method
+  const usdcFees = calculateTotalWithFees(totalContractValue * 100, "usdc");
+  const achFees = calculateTotalWithFees(totalContractValue * 100, "ach");
+  const cardFees = calculateTotalWithFees(totalContractValue * 100, "card");
+
+  return (
   <div className="space-y-6">
     <Card>
       <CardHeader>
@@ -666,8 +691,8 @@ const PaymentSetupStep = ({
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Processing Fee:</span>
-                  <span className="text-green-600">~$0.50 gas fee</span>
+                  <span className="text-slate-600">Transaction Fee:</span>
+                  <span className="text-green-600">{usdcFees.feePercentage.toFixed(1)}% (max $100)</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">Settlement Time:</span>
@@ -680,6 +705,24 @@ const PaymentSetupStep = ({
                 <div className="flex justify-between">
                   <span className="text-slate-600">Client Requirements:</span>
                   <span className="text-amber-600">Crypto Wallet</span>
+                </div>
+              </div>
+              
+              {/* Fee Display */}
+              <div className="mt-4 pt-4 border-t bg-slate-50 p-3 rounded">
+                <div className="text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span>Contract Amount:</span>
+                    <span>{formatCurrency(usdcFees.contractAmount)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Transaction Fee:</span>
+                    <span>{formatCurrency(usdcFees.transactionFee)}</span>
+                  </div>
+                  <div className="flex justify-between font-medium">
+                    <span>Client Pays Total:</span>
+                    <span>{formatCurrency(usdcFees.totalAmount)}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -810,7 +853,8 @@ const PaymentSetupStep = ({
       </CardContent>
     </Card>
   </div>
-);
+  );
+};
 
 export default function CreateContract() {
   const { toast } = useToast();
@@ -1097,6 +1141,8 @@ export default function CreateContract() {
           setSelectedPaymentMethod={setSelectedPaymentMethod}
           finalizeContract={finalizeContract}
           isCreating={isCreating}
+          milestones={milestones}
+          clientData={clientData}
         />;
       case 5:
         return <ContractGenerationStep 
@@ -1110,6 +1156,7 @@ export default function CreateContract() {
           generateContract={generateContract}
           customPrompt={customPrompt}
           setCustomPrompt={setCustomPrompt}
+          selectedPaymentMethod={selectedPaymentMethod}
         />;
       default:
         return null;

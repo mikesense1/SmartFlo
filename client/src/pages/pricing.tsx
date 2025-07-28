@@ -7,13 +7,13 @@ import { Link } from "wouter";
 
 const PRICING_PLANS = [
   {
-    name: "Starter",
+    name: "Free",
     price: "$0",
-    period: "Forever Free",
+    period: "Forever",
     description: "Perfect for trying out SmartFlo with basic freelance projects",
     icon: Zap,
     features: [
-      "Up to 3 contracts per month",
+      "2 contracts per month",
       "Basic milestone tracking",
       "Email notifications",
       "Standard contract templates",
@@ -21,45 +21,50 @@ const PRICING_PLANS = [
       "Community support"
     ],
     limitations: [
-      "No AI contract generation",
-      "No risk analysis",
-      "Basic dispute resolution"
+      "Limited AI contract generation",
+      "Basic risk analysis",
+      "Standard dispute resolution"
     ],
     buttonText: "Get Started Free",
     buttonVariant: "outline" as const,
     popular: false
   },
   {
-    name: "Professional",
+    name: "Pro",
     price: "$29",
     period: "per month",
+    originalPrice: "$348",
+    annualPrice: "$290",
     description: "For active freelancers who want AI-powered contract protection",
     icon: Crown,
     features: [
-      "Unlimited contracts",
-      "AI contract generation",
+      "10 contracts per month",
+      "Full AI contract generation",
       "Advanced risk analysis",
       "Smart milestone suggestions",
       "Priority email support",
-      "Stripe + Crypto payments",
+      "All payment methods (USDC, ACH, Cards)",
       "Auto payment release",
       "Advanced dispute resolution",
       "Client payment tracking",
       "Custom contract templates"
     ],
     limitations: [],
-    buttonText: "Start Professional Trial",
+    buttonText: "Start Pro Trial",
     buttonVariant: "default" as const,
     popular: true
   },
   {
-    name: "Agency",
-    price: "$99",
+    name: "Business",
+    price: "$79",
     period: "per month",
-    description: "For agencies managing multiple freelancers and client relationships",
+    originalPrice: "$948",
+    annualPrice: "$790",
+    description: "For agencies and teams managing multiple client relationships",
     icon: Building,
     features: [
-      "Everything in Professional",
+      "Unlimited contracts",
+      "Everything in Pro",
       "Team collaboration tools",
       "Client management dashboard",
       "White-label contracts",
@@ -68,7 +73,31 @@ const PRICING_PLANS = [
       "Priority phone support",
       "Custom integrations",
       "Bulk contract creation",
-      "Advanced reporting"
+      "Advanced reporting",
+      "Volume discount rates"
+    ],
+    limitations: [],
+    buttonText: "Start Business Trial",
+    buttonVariant: "outline" as const,
+    popular: false
+  },
+  {
+    name: "Enterprise",
+    price: "Custom",
+    period: "Contact us",
+    description: "For large organizations with custom requirements",
+    icon: Building,
+    features: [
+      "Everything in Business",
+      "Custom contract limits",
+      "Dedicated account manager",
+      "Custom integrations",
+      "SLA guarantees",
+      "On-premise deployment options",
+      "Custom training",
+      "Negotiable transaction rates",
+      "Priority feature requests",
+      "Custom compliance support"
     ],
     limitations: [],
     buttonText: "Contact Sales",
@@ -77,26 +106,51 @@ const PRICING_PLANS = [
   }
 ];
 
+const TRANSACTION_FEES = [
+  {
+    method: "USDC (Crypto)",
+    fee: "1.5%",
+    cap: "$100 max",
+    description: "Fast, secure blockchain payments with instant settlement"
+  },
+  {
+    method: "ACH (Bank Transfer)",
+    fee: "2%", 
+    cap: "$200 max",
+    description: "Direct bank transfers with 2-3 business day settlement"
+  },
+  {
+    method: "Credit/Debit Cards",
+    fee: "Stripe + 0.5%",
+    cap: "No cap",
+    description: "Instant payments via Stripe with industry-standard processing"
+  }
+];
+
 const FAQ_ITEMS = [
   {
-    question: "How does the payment processing work?",
-    answer: "SmartFlo supports both traditional payments via Stripe (credit cards, bank transfers) and crypto payments via USDC on Solana. All payments are held in secure escrow until milestones are approved."
+    question: "What are the transaction fees?",
+    answer: "USDC: 1.5% (capped at $100), ACH: 2% (capped at $200), Cards: Stripe rates + 0.5%. Fees are automatically added to contract amounts and clearly displayed to clients."
   },
   {
-    question: "What happens if a client disputes a milestone?",
-    answer: "Our dispute resolution system includes automated evidence collection, AI-powered assessment, and human mediation when needed. Most disputes are resolved within 3-5 business days."
+    question: "How does annual billing work?",
+    answer: "Annual plans get 2 months free! Pro costs $290/year (vs $348 monthly) and Business costs $790/year (vs $948 monthly). You can switch to annual billing anytime."
   },
   {
-    question: "Can I use my own contract templates?",
-    answer: "Yes! Professional and Agency plans allow custom contract templates. Our AI can also enhance your existing templates with protective clauses and risk analysis."
+    question: "What happens if I exceed my contract limit?",
+    answer: "Free plan: You'll be prompted to upgrade. Pro plan: You can purchase additional contracts at $5 each or upgrade to Business for unlimited contracts."
+  },
+  {
+    question: "How do referrals work?",
+    answer: "Refer friends and get 1 month free for each successful referral who becomes a paying customer. There's no limit to how many free months you can earn!"
+  },
+  {
+    question: "Can I get volume discounts?",
+    answer: "Business plan includes volume discounts on transaction fees. Enterprise customers can negotiate custom rates based on volume. High-volume freelancers should contact sales."
   },
   {
     question: "Is there a setup fee or long-term commitment?",
-    answer: "No setup fees and no long-term contracts. You can upgrade, downgrade, or cancel anytime. The free tier remains free forever."
-  },
-  {
-    question: "How secure are the crypto payments?",
-    answer: "Crypto payments use audited smart contracts on Solana with multi-signature security. Funds are held in escrow until both parties confirm milestone completion."
+    answer: "No setup fees and no long-term contracts. You can upgrade, downgrade, or cancel anytime. The free tier remains free forever with 2 contracts per month."
   }
 ];
 
@@ -119,8 +173,40 @@ export default function Pricing() {
           </p>
         </div>
 
+        {/* Annual Billing Toggle */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center bg-slate-100 rounded-lg p-1">
+            <button className="px-4 py-2 text-sm font-medium rounded-md bg-white text-slate-900 shadow-sm">
+              Monthly
+            </button>
+            <button className="px-4 py-2 text-sm font-medium rounded-md text-slate-600 hover:text-slate-900">
+              Annual (2 months free!)
+            </button>
+          </div>
+        </div>
+
+        {/* Transaction Fees Section */}
+        <div className="mb-12">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">Transaction Fees</h2>
+            <p className="text-slate-600">Transparent fees automatically added to contract amounts</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {TRANSACTION_FEES.map((fee, index) => (
+              <Card key={index} className="text-center">
+                <CardContent className="p-6">
+                  <h3 className="font-semibold text-lg mb-2">{fee.method}</h3>
+                  <div className="text-2xl font-bold text-blue-600 mb-1">{fee.fee}</div>
+                  <div className="text-sm text-slate-500 mb-3">{fee.cap}</div>
+                  <p className="text-sm text-slate-600">{fee.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
         {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           {PRICING_PLANS.map((plan) => {
             const IconComponent = plan.icon;
             return (
@@ -142,6 +228,12 @@ export default function Pricing() {
                     <span className="text-4xl font-bold text-slate-900">{plan.price}</span>
                     <span className="text-slate-500 ml-2">{plan.period}</span>
                   </div>
+                  {plan.originalPrice && (
+                    <div className="text-sm text-slate-500 mb-2">
+                      <span className="line-through">{plan.originalPrice}/year</span>
+                      <span className="ml-2 text-green-600 font-medium">{plan.annualPrice}/year</span>
+                    </div>
+                  )}
                   <CardDescription className="text-base">
                     {plan.description}
                   </CardDescription>

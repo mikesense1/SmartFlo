@@ -6,6 +6,7 @@ import {
   insertUserSchema, insertContactSchema, insertContractSchema, 
   insertMilestoneSchema, insertPaymentSchema, insertContractActivitySchema 
 } from "@shared/schema";
+import { calculateTotalWithFees, formatCurrency, TRANSACTION_FEE_CONFIG, type PaymentMethod } from "@shared/pricing";
 // Mock SmartPaymentTriggers for backend operations
 class SmartPaymentTriggers {
   async initializeContract(contractId: string) {
@@ -549,6 +550,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Webhook processing failed",
         details: error.message 
       });
+    }
+  });
+
+  // Pricing calculation endpoint
+  app.post("/api/pricing/calculate", async (req, res) => {
+    try {
+      const { contractAmount, paymentMethod } = req.body;
+
+      // Validate input
+      if (!contractAmount || typeof contractAmount !== 'number' || contractAmount <= 0) {
+        return res.status(400).json({
+          error: 'Invalid contract amount. Must be a positive number.'
+        });
+      }
+
+      if (!paymentMethod || !TRANSACTION_FEE_CONFIG[paymentMethod as PaymentMethod]) {
+        return res.status(400).json({
+          error: 'Invalid payment method. Must be one of: usdc, ach, card'
+        });
+      }
+
+      // Calculate fees (contractAmount expected in cents)
+      const pricing = calculateTotalWithFees(contractAmount, paymentMethod as PaymentMethod);
+      
+      res.json({
+        success: true,
+        data: {
+          ...pricing,
+          contractAmountFormatted: formatCurrency(pricing.contractAmount),
+          transactionFeeFormatted: formatCurrency(pricing.transactionFee),
+          totalAmountFormatted: formatCurrency(pricing.totalAmount),
+          paymentMethod,
+          feeConfig: TRANSACTION_FEE_CONFIG[paymentMethod as PaymentMethod]
+        }
+      });
+
+    } catch (error) {
+      console.error('Pricing calculation error:', error);
+      res.status(500).json({
+        error: 'Failed to calculate pricing',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get fee configuration
+  app.get("/api/pricing/fees", async (req, res) => {
+    try {
+      res.json({
+        success: true,
+        data: {
+          feeConfig: TRANSACTION_FEE_CONFIG,
+          supportedMethods: Object.keys(TRANSACTION_FEE_CONFIG)
+        }
+      });
+    } catch (error) {
+      console.error('Error getting fee config:', error);
+      res.status(500).json({ error: 'Failed to get fee configuration' });
     }
   });
 

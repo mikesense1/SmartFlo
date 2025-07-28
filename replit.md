@@ -102,6 +102,16 @@ SmartFlo is a modern web application designed to solve the payment delays and di
 - **Connection**: Environment variable-based database URL configuration
 
 ## Recent Changes  
+- July 28, 2025: Implemented comprehensive pricing structure and transaction fee system
+  - Updated pricing plans: Free (2 contracts/month), Pro ($29/month, 10 contracts), Business ($79/month, unlimited), Enterprise (custom)
+  - Added transaction fees: USDC 1.5% (capped $100), ACH 2% (capped $200), Cards Stripe + 0.5%
+  - Created pricing calculation utilities in shared/pricing.ts with fee calculation functions
+  - Added pricing API endpoints for fee calculations and configuration retrieval
+  - Enhanced contract creation to show real-time fee calculations based on payment method
+  - Added special offers: Annual billing (2 months free), Referrals (1 month free), Volume discounts
+  - Updated pricing page with transaction fee display and annual billing toggle
+  - Enhanced payment method selection step with transparent fee breakdowns
+  - Created Vercel-compatible API pricing endpoint for deployment readiness
 - July 22, 2025: Fixed dashboard blank screen issue for production deployment
   - Added loading spinner to prevent blank screen during initial data fetch
   - Fixed API field name compatibility between development (camelCase) and production (snake_case)
