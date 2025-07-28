@@ -709,7 +709,6 @@ const PaymentSetupStep = ({
 
   // Calculate fees for each payment method
   const usdcFees = calculateTotalWithFees(totalContractValue * 100, "usdc");
-  const achFees = calculateTotalWithFees(totalContractValue * 100, "ach");
   const cardFees = calculateTotalWithFees(totalContractValue * 100, "card");
 
   return (
@@ -759,7 +758,7 @@ const PaymentSetupStep = ({
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-600">Processing Fee:</span>
-                  <span className="text-red-600">2.9% + $0.30</span>
+                  <span className="text-red-600">{cardFees.feePercentage.toFixed(1)}% + $0.30</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">Settlement Time:</span>
@@ -772,6 +771,24 @@ const PaymentSetupStep = ({
                 <div className="flex justify-between">
                   <span className="text-slate-600">Client Requirements:</span>
                   <span className="text-green-600">Credit/Debit Card</span>
+                </div>
+              </div>
+              
+              {/* Fee Display */}
+              <div className="mt-4 pt-4 border-t bg-slate-50 p-3 rounded">
+                <div className="text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span>Contract Amount:</span>
+                    <span>{formatCurrency(cardFees.contractAmount)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Transaction Fee:</span>
+                    <span>{formatCurrency(cardFees.transactionFee)}</span>
+                  </div>
+                  <div className="flex justify-between font-medium">
+                    <span>Client Pays Total:</span>
+                    <span>{formatCurrency(cardFees.totalAmount)}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1082,9 +1099,18 @@ export default function CreateContract() {
     
     try {
       // Calculate total contract value from milestones
-      const totalContractValue = milestones.reduce((total, milestone) => {
+      const milestoneTotal = milestones.reduce((total, milestone) => {
         return total + (parseFloat(milestone.amount) || 0);
       }, 0);
+
+      // Calculate total including fees based on payment method
+      let totalContractValue = milestoneTotal;
+      if (selectedPaymentMethod === "stripe") {
+        // For Stripe, add the transaction fees to the contract total
+        const paymentMethod = "card"; // Stripe uses card fees
+        const feesCalculation = calculateTotalWithFees(milestoneTotal * 100, paymentMethod);
+        totalContractValue = feesCalculation.totalAmount / 100; // Convert back to dollars
+      }
 
       // Create the contract with all the gathered data
       const contractData = {

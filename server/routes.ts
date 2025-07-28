@@ -704,6 +704,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Pricing calculation routes
+  app.post("/api/pricing/calculate", async (req, res) => {
+    try {
+      const { contractAmount, paymentMethod } = req.body;
+
+      // Validate input
+      if (!contractAmount || typeof contractAmount !== 'number' || contractAmount <= 0) {
+        return res.status(400).json({
+          error: 'Invalid contract amount. Must be a positive number.'
+        });
+      }
+
+      if (!paymentMethod || !TRANSACTION_FEE_CONFIG[paymentMethod as PaymentMethod]) {
+        return res.status(400).json({
+          error: 'Invalid payment method. Must be one of: usdc, ach, card'
+        });
+      }
+
+      // Calculate fees (contractAmount should be in cents)
+      const pricing = calculateTotalWithFees(contractAmount, paymentMethod as PaymentMethod);
+      
+      return res.status(200).json({
+        success: true,
+        data: {
+          ...pricing,
+          contractAmountFormatted: formatCurrency(pricing.contractAmount),
+          transactionFeeFormatted: formatCurrency(pricing.transactionFee),
+          totalAmountFormatted: formatCurrency(pricing.totalAmount),
+          paymentMethod,
+          feeConfig: TRANSACTION_FEE_CONFIG[paymentMethod as PaymentMethod]
+        }
+      });
+
+    } catch (error) {
+      console.error('Pricing calculation error:', error);
+      return res.status(500).json({
+        error: 'Failed to calculate pricing',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get("/api/pricing/config", async (req, res) => {
+    try {
+      return res.status(200).json({
+        success: true,
+        data: {
+          feeConfig: TRANSACTION_FEE_CONFIG,
+          supportedMethods: Object.keys(TRANSACTION_FEE_CONFIG)
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching pricing config:', error);
+      return res.status(500).json({
+        error: 'Failed to fetch pricing configuration'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
