@@ -947,23 +947,14 @@ const PaymentSetupStep = ({
             </div>
           </div>
 
-          <div className="flex gap-4">
-            <Button 
-              variant="outline"
-              onClick={() => {/* Will be handled by parent navigation */}}
-              className="flex-1"
-              size="lg"
-            >
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Back to Milestones
-            </Button>
-            <Button 
-              className="flex-1"
-              size="lg"
-            >
-              <Brain className="w-5 h-5 mr-2" />
-              Continue to AI Contract Generation
-            </Button>
+          <div className="text-center py-4 border-t">
+            <div className="flex items-center justify-center gap-2 text-green-600 mb-2">
+              <CheckCircle className="w-5 h-5" />
+              <span className="font-medium">Payment Method Selected</span>
+            </div>
+            <p className="text-sm text-slate-500">
+              Use the navigation buttons below to continue to AI contract generation
+            </p>
           </div>
         </div>
       </CardContent>
