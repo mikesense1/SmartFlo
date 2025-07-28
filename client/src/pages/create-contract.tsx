@@ -10,8 +10,9 @@ import {
   Brain, Wallet, Plus, Trash2, 
   FileText, Sparkles, Shield,
   CheckCircle, ArrowRight, ArrowLeft, Target, Users,
-  CreditCard, Zap, Globe, Lock
+  CreditCard, Zap, Globe, Lock, ChevronDown
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/navigation";
 import { aiContractService } from "@/lib/openai-service";
@@ -20,6 +21,7 @@ import { queryClient } from "@/lib/queryClient";
 // Types
 interface ProjectSetupData {
   projectType: "website" | "mobile_app" | "design" | "consulting" | "content" | "custom";
+  scopeOfWork: string;
   title: string;
   description: string;
   startDate: string;
@@ -58,8 +60,36 @@ const WIZARD_STEPS = [
   "Project Setup",
   "Client Details", 
   "Smart Milestones",
-  "AI Contract & Review",
-  "Payment Setup"
+  "Payment Method",
+  "AI Contract & Review"
+];
+
+const SCOPE_OF_WORK_OPTIONS = [
+  "Website Development",
+  "Mobile App Development", 
+  "UI/UX Design",
+  "Logo & Brand Design",
+  "Content Writing",
+  "Blog Writing",
+  "Copywriting",
+  "SEO Services",
+  "Social Media Management",
+  "Marketing Campaign",
+  "Business Consulting",
+  "Data Analysis",
+  "Software Development",
+  "API Integration",
+  "Database Design",
+  "E-commerce Development",
+  "WordPress Development",
+  "Graphic Design",
+  "Video Editing",
+  "Photography",
+  "Translation Services",
+  "Virtual Assistant",
+  "Project Management",
+  "Quality Assurance Testing",
+  "Custom Software Solution"
 ];
 
 // Step Components - moved outside main component to prevent recreation
@@ -93,6 +123,22 @@ const ProjectSetupStep = ({ projectData, updateProjectData }: Pick<StepProps, 'p
           placeholder="E-commerce Website Development"
           onChange={(e) => updateProjectData("title", e.target.value)}
         />
+      </div>
+
+      <div>
+        <label className="text-sm font-medium mb-2 block">Scope of Work Type</label>
+        <Select value={projectData.scopeOfWork} onValueChange={(value) => updateProjectData("scopeOfWork", value)}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select the type of work you'll be doing" />
+          </SelectTrigger>
+          <SelectContent>
+            {SCOPE_OF_WORK_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div>
@@ -259,12 +305,27 @@ const MilestoneBuilderStep = ({
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Percentage</label>
-              <Input
-                type="number"
-                placeholder="25"
-                value={milestone.percentage}
-                onChange={(e) => updateMilestone(index, "percentage", parseInt(e.target.value) || 0)}
-              />
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder="25%"
+                  value={milestone.percentage ? `${milestone.percentage}%` : ''}
+                  onFocus={(e) => {
+                    // Clear the % symbol on focus for easier editing
+                    e.target.value = milestone.percentage ? milestone.percentage.toString() : '';
+                  }}
+                  onBlur={(e) => {
+                    // Add % symbol back on blur
+                    const numValue = parseInt(e.target.value) || 0;
+                    updateMilestone(index, "percentage", numValue);
+                  }}
+                  onChange={(e) => {
+                    // Allow only numeric input
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    updateMilestone(index, "percentage", parseInt(value) || 0);
+                  }}
+                />
+              </div>
             </div>
             <div className="md:col-span-2">
               <label className="text-sm font-medium mb-1 block">Deliverables</label>
@@ -320,6 +381,17 @@ const ContractGenerationStep = ({
       <CardContent>
         {!generatedContract ? (
           <div className="space-y-6">
+            {/* Payment Method Preview */}
+            <div className="bg-slate-50 p-4 rounded-lg border">
+              <div className="flex items-center gap-2 mb-2">
+                <Wallet className="w-4 h-4 text-slate-600" />
+                <span className="font-medium text-sm">Selected Payment Method</span>
+              </div>
+              <p className="text-sm text-slate-600">
+                {selectedPaymentMethod === "stripe" ? "Traditional USD payments via Stripe" : "Crypto payments via USDC on Solana"}
+              </p>
+            </div>
+
             {/* Custom Prompt Section */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -360,7 +432,7 @@ const ContractGenerationStep = ({
                 )}
               </Button>
               <p className="text-sm text-slate-500">
-                AI will create a professional contract based on your project details and custom requirements
+                AI will create a professional contract based on your project details, milestones, and {selectedPaymentMethod === "stripe" ? "traditional payment" : "crypto payment"} preferences
               </p>
             </div>
           </div>
@@ -754,6 +826,7 @@ export default function CreateContract() {
   ]);
   const [projectData, setProjectData] = useState<ProjectSetupData>({
     projectType: "website",
+    scopeOfWork: "",
     title: "",
     description: "",
     startDate: "",
@@ -949,6 +1022,7 @@ export default function CreateContract() {
         setRiskAnalysis(null);
         setProjectData({
           projectType: "website",
+          scopeOfWork: "",
           title: "",
           description: "",
           startDate: "",
@@ -1018,6 +1092,13 @@ export default function CreateContract() {
           removeMilestone={removeMilestone}
         />;
       case 4:
+        return <PaymentSetupStep 
+          selectedPaymentMethod={selectedPaymentMethod}
+          setSelectedPaymentMethod={setSelectedPaymentMethod}
+          finalizeContract={finalizeContract}
+          isCreating={isCreating}
+        />;
+      case 5:
         return <ContractGenerationStep 
           projectData={projectData}
           clientData={clientData}
@@ -1029,13 +1110,6 @@ export default function CreateContract() {
           generateContract={generateContract}
           customPrompt={customPrompt}
           setCustomPrompt={setCustomPrompt}
-        />;
-      case 5:
-        return <PaymentSetupStep 
-          selectedPaymentMethod={selectedPaymentMethod}
-          setSelectedPaymentMethod={setSelectedPaymentMethod}
-          finalizeContract={finalizeContract}
-          isCreating={isCreating}
         />;
       default:
         return null;

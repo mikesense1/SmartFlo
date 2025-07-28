@@ -58,19 +58,18 @@ export default function Navigation() {
                   <Link href="/" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
                     Home
                   </Link>
+                  <Link href="/features" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
+                    Features
+                  </Link>
+                  <Link href="/pricing" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
+                    Pricing
+                  </Link>
+                  <Link href="/about" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
+                    About
+                  </Link>
                   <Link href="/dashboard" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
                     Dashboard
                   </Link>
-                  <Link href="/blockchain-status" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
-                    Blockchain
-                  </Link>
-                  <Link href="/milestone-tracker" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
-                    Milestones
-                  </Link>
-                  <Link href="/client-payment" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
-                    Fund Contract
-                  </Link>
-
                 </>
               )}
               <Button variant="ghost" className="text-slate-600 hover:text-slate-900">

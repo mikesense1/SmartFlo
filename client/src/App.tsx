@@ -6,6 +6,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import CreateContract from "@/pages/create-contract";
+import Pricing from "@/pages/pricing";
+import Features from "@/pages/features";
+import About from "@/pages/about";
 import BlockchainStatus from "@/pages/blockchain-status";
 import MilestoneTracker from "@/pages/milestone-tracker";
 import ClientPayment from "@/pages/client-payment";
@@ -19,6 +22,9 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/dashboard/contracts/new" component={CreateContract} />
       <Route path="/create-contract" component={CreateContract} />
+      <Route path="/pricing" component={Pricing} />
+      <Route path="/features" component={Features} />
+      <Route path="/about" component={About} />
       <Route path="/blockchain-status" component={BlockchainStatus} />
       <Route path="/blockchain-test" component={BlockchainTest} />
       <Route path="/milestone-tracker/:id?" component={MilestoneTracker} />
