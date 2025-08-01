@@ -204,6 +204,32 @@ Analyze and provide JSON response with:
       };
     }
   }
+
+  async generateTemplateRecommendations(prompt: string): Promise<any[]> {
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [
+          {
+            role: "system", 
+            content: "You are an expert contract advisor specializing in freelance agreements. Provide practical, legally-informed recommendations."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || '{"templates": []}');
+      return result.templates || [];
+    } catch (error) {
+      console.error("Template recommendation generation error:", error);
+      throw new Error("Failed to generate template recommendations");
+    }
+  }
 }
 
 export const aiContractService = new AIContractService();

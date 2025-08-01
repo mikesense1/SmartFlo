@@ -102,6 +102,13 @@ SmartFlo is a modern web application designed to solve the payment delays and di
 - **Connection**: Environment variable-based database URL configuration
 
 ## Recent Changes  
+- July 28, 2025: Implemented AI-powered contract template recommendations based on project type
+  - Added intelligent template selection step with 3 AI-recommended contract templates tailored to project specifics
+  - Templates include specialized clauses, risk mitigation strategies, and match scores (0-100%)
+  - Enhanced contract creation workflow with template-based generation for better freelancer protection
+  - Templates analyze project type, scope of work, and description to provide relevant recommendations
+  - Added visual template selection interface with protection clause badges and risk mitigation displays
+  - Integrated with OpenAI GPT-4o for intelligent template generation and project analysis
 - July 28, 2025: Enhanced contract creation with automatic fixed price milestone setup
   - When Fixed Price is selected, automatically populates first milestone with project title, description, and budget
   - Added informative UI messages explaining fixed price behavior to users

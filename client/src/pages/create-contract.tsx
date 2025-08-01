@@ -15,7 +15,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/navigation";
-import { aiContractService } from "@/lib/openai-service";
+import { aiContractService, type ContractTemplate } from "@/lib/openai-service";
 import { queryClient } from "@/lib/queryClient";
 import { calculateTotalWithFees, formatCurrency, getPaymentMethodName, getFeeBreakdown, type PaymentMethod } from "@shared/pricing";
 
@@ -70,6 +70,7 @@ const WIZARD_STEPS = [
   "Project Setup",
   "Client Details", 
   "Smart Milestones",
+  "Template Selection",
   "Payment Method",
   "AI Contract & Review"
 ];
@@ -460,6 +461,113 @@ const MilestoneBuilderStep = ({
   </Card>
   );
 };
+
+const TemplateSelectionStep = ({ 
+  recommendedTemplates, 
+  selectedTemplate, 
+  setSelectedTemplate, 
+  isLoadingTemplates 
+}: {
+  recommendedTemplates: ContractTemplate[];
+  selectedTemplate: ContractTemplate | null;
+  setSelectedTemplate: (template: ContractTemplate | null) => void;
+  isLoadingTemplates: boolean;
+}) => (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2">
+        <Brain className="w-5 h-5" />
+        AI Template Recommendations
+      </CardTitle>
+      <CardDescription>
+        Choose from AI-generated contract templates tailored to your project type
+      </CardDescription>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      {isLoadingTemplates ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <span className="text-sm text-gray-600">AI is analyzing your project to recommend the best contract templates...</span>
+          </div>
+        </div>
+      ) : recommendedTemplates.length > 0 ? (
+        <div className="space-y-4">
+          <div className="grid gap-4">
+            {recommendedTemplates.map((template) => (
+              <Card 
+                key={template.id} 
+                className={`cursor-pointer transition-all ${
+                  selectedTemplate?.id === template.id 
+                    ? 'ring-2 ring-blue-500 bg-blue-50' 
+                    : 'hover:shadow-md'
+                }`}
+                onClick={() => setSelectedTemplate(template)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg">{template.name}</h3>
+                      <p className="text-sm text-gray-600 mt-1">{template.description}</p>
+                    </div>
+                    <Badge variant="secondary" className="ml-3">
+                      {template.recommendationScore}% match
+                    </Badge>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="font-medium text-sm text-gray-700 mb-1">Key Protection Clauses:</h4>
+                      <div className="flex flex-wrap gap-1">
+                        {template.clauses.slice(0, 3).map((clause, idx) => (
+                          <Badge key={idx} variant="outline" className="text-xs">
+                            {clause}
+                          </Badge>
+                        ))}
+                        {template.clauses.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{template.clauses.length - 3} more
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-medium text-sm text-gray-700 mb-1">Risk Mitigation:</h4>
+                      <ul className="text-xs text-gray-600 space-y-1">
+                        {template.riskMitigation.slice(0, 2).map((risk, idx) => (
+                          <li key={idx} className="flex items-start gap-1">
+                            <Shield className="w-3 h-3 mt-0.5 text-green-600 flex-shrink-0" />
+                            {risk}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          
+          <div className="border-t pt-4">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Sparkles className="w-4 h-4" />
+              <span>Templates are customized based on your project type and include freelancer-focused protections</span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <Brain className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+          <h3 className="font-medium text-gray-900 mb-2">No templates available</h3>
+          <p className="text-sm text-gray-600">
+            AI template recommendations will load when project details are complete.
+          </p>
+        </div>
+      )}
+    </CardContent>
+  </Card>
+);
 
 const ContractGenerationStep = ({ 
   projectData, 
@@ -1096,6 +1204,11 @@ export default function CreateContract() {
     hourlyRate: ""
   });
   
+  // Template Recommendation State
+  const [recommendedTemplates, setRecommendedTemplates] = useState<ContractTemplate[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<ContractTemplate | null>(null);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+  
   // AI Contract Generation State
   const [generatedContract, setGeneratedContract] = useState("");
   const [riskAnalysis, setRiskAnalysis] = useState<RiskAnalysis | null>(null);
@@ -1168,6 +1281,34 @@ export default function CreateContract() {
       });
     }
   }, [projectData.pricingModel, projectData.title, projectData.description, clientData.projectBudget]);
+
+  // Load template recommendations when project data is complete
+  useEffect(() => {
+    if (projectData.scopeOfWork && projectData.title && projectData.description && currentStep >= 4) {
+      loadTemplateRecommendations();
+    }
+  }, [projectData.scopeOfWork, projectData.title, projectData.description, currentStep]);
+
+  const loadTemplateRecommendations = useCallback(async () => {
+    setIsLoadingTemplates(true);
+    try {
+      const templates = await aiContractService.getContractTemplateRecommendations(
+        projectData.scopeOfWork,
+        projectData.scopeOfWork,
+        projectData.description
+      );
+      setRecommendedTemplates(templates);
+    } catch (error) {
+      console.error("Failed to load template recommendations:", error);
+      toast({
+        title: "Template Loading Failed",
+        description: "Unable to load AI template recommendations. Please continue with standard contract generation.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingTemplates(false);
+    }
+  }, [projectData.scopeOfWork, projectData.description, toast]);
 
   // AI Contract Generation Function
   const generateContract = useCallback(async () => {
@@ -1417,13 +1558,20 @@ export default function CreateContract() {
           projectData={projectData}
         />;
       case 4:
+        return <TemplateSelectionStep 
+          recommendedTemplates={recommendedTemplates}
+          selectedTemplate={selectedTemplate}
+          setSelectedTemplate={setSelectedTemplate}
+          isLoadingTemplates={isLoadingTemplates}
+        />;
+      case 5:
         return <PaymentSetupStep 
           selectedPaymentMethod={selectedPaymentMethod}
           setSelectedPaymentMethod={setSelectedPaymentMethod}
           milestones={milestones}
           clientData={clientData}
         />;
-      case 5:
+      case 6:
         return <ContractGenerationStep 
           projectData={projectData}
           clientData={clientData}
@@ -1517,7 +1665,8 @@ export default function CreateContract() {
                 disabled={
                   (currentStep === 1 && !projectData?.title) ||
                   (currentStep === 2 && !clientData?.clientEmail) ||
-                  (currentStep === 3 && milestones.length === 0)
+                  (currentStep === 3 && milestones.length === 0) ||
+                  (currentStep === 4 && !selectedTemplate)
                 }
               >
                 Next

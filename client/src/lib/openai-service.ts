@@ -20,7 +20,7 @@ interface ContractGenerationParams {
     dueDate: string;
     percentage: number;
   }>;
-  paymentMethod: "stripe" | "usdc";
+  paymentMethod: "stripe" | "usdc" | "stripe_card" | "stripe_ach";
   customPrompt?: string;
 }
 
@@ -34,6 +34,17 @@ interface RiskAnalysis {
     fix: string;
     severity: "low" | "medium" | "high";
   }>;
+}
+
+export interface ContractTemplate {
+  id: string;
+  name: string;
+  description: string;
+  projectTypes: string[];
+  template: string;
+  clauses: string[];
+  riskMitigation: string[];
+  recommendationScore: number;
 }
 
 export class AIContractService {
@@ -98,6 +109,33 @@ export class AIContractService {
           }
         ]
       };
+    }
+  }
+
+  async getContractTemplateRecommendations(projectType: string, scopeOfWork: string, projectDescription: string): Promise<ContractTemplate[]> {
+    try {
+      const response = await fetch('/api/ai/template-recommendations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectType,
+          scopeOfWork,
+          projectDescription
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.templates || [];
+    } catch (error) {
+      console.error("Template recommendation error:", error);
+      throw new Error("Failed to get template recommendations");
     }
   }
 }
