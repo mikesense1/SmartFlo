@@ -591,7 +591,7 @@ const ContractGenerationStep = ({
   generateContract: () => Promise<void>;
   customPrompt: string;
   setCustomPrompt: (value: string) => void;
-  selectedPaymentMethod: "stripe" | "usdc";
+  selectedPaymentMethod: PaymentMethod;
   finalizeContract: () => Promise<void>;
   isCreating: boolean;
 }) => (
@@ -616,7 +616,7 @@ const ContractGenerationStep = ({
                 <span className="font-medium text-sm">Selected Payment Method</span>
               </div>
               <p className="text-sm text-slate-600">
-                {selectedPaymentMethod === "stripe" ? "Traditional USD payments via Stripe" : "Crypto payments via USDC on Solana"}
+                {getPaymentMethodName(selectedPaymentMethod)} - {getFeeBreakdown(selectedPaymentMethod).description}
               </p>
             </div>
 
@@ -660,7 +660,7 @@ const ContractGenerationStep = ({
                 )}
               </Button>
               <p className="text-sm text-slate-500">
-                AI will create a professional contract based on your project details, milestones, and {selectedPaymentMethod === "stripe" ? "traditional payment" : "crypto payment"} preferences
+                AI will create a professional contract based on your project details, milestones, and {getPaymentMethodName(selectedPaymentMethod)} preferences
               </p>
             </div>
           </div>
@@ -1145,8 +1145,8 @@ const PaymentSetupStep = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div className="bg-white p-3 rounded border">
               <div className="font-medium text-slate-700">Payment Method</div>
-              <div className="text-slate-600 capitalize">
-                {selectedPaymentMethod === "stripe" ? "Traditional Payment" : "USDC Crypto Escrow"}
+              <div className="text-slate-600">
+                {getPaymentMethodName(selectedPaymentMethod)}
               </div>
             </div>
             <div className="bg-white p-3 rounded border">

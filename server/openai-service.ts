@@ -1,5 +1,18 @@
 import OpenAI from "openai";
 
+function getPaymentMethodDescription(paymentMethod: string): string {
+  switch (paymentMethod) {
+    case "stripe_card":
+      return "Credit/Debit Card payments via Stripe (2.9% + $0.30 + 0.5% SmartFlo fee)";
+    case "stripe_ach":
+      return "Bank Transfer (ACH) via Stripe (0.8% max $5 + 0.5% SmartFlo fee)";
+    case "usdc":
+      return "USDC Cryptocurrency payments on Solana blockchain (1.5% max $100 SmartFlo fee)";
+    default:
+      return "Traditional payment processing";
+  }
+}
+
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 console.log("Initializing OpenAI client...");
 console.log("API Key exists:", !!process.env.OPENAI_API_KEY);
@@ -104,7 +117,7 @@ Milestone ${index + 1}: ${milestone.title}
 - Percentage: ${milestone.percentage}%
 `).join('')}
 
-PAYMENT METHOD: ${paymentMethod.startsWith("stripe") ? "Traditional payment processing (Stripe)" : "Cryptocurrency escrow (USDC)"}
+PAYMENT METHOD: ${getPaymentMethodDescription(paymentMethod)}
 
 CUSTOM REQUIREMENTS:
 ${customPrompt || "Standard freelance protections apply"}
