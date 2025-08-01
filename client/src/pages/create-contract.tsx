@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -280,8 +280,9 @@ const MilestoneBuilderStep = ({
   updateMilestone, 
   addMilestone, 
   removeMilestone,
-  clientData
-}: Pick<StepProps, 'milestones' | 'updateMilestone' | 'addMilestone' | 'removeMilestone' | 'clientData'>) => {
+  clientData,
+  projectData
+}: Pick<StepProps, 'milestones' | 'updateMilestone' | 'addMilestone' | 'removeMilestone' | 'clientData' | 'projectData'>) => {
   
   // Calculate milestone amount based on percentage
   const calculateMilestoneAmount = (percentage: number): string => {
@@ -310,10 +311,30 @@ const MilestoneBuilderStep = ({
         Smart Milestones
       </CardTitle>
       <CardDescription>
-        Break your project into manageable milestones for automatic payments
+        {projectData.pricingModel === "fixed" 
+          ? "Your project has been set up as a single milestone. You can edit details or add additional milestones below."
+          : "Break your project into manageable milestones for automatic payments"
+        }
       </CardDescription>
     </CardHeader>
     <CardContent className="space-y-4">
+      {projectData.pricingModel === "fixed" && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <div className="flex items-start gap-3">
+            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
+              <span className="text-blue-600 text-xs font-semibold">!</span>
+            </div>
+            <div>
+              <h4 className="font-medium text-blue-900 mb-1">Fixed Price Project</h4>
+              <p className="text-sm text-blue-700">
+                Your project has been automatically set up as a single milestone with your project details. 
+                You can edit the milestone below or add additional milestones if needed.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {milestones.map((milestone, index) => (
         <Card key={index} className="p-4 bg-slate-50">
           <div className="flex justify-between items-center mb-4">
@@ -1119,6 +1140,35 @@ export default function CreateContract() {
     setClientData(prev => ({ ...prev, [field]: value }));
   }, []);
 
+  // Auto-populate first milestone when Fixed Price is selected
+  useEffect(() => {
+    if (projectData.pricingModel === "fixed" && projectData.title && clientData.projectBudget) {
+      setMilestones(prev => {
+        const updated = [...prev];
+        if (updated.length === 0) {
+          updated.push({
+            title: "",
+            deliverables: "",
+            amount: "",
+            dueDate: "",
+            percentage: 0,
+          });
+        }
+        
+        // Auto-populate first milestone with project details
+        updated[0] = {
+          ...updated[0],
+          title: projectData.title || "Project Completion",
+          deliverables: projectData.description || "Complete project deliverables as specified",
+          amount: clientData.projectBudget || "",
+          percentage: 100
+        };
+        
+        return updated;
+      });
+    }
+  }, [projectData.pricingModel, projectData.title, projectData.description, clientData.projectBudget]);
+
   // AI Contract Generation Function
   const generateContract = useCallback(async () => {
     setIsGenerating(true);
@@ -1364,6 +1414,7 @@ export default function CreateContract() {
           addMilestone={addMilestone}
           removeMilestone={removeMilestone}
           clientData={clientData}
+          projectData={projectData}
         />;
       case 4:
         return <PaymentSetupStep 

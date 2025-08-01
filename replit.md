@@ -102,6 +102,12 @@ SmartFlo is a modern web application designed to solve the payment delays and di
 - **Connection**: Environment variable-based database URL configuration
 
 ## Recent Changes  
+- July 28, 2025: Enhanced contract creation with automatic fixed price milestone setup
+  - When Fixed Price is selected, automatically populates first milestone with project title, description, and budget
+  - Added informative UI messages explaining fixed price behavior to users
+  - Maintains full editing capability - users can modify auto-populated milestone or add additional milestones
+  - Updated scope of work dropdown to 15 broader categories including Bookkeeping & Accounting
+  - Streamlined options: Web Development, Mobile Apps, Design & Creative, Writing & Content, Marketing, Software Development, Business Consulting, Bookkeeping & Accounting, Virtual Assistant, Data Analysis, Legal Services, Video & Photography, Translation, Project Management
 - July 28, 2025: Implemented blockchain smart contract deployment for all payment methods
   - All contracts automatically deploy as smart contracts regardless of payment method (Stripe Card, Stripe ACH, USDC)
   - Enhanced payment method selection with three distinct options showing transparent fee breakdowns
