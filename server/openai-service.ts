@@ -30,8 +30,16 @@ interface ContractGenerationParams {
     dueDate: string;
     percentage: number;
   }>;
-  paymentMethod: "stripe" | "usdc";
+  paymentMethod: "stripe" | "usdc" | "stripe_card" | "stripe_ach";
   customPrompt?: string;
+  selectedTemplate?: {
+    id: string;
+    name: string;
+    description: string;
+    clauses: string[];
+    riskMitigation: string[];
+    template: string;
+  } | null;
 }
 
 interface RiskAnalysis {
@@ -53,7 +61,8 @@ export class AIContractService {
       clientData,
       milestones,
       paymentMethod,
-      customPrompt = ""
+      customPrompt = "",
+      selectedTemplate
     } = params;
 
     const systemPrompt = `You are an expert freelance contract attorney specializing in protecting freelancers from common payment delays, scope creep, and legal issues. Generate professional, legally sound freelance service agreements that prioritize freelancer protection while being fair to clients.
@@ -95,10 +104,17 @@ Milestone ${index + 1}: ${milestone.title}
 - Percentage: ${milestone.percentage}%
 `).join('')}
 
-PAYMENT METHOD: ${paymentMethod === "stripe" ? "Traditional payment processing (Stripe)" : "Cryptocurrency escrow (USDC)"}
+PAYMENT METHOD: ${paymentMethod.startsWith("stripe") ? "Traditional payment processing (Stripe)" : "Cryptocurrency escrow (USDC)"}
 
 CUSTOM REQUIREMENTS:
 ${customPrompt || "Standard freelance protections apply"}
+
+${selectedTemplate ? `
+SELECTED TEMPLATE: ${selectedTemplate.name}
+Template Description: ${selectedTemplate.description}
+Key Clauses to Include: ${selectedTemplate.clauses.join(', ')}
+Risk Mitigation Strategies: ${selectedTemplate.riskMitigation.join(', ')}
+` : ""}
 
 Generate a complete, professional freelance service agreement that includes:
 1. Clear project scope and deliverables

@@ -22,6 +22,7 @@ interface ContractGenerationParams {
   }>;
   paymentMethod: "stripe" | "usdc" | "stripe_card" | "stripe_ach";
   customPrompt?: string;
+  selectedTemplate?: ContractTemplate | null;
 }
 
 interface RiskAnalysis {

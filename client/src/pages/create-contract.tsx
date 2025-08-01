@@ -1220,7 +1220,7 @@ export default function CreateContract() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>("stripe_card");
   const [isCreating, setIsCreating] = useState(false);
 
-  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 5));
+  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 6));
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   const addMilestone = () => {
@@ -1316,20 +1316,24 @@ export default function CreateContract() {
     setIsAnalyzing(true);
     
     try {
-      // Generate contract with OpenAI
+      // Include selected template in contract generation
       const contractParams = {
         projectData,
         clientData,
         milestones,
         paymentMethod: selectedPaymentMethod,
-        customPrompt
+        customPrompt,
+        selectedTemplate
       };
-
-      const generatedText = await aiContractService.generateFreelanceContract(contractParams);
-      setGeneratedContract(generatedText);
       
-      // Analyze risks with OpenAI
-      const riskAnalysisResult = await aiContractService.analyzeContractRisks(contractParams);
+      console.log("Generating contract with params:", contractParams);
+
+      const [generatedText, riskAnalysisResult] = await Promise.all([
+        aiContractService.generateFreelanceContract(contractParams),
+        aiContractService.analyzeContractRisks(contractParams)
+      ]);
+      
+      setGeneratedContract(generatedText);
       setRiskAnalysis(riskAnalysisResult);
       
       toast({
@@ -1341,14 +1345,14 @@ export default function CreateContract() {
       console.error("Contract generation error:", error);
       toast({
         title: "Generation Failed",
-        description: "Please check your OpenAI API key and try again",
+        description: error.message || "Please check your OpenAI API key and try again",
         variant: "destructive",
       });
     } finally {
       setIsGenerating(false);
       setIsAnalyzing(false);
     }
-  }, [projectData, clientData, milestones, selectedPaymentMethod, customPrompt, toast]);
+  }, [projectData, clientData, milestones, selectedPaymentMethod, customPrompt, selectedTemplate, toast]);
 
   // Final Contract Creation Function
   const finalizeContract = useCallback(async () => {
