@@ -10,8 +10,9 @@ import { Separator } from "@/components/ui/separator";
 import { 
   Plus, FileText, DollarSign, Clock, CheckCircle, 
   AlertCircle, Wallet, CreditCard, Activity, Target,
-  TrendingUp, TrendingDown, Lock, Zap, Users
+  TrendingUp, TrendingDown, Lock, Zap, Users, Eye
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { paymentTriggers } from "@/lib/payments/smart-triggers";
 import Navigation from "@/components/navigation";
@@ -28,6 +29,9 @@ const DEMO_USER = {
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [contractDocument, setContractDocument] = useState<string | null>(null);
+  const [isLoadingDocument, setIsLoadingDocument] = useState(false);
   const [realtimeStats, setRealtimeStats] = useState({
     lifetimeEarnings: 24750,
     inEscrow: 6000,
@@ -102,6 +106,30 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/users", DEMO_USER.id, "contracts"] });
     }
   });
+
+  // Function to fetch contract document
+  const fetchContractDocument = async (contractId: string) => {
+    setIsLoadingDocument(true);
+    try {
+      const response = await fetch(`/api/contracts/${contractId}/document`);
+      if (response.ok) {
+        const data = await response.json();
+        setContractDocument(data.document);
+      } else {
+        setContractDocument("Contract document not available. This contract may not have been generated with AI contract generation.");
+      }
+    } catch (error) {
+      console.error("Error fetching contract document:", error);
+      setContractDocument("Error loading contract document. Please try again later.");
+    } finally {
+      setIsLoadingDocument(false);
+    }
+  };
+
+  const handleViewContract = (contract: Contract) => {
+    setSelectedContract(contract);
+    fetchContractDocument(contract.id);
+  };
 
   const handleCreateContract = () => {
     createContractMutation.mutate({
@@ -503,10 +531,38 @@ export default function Dashboard() {
                             Fund Contract
                           </Button>
                         </Link>
-                        <Button variant="outline" size="sm">
-                          <FileText className="w-4 h-4 mr-2" />
-                          View Contract
-                        </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={() => handleViewContract(contract)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Contract
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>Contract Document - {selectedContract?.title}</DialogTitle>
+                            </DialogHeader>
+                            <div className="mt-4">
+                              {isLoadingDocument ? (
+                                <div className="flex items-center justify-center py-8">
+                                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                  <span className="ml-3 text-slate-600">Loading contract document...</span>
+                                </div>
+                              ) : contractDocument ? (
+                                <div className="bg-white border rounded-lg p-6">
+                                  <div className="whitespace-pre-wrap text-sm leading-relaxed font-mono">
+                                    {contractDocument}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-center py-8 text-slate-500">
+                                  <FileText className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                                  <p>No contract document available</p>
+                                </div>
+                              )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                       </div>
                     </CardContent>
                   </Card>

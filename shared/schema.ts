@@ -32,6 +32,7 @@ export const contracts = pgTable("contracts", {
   deploymentTx: text("deployment_tx"),
   blockchainStatus: text("blockchain_status").default("pending"), // 'pending', 'deployed', 'active', 'completed'
   metadataUri: text("metadata_uri"),
+  generatedContract: text("generated_contract"), // AI-generated contract document text
   createdAt: timestamp("created_at").defaultNow(),
   activatedAt: timestamp("activated_at"),
   completedAt: timestamp("completed_at"),

@@ -1387,13 +1387,16 @@ export default function CreateContract() {
         status: "draft"
       };
 
-      // Create contract via API
+      // Create contract via API, including the generated contract document
       const contractResponse = await fetch('/api/contracts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(contractData),
+        body: JSON.stringify({
+          ...contractData,
+          generatedContract: generatedContract // Include the AI-generated contract document
+        }),
       });
 
       if (!contractResponse.ok) {

@@ -145,6 +145,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get contract document by ID
+  app.get("/api/contracts/:id/document", async (req, res) => {
+    try {
+      const contract = await storage.getContract(req.params.id);
+      
+      if (!contract) {
+        return res.status(404).json({ error: "Contract not found" });
+      }
+      
+      if (!contract.generatedContract) {
+        return res.status(404).json({ 
+          error: "Contract document not available",
+          message: "This contract does not have a generated document. It may have been created before AI generation was available."
+        });
+      }
+      
+      res.json({ 
+        document: contract.generatedContract,
+        contractId: contract.id,
+        title: contract.title,
+        clientName: contract.clientName
+      });
+    } catch (error) {
+      console.error("Failed to get contract document:", error);
+      res.status(500).json({ error: "Failed to get contract document" });
+    }
+  });
+
   // Milestone routes
   app.post("/api/milestones", async (req, res) => {
     try {
