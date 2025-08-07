@@ -849,6 +849,22 @@ Respond with JSON in this exact format:
     }
   });
 
+  // Admin routes for demo data seeding
+  app.post("/api/admin/seed-demo-data", async (req, res) => {
+    try {
+      const { seedSimpleData } = await import('./simple-seed');
+      const result = await seedSimpleData();
+      res.json(result);
+    } catch (error) {
+      console.error("Demo data seeding error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to seed demo data",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Pricing calculation routes
   app.post("/api/pricing/calculate", async (req, res) => {
     try {
