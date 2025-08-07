@@ -1059,10 +1059,10 @@ const PaymentSetupStep = ({
           {/* Payment Method Benefits */}
           <div className="bg-slate-50 p-4 rounded-lg">
             <h4 className="font-medium mb-2">
-              {selectedPaymentMethod === "stripe" ? "Why Clients Choose USD Payments" : "Why Clients Choose Crypto Payments"}
+              {selectedPaymentMethod.startsWith("stripe_") ? "Why Clients Choose USD Payments" : "Why Clients Choose Crypto Payments"}
             </h4>
             <ul className="text-sm text-slate-600 space-y-1">
-              {selectedPaymentMethod === "stripe" ? (
+              {selectedPaymentMethod.startsWith("stripe_") ? (
                 <>
                   <li>• No crypto wallet required - use existing bank accounts</li>
                   <li>• Pay with credit card, debit card, or bank transfer</li>
@@ -1084,17 +1084,17 @@ const PaymentSetupStep = ({
 
           {/* Additional Payment Method Info */}
           <div className={`p-4 rounded-lg border-l-4 ${
-            selectedPaymentMethod === "stripe" 
+            selectedPaymentMethod.startsWith("stripe_") 
               ? "bg-purple-50 border-purple-400" 
               : "bg-green-50 border-green-400"
           }`}>
             <div className="flex items-start gap-3">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                selectedPaymentMethod === "stripe" 
+                selectedPaymentMethod.startsWith("stripe_") 
                   ? "bg-purple-100" 
                   : "bg-green-100"
               }`}>
-                {selectedPaymentMethod === "stripe" ? (
+                {selectedPaymentMethod.startsWith("stripe_") ? (
                   <Wallet className="w-4 h-4 text-purple-600" />
                 ) : (
                   <Shield className="w-4 h-4 text-green-600" />
@@ -1102,10 +1102,10 @@ const PaymentSetupStep = ({
               </div>
               <div className="flex-1">
                 <h5 className="font-medium text-sm mb-1">
-                  {selectedPaymentMethod === "stripe" ? "Client Payment Process" : "Client Payment Process"}
+                  {selectedPaymentMethod.startsWith("stripe_") ? "Client Payment Process" : "Client Payment Process"}
                 </h5>
                 <p className="text-sm text-slate-600">
-                  {selectedPaymentMethod === "stripe" ? (
+                  {selectedPaymentMethod.startsWith("stripe_") ? (
                     "Your client will receive a secure payment link and can pay instantly with their credit card or bank account. No crypto knowledge required."
                   ) : (
                     "Your client will connect their crypto wallet (like Phantom or MetaMask) and send USDC tokens to the smart contract. Funds are held securely until milestones are approved."
