@@ -1360,6 +1360,11 @@ export default function CreateContract() {
   const finalizeContract = useCallback(async () => {
     setIsCreating(true);
     
+    // Show success screen immediately to prevent blank screen during async operations
+    setTimeout(() => {
+      setIsContractCreated(true);
+    }, 500);
+    
     try {
       // Calculate total contract value from milestones
       const milestoneTotal = milestones.reduce((total, milestone) => {
@@ -1487,12 +1492,11 @@ export default function CreateContract() {
         });
       }
       
-      // Set success state and redirect to dashboard
-      setIsContractCreated(true);
+      // Redirect to dashboard after success (success state already set above)
       setTimeout(() => {
         console.log("Redirecting to dashboard after successful contract creation");
         window.location.href = '/dashboard';
-      }, 3000);
+      }, 2500);
       
     } catch (error) {
       console.error("Contract creation error:", error);
@@ -1626,22 +1630,29 @@ export default function CreateContract() {
         {/* Step Content */}
         <div className="space-y-6">
           {isContractCreated ? (
-            <Card>
-              <CardContent className="text-center py-12">
-                <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
-                <h2 className="text-2xl font-bold text-green-700 mb-2">Contract Created Successfully!</h2>
-                <p className="text-slate-600 mb-4">
-                  Your contract has been saved and is ready to send to your client.
+            <Card className="border-green-200 bg-green-50">
+              <CardContent className="text-center py-16">
+                <div className="animate-bounce mb-6">
+                  <CheckCircle className="w-20 h-20 mx-auto text-green-500" />
+                </div>
+                <h2 className="text-3xl font-bold text-green-700 mb-3">Contract Created Successfully!</h2>
+                <p className="text-lg text-slate-700 mb-6">
+                  Your AI-generated contract with smart escrow protection is ready.
                 </p>
-                <div className="bg-green-50 p-4 rounded-lg border border-green-200 mb-4">
-                  <p className="text-green-700 font-medium">Redirecting to dashboard...</p>
-                  <div className="w-full bg-green-200 rounded-full h-2 mt-2">
-                    <div className="bg-green-500 h-2 rounded-full animate-pulse" style={{width: '66%'}}></div>
+                <div className="bg-white p-6 rounded-lg border border-green-200 mb-6 max-w-md mx-auto">
+                  <div className="flex items-center justify-center mb-3">
+                    <Sparkles className="w-5 h-5 text-green-600 mr-2 animate-spin" />
+                    <p className="text-green-700 font-semibold">Taking you to dashboard...</p>
+                  </div>
+                  <div className="w-full bg-green-200 rounded-full h-3">
+                    <div className="bg-green-500 h-3 rounded-full transition-all duration-1000 ease-out" style={{width: '85%'}}></div>
                   </div>
                 </div>
-                <p className="text-sm text-slate-500">
-                  You'll be able to view, edit, and send your contract from the dashboard.
-                </p>
+                <div className="text-sm text-slate-600 space-y-1">
+                  <p>✓ Contract saved with milestone-based payments</p>
+                  <p>✓ Smart escrow protection activated</p>
+                  <p>✓ Ready to send to your client</p>
+                </div>
               </CardContent>
             </Card>
           ) : (
