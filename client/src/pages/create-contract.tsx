@@ -616,7 +616,7 @@ const ContractGenerationStep = ({
                 <span className="font-medium text-sm">Selected Payment Method</span>
               </div>
               <p className="text-sm text-slate-600">
-                {getPaymentMethodName(selectedPaymentMethod)} - {getFeeBreakdown(selectedPaymentMethod).description}
+                {getPaymentMethodName(selectedPaymentMethod)}
               </p>
             </div>
 
@@ -1282,13 +1282,6 @@ export default function CreateContract() {
     }
   }, [projectData.pricingModel, projectData.title, projectData.description, clientData.projectBudget]);
 
-  // Load template recommendations when project data is complete
-  useEffect(() => {
-    if (projectData.scopeOfWork && projectData.title && projectData.description && currentStep >= 4) {
-      loadTemplateRecommendations();
-    }
-  }, [projectData.projectType, projectData.scopeOfWork, projectData.title, projectData.description, currentStep, loadTemplateRecommendations]);
-
   const loadTemplateRecommendations = useCallback(async () => {
     setIsLoadingTemplates(true);
     try {
@@ -1309,6 +1302,13 @@ export default function CreateContract() {
       setIsLoadingTemplates(false);
     }
   }, [projectData.projectType, projectData.scopeOfWork, projectData.description, toast]);
+
+  // Load template recommendations when project data is complete
+  useEffect(() => {
+    if (projectData.scopeOfWork && projectData.title && projectData.description && currentStep >= 4) {
+      loadTemplateRecommendations();
+    }
+  }, [projectData.projectType, projectData.scopeOfWork, projectData.title, projectData.description, currentStep, loadTemplateRecommendations]);
 
   // AI Contract Generation Function
   const generateContract = useCallback(async () => {
@@ -1343,9 +1343,10 @@ export default function CreateContract() {
       
     } catch (error) {
       console.error("Contract generation error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Please check your OpenAI API key and try again";
       toast({
         title: "Generation Failed",
-        description: error.message || "Please check your OpenAI API key and try again",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
