@@ -1287,13 +1287,13 @@ export default function CreateContract() {
     if (projectData.scopeOfWork && projectData.title && projectData.description && currentStep >= 4) {
       loadTemplateRecommendations();
     }
-  }, [projectData.scopeOfWork, projectData.title, projectData.description, currentStep]);
+  }, [projectData.projectType, projectData.scopeOfWork, projectData.title, projectData.description, currentStep, loadTemplateRecommendations]);
 
   const loadTemplateRecommendations = useCallback(async () => {
     setIsLoadingTemplates(true);
     try {
       const templates = await aiContractService.getContractTemplateRecommendations(
-        projectData.scopeOfWork,
+        projectData.projectType,
         projectData.scopeOfWork,
         projectData.description
       );
@@ -1308,7 +1308,7 @@ export default function CreateContract() {
     } finally {
       setIsLoadingTemplates(false);
     }
-  }, [projectData.scopeOfWork, projectData.description, toast]);
+  }, [projectData.projectType, projectData.scopeOfWork, projectData.description, toast]);
 
   // AI Contract Generation Function
   const generateContract = useCallback(async () => {
