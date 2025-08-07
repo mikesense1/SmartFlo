@@ -727,7 +727,7 @@ const ContractGenerationStep = ({
                   {isCreating ? (
                     <>
                       <Sparkles className="w-5 h-5 mr-2 animate-spin" />
-                      Creating...
+                      Creating Contract...
                     </>
                   ) : (
                     <>
@@ -1219,6 +1219,7 @@ export default function CreateContract() {
   // Payment Setup State
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>("stripe_card");
   const [isCreating, setIsCreating] = useState(false);
+  const [isContractCreated, setIsContractCreated] = useState(false);
 
   const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 6));
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
@@ -1468,58 +1469,30 @@ export default function CreateContract() {
             console.log(`Smart contract deployed at: ${blockchainStatus.contractAddress}`);
             
             toast({
-              title: "Smart Contract Deployed!",
-              description: `Contract created with blockchain escrow at ${blockchainStatus.contractAddress?.slice(0, 8)}...`,
+              title: "✅ Smart Contract Deployed!",
+              description: `Contract created with blockchain escrow. Redirecting to dashboard...`,
             });
           } else {
             toast({
-              title: "Contract Created Successfully!",
-              description: "Contract saved. Smart contract deployment in progress...",
+              title: "✅ Contract Created Successfully!",
+              description: "Contract saved. Redirecting to dashboard...",
             });
           }
         }
       } catch (blockchainError) {
         console.warn("Could not check blockchain status:", blockchainError);
         toast({
-          title: "Contract Created Successfully!",
-          description: "Contract has been saved and is ready to send to your client",
+          title: "✅ Contract Created Successfully!",
+          description: "Contract saved and ready to send. Redirecting to dashboard...",
         });
       }
       
-      // Reset form and redirect to dashboard after success
+      // Set success state and redirect to dashboard
+      setIsContractCreated(true);
       setTimeout(() => {
-        setCurrentStep(1);
-        setGeneratedContract("");
-        setRiskAnalysis(null);
-        setProjectData({
-          projectType: "website",
-          scopeOfWork: "",
-          title: "",
-          description: "",
-          startDate: "",
-          endDate: "",
-          pricingModel: "milestones"
-        });
-        setClientData({
-          clientName: "",
-          clientEmail: "",
-          clientCompany: "",
-          projectBudget: "",
-          hourlyRate: ""
-        });
-        setMilestones([{
-          title: "",
-          deliverables: "",
-          amount: "",
-          dueDate: "",
-          percentage: 0
-        }]);
-        setCustomPrompt("");
-        
-        // Navigate to dashboard immediately - avoid any potential redirect conflicts
         console.log("Redirecting to dashboard after successful contract creation");
-        window.location.replace('/dashboard');
-      }, 2000);
+        window.location.href = '/dashboard';
+      }, 3000);
       
     } catch (error) {
       console.error("Contract creation error:", error);
@@ -1652,7 +1625,28 @@ export default function CreateContract() {
 
         {/* Step Content */}
         <div className="space-y-6">
-          {renderStepContent()}
+          {isContractCreated ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
+                <h2 className="text-2xl font-bold text-green-700 mb-2">Contract Created Successfully!</h2>
+                <p className="text-slate-600 mb-4">
+                  Your contract has been saved and is ready to send to your client.
+                </p>
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200 mb-4">
+                  <p className="text-green-700 font-medium">Redirecting to dashboard...</p>
+                  <div className="w-full bg-green-200 rounded-full h-2 mt-2">
+                    <div className="bg-green-500 h-2 rounded-full animate-pulse" style={{width: '66%'}}></div>
+                  </div>
+                </div>
+                <p className="text-sm text-slate-500">
+                  You'll be able to view, edit, and send your contract from the dashboard.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            renderStepContent()
+          )}
         </div>
 
         {/* Navigation */}
