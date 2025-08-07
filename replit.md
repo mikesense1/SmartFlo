@@ -13,6 +13,8 @@ SmartFlo is built with a modern web application stack. The **Frontend** uses Rea
 
 **Technical Implementations** include AI-powered contract template recommendations using OpenAI GPT-4o, automatic fixed-price milestone setup, and a comprehensive pricing structure with detailed transaction fees. The system implements a blockchain smart contract deployment simulation for all payment methods (Stripe Card, ACH, USDC), tracking smart contract addresses and escrow accounts. The application also provides a robust payment automation system, including smart payment triggers, auto-approval mechanisms, and real-time status updates. A 5-step wizard guides users through contract creation, including intelligent milestone suggestions and risk analysis.
 
+**Recent Production Updates (January 2025)**: Added comprehensive contract document viewing functionality with full Vercel deployment support. Created dedicated API endpoints (`/api/contracts/[id]/document`) for retrieving AI-generated contract documents, updated database schema to store generated contracts, and implemented modal dialog interface for document viewing from dashboard. All endpoints are now production-ready with proper CORS configuration, database connection pooling, and error handling for Vercel serverless deployment at getsmartflo.com.
+
 ### External Dependencies
 **Frontend Dependencies**: Radix UI, TanStack React Query, React Hook Form, Zod, clsx, class-variance-authority, Lucide React.
 **Backend Dependencies**: Neon Database (PostgreSQL), Drizzle ORM, connect-pg-simple, date-fns.

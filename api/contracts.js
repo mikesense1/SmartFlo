@@ -60,6 +60,7 @@ module.exports = async function handler(req, res) {
           status,
           solana_program_address,
           metadata_uri,
+          generated_contract,
           created_at,
           activated_at,
           completed_at
@@ -95,16 +96,18 @@ module.exports = async function handler(req, res) {
         paymentMethod,
         contractType,
         creatorId,
-        status
+        status,
+        generatedContract
       } = req.body;
 
       const query = `
         INSERT INTO contracts (
           id, title, project_description, client_name, client_email, 
-          total_value, payment_method, contract_type, creator_id, status, created_at
+          total_value, payment_method, contract_type, creator_id, status, 
+          generated_contract, created_at
         )
         VALUES (
-          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()
+          gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW()
         )
         RETURNING *
       `;
@@ -118,7 +121,8 @@ module.exports = async function handler(req, res) {
         paymentMethod,
         contractType,
         creatorId,
-        status || 'draft'
+        status || 'draft',
+        generatedContract || null
       ];
 
       const client = await pool.connect();
