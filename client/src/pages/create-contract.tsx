@@ -93,6 +93,23 @@ const SCOPE_OF_WORK_OPTIONS = [
   "Other"
 ];
 
+const MILESTONE_TITLE_OPTIONS = [
+  "Down Payment",
+  "Project Initiation",
+  "Design Phase Completion",
+  "Development Phase 1",
+  "Development Phase 2", 
+  "Testing & Quality Assurance",
+  "Content Integration",
+  "User Acceptance Testing",
+  "Final Delivery",
+  "Post-Launch Support",
+  "Bug Fixes & Revisions",
+  "Documentation Delivery",
+  "Training & Handover",
+  "Custom Milestone"
+];
+
 // Step Components - moved outside main component to prevent recreation
 interface StepProps {
   projectData: ProjectSetupData;
@@ -118,16 +135,21 @@ const ProjectSetupStep = ({ projectData, updateProjectData }: Pick<StepProps, 'p
     </CardHeader>
     <CardContent className="space-y-4">
       <div>
-        <label className="text-sm font-medium mb-2 block">Project Title</label>
+        <label className="text-sm font-medium mb-2 block">
+          Project Title <span className="text-red-500">*</span>
+        </label>
         <Input 
           value={projectData.title}
           placeholder="E-commerce Website Development"
           onChange={(e) => updateProjectData("title", e.target.value)}
+          required
         />
       </div>
 
       <div>
-        <label className="text-sm font-medium mb-2 block">Scope of Work Type</label>
+        <label className="text-sm font-medium mb-2 block">
+          Scope of Work Type <span className="text-red-500">*</span>
+        </label>
         <Select value={projectData.scopeOfWork} onValueChange={(value) => updateProjectData("scopeOfWork", value)}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select the type of work you'll be doing" />
@@ -155,12 +177,15 @@ const ProjectSetupStep = ({ projectData, updateProjectData }: Pick<StepProps, 'p
       )}
 
       <div>
-        <label className="text-sm font-medium mb-2 block">Project Description</label>
+        <label className="text-sm font-medium mb-2 block">
+          Project Description <span className="text-red-500">*</span>
+        </label>
         <Textarea
           value={projectData.description}
           placeholder="Brief description of the project scope and requirements..."
           className="min-h-[100px]"
           onChange={(e) => updateProjectData("description", e.target.value)}
+          required
         />
       </div>
 
@@ -221,21 +246,30 @@ const ClientDetailsStep = ({ clientData, updateClientData, projectData }: Pick<S
     <CardContent className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="text-sm font-medium mb-2 block">Client Name</label>
+          <label className="text-sm font-medium mb-2 block">
+            Client Name <span className="text-red-500">*</span>
+          </label>
           <Input 
             value={clientData.clientName}
             placeholder="John Smith"
             onChange={(e) => updateClientData("clientName", e.target.value)}
+            required
           />
         </div>
         <div>
-          <label className="text-sm font-medium mb-2 block">Client Email</label>
+          <label className="text-sm font-medium mb-2 block">
+            Client Email <span className="text-red-500">*</span>
+          </label>
           <Input 
             type="email"
             value={clientData.clientEmail}
             placeholder="john@company.com"
             onChange={(e) => updateClientData("clientEmail", e.target.value)}
+            required
           />
+          {clientData.clientEmail && !clientData.clientEmail.includes('@') && (
+            <p className="text-red-500 text-xs mt-1">Please enter a valid email address</p>
+          )}
         </div>
       </div>
 
@@ -250,12 +284,15 @@ const ClientDetailsStep = ({ clientData, updateClientData, projectData }: Pick<S
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="text-sm font-medium mb-2 block">Project Budget ($)</label>
+          <label className="text-sm font-medium mb-2 block">
+            Project Budget ($) <span className="text-red-500">*</span>
+          </label>
           <Input 
             type="number"
             value={clientData.projectBudget}
             placeholder="5000"
             onChange={(e) => updateClientData("projectBudget", e.target.value)}
+            required
           />
         </div>
         
@@ -350,28 +387,61 @@ const MilestoneBuilderStep = ({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1 block">Title</label>
-              <Input
-                placeholder="Milestone title"
-                value={milestone.title}
-                onChange={(e) => updateMilestone(index, "title", e.target.value)}
-              />
+              <label className="text-sm font-medium mb-1 block">
+                Milestone Title <span className="text-red-500">*</span>
+              </label>
+              <Select 
+                value={milestone.title} 
+                onValueChange={(value) => {
+                  if (value === "Custom Milestone") {
+                    updateMilestone(index, "title", "");
+                  } else {
+                    updateMilestone(index, "title", value);
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select milestone type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MILESTONE_TITLE_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {/* Custom input when "Custom Milestone" is selected or when value is not in predefined options */}
+              {(milestone.title === "Custom Milestone" || (!MILESTONE_TITLE_OPTIONS.includes(milestone.title) && milestone.title)) && (
+                <Input
+                  className="mt-2"
+                  placeholder="Enter custom milestone title"
+                  value={milestone.title === "Custom Milestone" ? "" : milestone.title}
+                  onChange={(e) => updateMilestone(index, "title", e.target.value)}
+                />
+              )}
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Amount ($)</label>
+              <label className="text-sm font-medium mb-1 block">
+                Amount ($) <span className="text-red-500">*</span>
+              </label>
               <Input
                 type="number"
                 placeholder="1000"
                 value={milestone.amount}
                 onChange={(e) => updateMilestone(index, "amount", e.target.value)}
+                required
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Due Date</label>
+              <label className="text-sm font-medium mb-1 block">
+                Due Date <span className="text-red-500">*</span>
+              </label>
               <Input
                 type="date"
                 value={milestone.dueDate}
                 onChange={(e) => updateMilestone(index, "dueDate", e.target.value)}
+                required
               />
             </div>
             <div>
@@ -410,11 +480,14 @@ const MilestoneBuilderStep = ({
               </div>
             </div>
             <div className="md:col-span-2">
-              <label className="text-sm font-medium mb-1 block">Deliverables</label>
+              <label className="text-sm font-medium mb-1 block">
+                Deliverables <span className="text-red-500">*</span>
+              </label>
               <Textarea
                 placeholder="What will be delivered in this milestone?"
                 value={milestone.deliverables}
                 onChange={(e) => updateMilestone(index, "deliverables", e.target.value)}
+                required
               />
             </div>
           </div>
@@ -1676,9 +1749,9 @@ export default function CreateContract() {
               <Button 
                 onClick={nextStep}
                 disabled={
-                  (currentStep === 1 && !projectData?.title) ||
-                  (currentStep === 2 && !clientData?.clientEmail) ||
-                  (currentStep === 3 && milestones.length === 0) ||
+                  (currentStep === 1 && (!projectData?.title || !projectData?.scopeOfWork || !projectData?.description)) ||
+                  (currentStep === 2 && (!clientData?.clientName || !clientData?.clientEmail || !clientData?.projectBudget || !clientData.clientEmail.includes('@') || !clientData.clientEmail.includes('.'))) ||
+                  (currentStep === 3 && (milestones.length === 0 || milestones.some(m => !m.title || !m.amount || !m.dueDate || !m.deliverables))) ||
                   (currentStep === 4 && !selectedTemplate)
                 }
               >
