@@ -6,12 +6,15 @@ export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
   fullName: text("full_name").notNull(),
-  freelanceType: text("freelance_type").notNull().default("other"), // 'developer', 'designer', 'writer', 'consultant', 'other'
+  passwordHash: text("password_hash").notNull(),
+  userType: text("user_type").notNull(), // 'freelancer' or 'client'
+  freelanceType: text("freelance_type").default("other"), // 'developer', 'designer', 'writer', 'consultant', 'other'
   walletAddress: text("wallet_address"),
   stripeAccountId: text("stripe_account_id"),
   hourlyRate: decimal("hourly_rate"),
   subscriptionTier: text("subscription_tier").notNull().default("free"),
   totalContractsValue: decimal("total_contracts_value").notNull().default("0"),
+  isEmailVerified: boolean("is_email_verified").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -100,6 +103,7 @@ export const contacts = pgTable("contacts", {
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
+  passwordHash: true,
 });
 
 export const insertContractSchema = createInsertSchema(contracts).omit({

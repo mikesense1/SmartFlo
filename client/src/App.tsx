@@ -9,6 +9,8 @@ import FreelancerDashboard from "@/pages/freelancer-dashboard";
 import ClientDashboard from "@/pages/client-dashboard";
 import CreateContract from "@/pages/create-contract";
 import EditContract from "@/pages/edit-contract";
+import SignupPage from "@/pages/signup";
+import LoginPage from "@/pages/login";
 import Pricing from "@/pages/pricing";
 import Features from "@/pages/features";
 import About from "@/pages/about";
@@ -35,6 +37,8 @@ function Router() {
       <Route path="/blockchain-test" component={BlockchainTest} />
       <Route path="/milestone-tracker/:id?" component={MilestoneTracker} />
       <Route path="/client-payment/:id?" component={ClientPayment} />
+      <Route path="/signup" component={SignupPage} />
+      <Route path="/login" component={LoginPage} />
       <Route component={NotFound} />
     </Switch>
   );

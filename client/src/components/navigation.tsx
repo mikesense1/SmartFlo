@@ -75,10 +75,12 @@ export default function Navigation() {
                   </Link>
                 </>
               )}
-              <Button variant="ghost" className="text-slate-600 hover:text-slate-900">
-                Sign In
-              </Button>
-              <Link href="/dashboard">
+              <Link href="/login">
+                <Button variant="ghost" className="text-slate-600 hover:text-slate-900">
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/signup">
                 <Button className="bg-primary hover:bg-primary/90">
                   {location === "/" ? "Start Free Trial" : "Dashboard"}
                 </Button>
@@ -130,9 +132,11 @@ export default function Navigation() {
                       </Link>
                     </>
                   )}
-                  <Button variant="ghost" className="justify-start text-slate-600 hover:text-slate-900">
-                    Sign In
-                  </Button>
+                  <Link href="/login" onClick={() => setIsOpen(false)}>
+                    <Button variant="ghost" className="justify-start text-slate-600 hover:text-slate-900 w-full">
+                      Sign In
+                    </Button>
+                  </Link>
                 </div>
               </SheetContent>
             </Sheet>

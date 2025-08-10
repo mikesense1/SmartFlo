@@ -33,6 +33,27 @@ class SmartPaymentTriggers {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Authentication routes
+  app.post("/api/auth/signup", async (req, res) => {
+    const { signup } = await import("./auth");
+    return signup(req, res);
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    const { login } = await import("./auth");
+    return login(req, res);
+  });
+
+  app.post("/api/auth/logout", async (req, res) => {
+    const { logout } = await import("./auth");
+    return logout(req, res);
+  });
+
+  app.get("/api/auth/me", async (req, res) => {
+    const { getCurrentUser } = await import("./auth");
+    return getCurrentUser(req, res);
+  });
+
   // User routes
   app.post("/api/users", async (req, res) => {
     try {

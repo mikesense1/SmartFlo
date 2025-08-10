@@ -24,8 +24,8 @@ export default function HeroSection() {
           <p className="text-lg text-slate-500 mb-8 max-w-2xl mx-auto">
             Set milestones, get client approval, receive instant payments. No more chasing invoices or waiting 45 days to get paid.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Link href="/dashboard">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+            <Link href="/signup">
               <Button 
                 size="lg" 
                 className="bg-primary hover:bg-primary/90 text-white px-8 py-4 text-lg font-semibold shadow-lg w-full sm:w-auto"
@@ -41,6 +41,15 @@ export default function HeroSection() {
             >
               See How It Works
             </Button>
+          </div>
+          
+          <div className="text-center mb-12">
+            <p className="text-sm text-slate-600">
+              Already have an account?{" "}
+              <Link href="/login" className="text-primary hover:underline font-medium">
+                Sign in here
+              </Link>
+            </p>
           </div>
           
           {/* Trust Indicators */}
