@@ -71,7 +71,6 @@ const WIZARD_STEPS = [
   "Client Details", 
   "Smart Milestones",
   "Template Selection",
-  "Payment Method",
   "AI Contract & Review"
 ];
 
@@ -1290,11 +1289,11 @@ export default function CreateContract() {
   const [customPrompt, setCustomPrompt] = useState("");
   
   // Payment Setup State
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>("stripe_card");
+  // Payment method will be selected by client during funding process
   const [isCreating, setIsCreating] = useState(false);
   const [isContractCreated, setIsContractCreated] = useState(false);
 
-  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 6));
+  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 5));
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   const addMilestone = () => {
@@ -1444,22 +1443,14 @@ export default function CreateContract() {
         return total + (parseFloat(milestone.amount) || 0);
       }, 0);
 
-      // Calculate total including fees based on payment method
-      let totalContractValue = milestoneTotal;
-      if (selectedPaymentMethod.startsWith("stripe_")) {
-        // For Stripe methods, add the transaction fees to the contract total
-        const feesCalculation = calculateTotalWithFees(milestoneTotal * 100, selectedPaymentMethod);
-        totalContractValue = feesCalculation.totalAmount / 100; // Convert back to dollars
-      }
-
-      // Create the contract with all the gathered data
+      // Create the contract with all the gathered data (payment method will be set by client)
       const contractData = {
         title: projectData.title,
         projectDescription: projectData.description,
         clientName: clientData.clientName,
         clientEmail: clientData.clientEmail,
-        totalValue: totalContractValue.toString(),
-        paymentMethod: selectedPaymentMethod,
+        totalValue: milestoneTotal.toString(),
+        paymentMethod: null, // Client will select payment method during funding
         contractType: "milestone_based",
         startDate: projectData.startDate,
         endDate: projectData.endDate,
@@ -1608,7 +1599,7 @@ export default function CreateContract() {
     } finally {
       setIsCreating(false);
     }
-  }, [projectData, clientData, milestones, selectedPaymentMethod, generatedContract, toast]);
+  }, [projectData, clientData, milestones, generatedContract, toast]);
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -1633,13 +1624,6 @@ export default function CreateContract() {
           isLoadingTemplates={isLoadingTemplates}
         />;
       case 5:
-        return <PaymentSetupStep 
-          selectedPaymentMethod={selectedPaymentMethod}
-          setSelectedPaymentMethod={setSelectedPaymentMethod}
-          milestones={milestones}
-          clientData={clientData}
-        />;
-      case 6:
         return <ContractGenerationStep 
           projectData={projectData}
           clientData={clientData}
@@ -1651,7 +1635,7 @@ export default function CreateContract() {
           generateContract={generateContract}
           customPrompt={customPrompt}
           setCustomPrompt={setCustomPrompt}
-          selectedPaymentMethod={selectedPaymentMethod}
+          selectedPaymentMethod={undefined}
           finalizeContract={finalizeContract}
           isCreating={isCreating}
         />;

@@ -67,8 +67,11 @@ export default function Navigation() {
                   <Link href="/about" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
                     About
                   </Link>
-                  <Link href="/dashboard" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
-                    Dashboard
+                  <Link href="/freelancer-dashboard" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
+                    Freelancer
+                  </Link>
+                  <Link href="/client-dashboard" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
+                    Client
                   </Link>
                 </>
               )}

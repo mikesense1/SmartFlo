@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
+import FreelancerDashboard from "@/pages/freelancer-dashboard";
+import ClientDashboard from "@/pages/client-dashboard";
 import CreateContract from "@/pages/create-contract";
 import EditContract from "@/pages/edit-contract";
 import Pricing from "@/pages/pricing";
@@ -21,6 +23,8 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/freelancer-dashboard" component={FreelancerDashboard} />
+      <Route path="/client-dashboard" component={ClientDashboard} />
       <Route path="/dashboard/contracts/new" component={CreateContract} />
       <Route path="/create-contract" component={CreateContract} />
       <Route path="/edit-contract/:id" component={EditContract} />
