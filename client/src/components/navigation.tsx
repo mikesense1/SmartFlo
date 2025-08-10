@@ -21,7 +21,7 @@ export default function Navigation() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <Link href="/dashboard" className="flex-shrink-0 flex items-center">
+            <Link href="/" className="flex-shrink-0 flex items-center">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <Zap className="w-5 h-5 text-white" />
               </div>
@@ -119,9 +119,6 @@ export default function Navigation() {
                     </>
                   ) : (
                     <>
-                      <Link href="/" onClick={() => setIsOpen(false)} className="text-left text-slate-600 hover:text-slate-900 py-2 text-sm font-medium">
-                        Home
-                      </Link>
                       <Link href="/freelancer-dashboard" onClick={() => setIsOpen(false)} className="text-left text-slate-600 hover:text-slate-900 py-2 text-sm font-medium">
                         Freelancer Dashboard
                       </Link>
@@ -136,11 +133,6 @@ export default function Navigation() {
                   <Button variant="ghost" className="justify-start text-slate-600 hover:text-slate-900">
                     Sign In
                   </Button>
-                  <Link href="/freelancer-dashboard">
-                    <Button className="bg-primary hover:bg-primary/90 w-full">
-                      {location === "/" ? "Start Free Trial" : "Dashboard"}
-                    </Button>
-                  </Link>
                 </div>
               </SheetContent>
             </Sheet>
