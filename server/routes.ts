@@ -83,24 +83,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Contract routes
+  // Contract routes with authentication
   app.get("/api/contracts", async (req, res) => {
     try {
-      console.log("Fetching contracts from storage...");
-      const contracts = await storage.getContracts();
-      console.log(`Successfully retrieved ${contracts.length} contracts`);
+      const userId = (req as any).session?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      console.log(`Fetching contracts for user: ${userId}`);
+      const contracts = await storage.getContractsByUser(userId);
+      console.log(`Successfully retrieved ${contracts.length} contracts for user`);
       res.json(contracts);
     } catch (error) {
-      console.error("Error fetching contracts:", error);
-      // Return empty array to prevent dashboard crash
-      res.json([]);
+      console.error("Failed to fetch contracts:", error);
+      res.status(500).json({ message: "Failed to fetch contracts" });
     }
   });
 
   app.post("/api/contracts", async (req, res) => {
     try {
+      const userId = (req as any).session?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
       console.log("Creating contract with data:", req.body);
-      const contractData = insertContractSchema.parse(req.body);
+      const contractData = insertContractSchema.parse({
+        ...req.body,
+        creatorId: userId // Ensure contract is associated with authenticated user
+      });
       const contract = await storage.createContract(contractData);
       console.log("Contract created successfully:", contract);
       
@@ -132,10 +146,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/contracts/:id", async (req, res) => {
     try {
+      const userId = (req as any).session?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
       const contract = await storage.getContract(req.params.id);
       if (!contract) {
         return res.status(404).json({ message: "Contract not found" });
       }
+      
+      // Ensure user can only access their own contracts
+      if (contract.creatorId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
       res.json(contract);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch contract" });
@@ -144,9 +170,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/users/:userId/contracts", async (req, res) => {
     try {
-      // Handle both the mock UUID and the old "user-123" format
-      const userId = req.params.userId === "user-123" ? "5db53622-f397-41f4-9746-4b567a24fcfb" : req.params.userId;
-      const contracts = await storage.getContractsByUser(userId);
+      const authenticatedUserId = (req as any).session?.userId;
+      
+      if (!authenticatedUserId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const requestedUserId = req.params.userId;
+      
+      // Users can only access their own contracts
+      if (requestedUserId !== authenticatedUserId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const contracts = await storage.getContractsByUser(requestedUserId);
       res.json(contracts);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch contracts" });

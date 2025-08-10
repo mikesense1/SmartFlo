@@ -20,30 +20,38 @@ export default function FreelancerDashboard() {
   const [contractDocument, setContractDocument] = useState("");
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
 
-  // Mock user ID - in production this would come from auth
-  const currentUserId = "6d52e85d-2ee5-4922-a7cf-0aef6f52b8ba"; // Alex Morgan
+  // Fetch current user data
+  const { data: userResponse, isLoading: userLoading } = useQuery({
+    queryKey: ["/api/auth/me"],
+    retry: false,
+  });
+  
+  const currentUser = userResponse?.user;
 
-  // Fetch contracts for current user
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!userLoading && !currentUser) {
+      window.location.href = "/login";
+    }
+  }, [currentUser, userLoading]);
+
+  // Fetch contracts for authenticated user
   const { data: contracts = [], isLoading } = useQuery({
     queryKey: ["/api/contracts"],
+    enabled: !!currentUser,
     queryFn: async () => {
-      console.log("Fetching user contracts...");
+      console.log("Fetching authenticated user contracts...");
       const response = await fetch("/api/contracts");
-      if (!response.ok) throw new Error("Failed to fetch contracts");
-      const allContracts = await response.json();
-      console.log("Successfully fetched contracts:", allContracts);
-      
-      // Filter contracts for current user
-      const userContracts = allContracts.filter((contract: any) => 
-        contract.creatorId === currentUserId || contract.creator_id === currentUserId
-      );
-      console.log("User contracts filtered:", userContracts.length);
-      
-      if (userContracts.length > 0) {
-        console.log("Sample contract fields:", Object.keys(userContracts[0]));
+      if (!response.ok) {
+        if (response.status === 401) {
+          window.location.href = "/login";
+          return [];
+        }
+        throw new Error("Failed to fetch contracts");
       }
-      
-      return userContracts;
+      const contracts = await response.json();
+      console.log(`Successfully fetched ${contracts.length} contracts for authenticated user`);
+      return contracts;
     }
   });
 

@@ -22,25 +22,38 @@ export default function ClientDashboard() {
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
 
-  // Mock client email - in production this would come from auth
-  const currentClientEmail = "hello@techstartup.co";
+  // Fetch current user data
+  const { data: userResponse, isLoading: userLoading } = useQuery({
+    queryKey: ["/api/auth/me"],
+    retry: false,
+  });
+  
+  const currentUser = userResponse?.user;
 
-  // Fetch contracts for current client
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!userLoading && !currentUser) {
+      window.location.href = "/login";
+    }
+  }, [currentUser, userLoading]);
+
+  // Fetch contracts for authenticated client
   const { data: contracts = [], isLoading } = useQuery({
     queryKey: ["/api/contracts"],
+    enabled: !!currentUser,
     queryFn: async () => {
-      console.log("Fetching client contracts...");
+      console.log("Fetching authenticated client contracts...");
       const response = await fetch("/api/contracts");
-      if (!response.ok) throw new Error("Failed to fetch contracts");
-      const allContracts = await response.json();
-      
-      // Filter contracts for current client
-      const clientContracts = allContracts.filter((contract: any) => 
-        contract.clientEmail === currentClientEmail || contract.client_email === currentClientEmail
-      );
-      console.log("Client contracts filtered:", clientContracts.length);
-      
-      return clientContracts;
+      if (!response.ok) {
+        if (response.status === 401) {
+          window.location.href = "/login";
+          return [];
+        }
+        throw new Error("Failed to fetch contracts");
+      }
+      const contracts = await response.json();
+      console.log(`Successfully fetched ${contracts.length} contracts for authenticated client`);
+      return contracts;
     }
   });
 
