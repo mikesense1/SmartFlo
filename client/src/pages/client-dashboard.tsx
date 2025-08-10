@@ -60,16 +60,25 @@ export default function ClientDashboard() {
   const activeContracts = contracts.filter((contract: any) => contract.status === "active");
   const pendingContracts = contracts.filter((contract: any) => contract.status === "draft");
 
-  // Calculate stats
+  // Calculate stats from actual user data
+  const totalInvestment = contracts.reduce((sum: number, contract: any) => 
+    sum + parseFloat(contract.totalValue || contract.total_value || "0"), 0);
+  
+  const completedProjects = contracts.filter((contract: any) => contract.status === "completed");
+  const completedSpending = completedProjects.reduce((sum: number, contract: any) => 
+    sum + parseFloat(contract.totalValue || contract.total_value || "0"), 0);
+  
+  const activeSpending = activeContracts.reduce((sum: number, contract: any) => 
+    sum + parseFloat(contract.totalValue || contract.total_value || "0"), 0);
+
   const realtimeStats = {
-    totalInvestment: contracts.reduce((sum: number, contract: any) => 
-      sum + parseFloat(contract.totalValue || contract.total_value || "0"), 0),
+    totalInvestment,
     activeProjects: activeContracts.length,
-    completedProjects: contracts.filter((contract: any) => contract.status === "completed").length,
-    avgDeliveryTime: 14,
-    totalBudget: 125000,
-    spent: 78000,
-    remaining: 47000
+    completedProjects: completedProjects.length,
+    avgDeliveryTime: contracts.length > 0 ? 14 : 0, // Show 0 if no contracts
+    totalBudget: totalInvestment,
+    spent: completedSpending,
+    remaining: totalInvestment - completedSpending
   };
 
   const handleViewContract = async (contract: any) => {
@@ -219,8 +228,14 @@ export default function ClientDashboard() {
             <CardContent>
               <div className="text-2xl font-bold text-green-600">{realtimeStats.avgDeliveryTime} days</div>
               <p className="text-xs text-muted-foreground flex items-center">
-                <TrendingUp className="w-3 h-3 mr-1 text-green-600" />
-                On schedule
+                {contracts.length > 0 ? (
+                  <>
+                    <TrendingUp className="w-3 h-3 mr-1 text-green-600" />
+                    On schedule
+                  </>
+                ) : (
+                  'No projects yet'
+                )}
               </p>
             </CardContent>
           </Card>
@@ -703,16 +718,16 @@ export default function ClientDashboard() {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex justify-between">
-                      <span>This Quarter</span>
-                      <span className="font-semibold">$45,000</span>
+                      <span>Total Budget</span>
+                      <span className="font-semibold">${realtimeStats.totalBudget.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Last Quarter</span>
-                      <span className="font-semibold">$38,500</span>
+                      <span>Spent</span>
+                      <span className="font-semibold">${realtimeStats.spent.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Growth</span>
-                      <span className="font-semibold text-green-600">+17%</span>
+                      <span>Remaining</span>
+                      <span className="font-semibold text-green-600">${realtimeStats.remaining.toLocaleString()}</span>
                     </div>
                   </div>
                 </CardContent>

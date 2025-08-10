@@ -58,16 +58,27 @@ export default function FreelancerDashboard() {
   const activeContracts = contracts.filter((contract: any) => contract.status === "active");
   const draftContracts = contracts.filter((contract: any) => contract.status === "draft");
 
-  // Calculate stats
+  // Calculate stats from actual user data
+  const totalEarnings = contracts.reduce((sum: number, contract: any) => 
+    sum + parseFloat(contract.totalValue || contract.total_value || "0"), 0);
+  
+  const completedContracts = contracts.filter((contract: any) => contract.status === "completed");
+  const completedEarnings = completedContracts.reduce((sum: number, contract: any) => 
+    sum + parseFloat(contract.totalValue || contract.total_value || "0"), 0);
+  
+  const escrowContracts = contracts.filter((contract: any) => 
+    contract.status === "active" && contract.blockchainStatus === "deployed");
+  const inEscrow = escrowContracts.reduce((sum: number, contract: any) => 
+    sum + parseFloat(contract.totalValue || contract.total_value || "0"), 0);
+
   const realtimeStats = {
-    totalEarnings: contracts.reduce((sum: number, contract: any) => 
-      sum + parseFloat(contract.totalValue || contract.total_value || "0"), 0),
+    totalEarnings,
     activeContracts: activeContracts.length,
-    completedMilestones: 12, // Mock data
-    avgPaymentDays: 2,
-    lifetimeEarnings: 85000,
-    inEscrow: 25000,
-    pendingApproval: 8500
+    completedMilestones: completedContracts.length,
+    avgPaymentDays: contracts.length > 0 ? 2 : 0, // Show 0 if no contracts
+    lifetimeEarnings: completedEarnings,
+    inEscrow,
+    pendingApproval: totalEarnings - completedEarnings - inEscrow
   };
 
   const handleViewContract = async (contract: any) => {
@@ -185,8 +196,14 @@ export default function FreelancerDashboard() {
             <CardContent>
               <div className="text-2xl font-bold text-green-600">{realtimeStats.avgPaymentDays} days</div>
               <p className="text-xs text-muted-foreground flex items-center">
-                <TrendingDown className="w-3 h-3 mr-1 text-green-600" />
-                85% faster than industry
+                {contracts.length > 0 ? (
+                  <>
+                    <TrendingDown className="w-3 h-3 mr-1 text-green-600" />
+                    85% faster than industry
+                  </>
+                ) : (
+                  'No contracts yet'
+                )}
               </p>
             </CardContent>
           </Card>
@@ -548,15 +565,15 @@ export default function FreelancerDashboard() {
                   <div className="space-y-4">
                     <div className="flex justify-between">
                       <span>This Month</span>
-                      <span className="font-semibold">$12,500</span>
+                      <span className="font-semibold">${realtimeStats.lifetimeEarnings.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Last Month</span>
-                      <span className="font-semibold">$8,200</span>
+                      <span>In Escrow</span>
+                      <span className="font-semibold">${realtimeStats.inEscrow.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Growth</span>
-                      <span className="font-semibold text-green-600">+52%</span>
+                      <span>Completed</span>
+                      <span className="font-semibold text-green-600">${realtimeStats.lifetimeEarnings.toLocaleString()}</span>
                     </div>
                   </div>
                 </CardContent>
