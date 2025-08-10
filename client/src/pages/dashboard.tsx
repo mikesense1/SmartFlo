@@ -20,9 +20,9 @@ import type { Contract, Milestone, Payment } from "@shared/schema";
 
 // Demo user data from database
 const DEMO_USER = {
-  id: "5db53622-f397-41f4-9746-4b567a24fcfb",
-  fullName: "Demo User",
-  email: "demo@payflow.com",
+  id: "6d52e85d-2ee5-4922-a7cf-0aef6f52b8ba",
+  fullName: "Alex Morgan",
+  email: "alex.morgan@smartflo.dev",
   specialization: "Full-Stack Developer",
   joinedDate: "2025-07-13"
 };
