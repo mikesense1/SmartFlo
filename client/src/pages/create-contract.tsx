@@ -1463,7 +1463,7 @@ export default function CreateContract() {
         contractType: "milestone_based",
         startDate: projectData.startDate,
         endDate: projectData.endDate,
-        creatorId: "5db53622-f397-41f4-9746-4b567a24fcfb", // Demo user from database
+        creatorId: "6d52e85d-2ee5-4922-a7cf-0aef6f52b8ba", // Demo user from database (Alex Morgan)
         status: "draft"
       };
 
@@ -1480,9 +1480,19 @@ export default function CreateContract() {
       });
 
       if (!contractResponse.ok) {
-        const errorText = await contractResponse.text();
-        console.error('Contract API Error:', contractResponse.status, errorText);
-        throw new Error(`Failed to create contract (${contractResponse.status}): ${errorText}`);
+        const errorData = await contractResponse.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('Contract API Error:', contractResponse.status, errorData);
+        
+        // Show user-friendly error message
+        toast({
+          title: "Contract Creation Failed",
+          description: errorData.message || "Please check your project details and try again.",
+          variant: "destructive",
+        });
+        
+        setIsContractCreated(false);
+        setIsCreating(false);
+        return;
       }
 
       const createdContract = await contractResponse.json();
@@ -1528,7 +1538,7 @@ export default function CreateContract() {
       
       // Invalidate contracts cache to trigger refresh
       queryClient.invalidateQueries({
-        queryKey: ["/api/users", "5db53622-f397-41f4-9746-4b567a24fcfb", "contracts"]
+        queryKey: ["/api/users", "6d52e85d-2ee5-4922-a7cf-0aef6f52b8ba", "contracts"]
       });
       
       // Invalidate milestone cache for the new contract
