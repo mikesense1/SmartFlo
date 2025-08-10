@@ -62,8 +62,9 @@ export const signup = async (req: Request, res: Response) => {
         createdAt: users.createdAt,
       });
     
-    // Set session or return user data
-    (req as any).session = { userId: newUser.id };
+    // Set session properly
+    (req as any).session.userId = newUser.id;
+    (req as any).session.email = newUser.email;
     
     res.status(201).json({
       message: "Account created successfully",
@@ -112,8 +113,9 @@ export const login = async (req: Request, res: Response) => {
       });
     }
     
-    // Set session
-    (req as any).session = { userId: user.id };
+    // Set session properly
+    (req as any).session.userId = user.id;
+    (req as any).session.email = user.email;
     
     // Return user data (excluding sensitive info)
     const userResponse = {
@@ -147,8 +149,14 @@ export const login = async (req: Request, res: Response) => {
 
 export const logout = async (req: Request, res: Response) => {
   try {
-    (req as any).session = null;
-    res.json({ message: "Logged out successfully" });
+    (req as any).session.destroy((err: any) => {
+      if (err) {
+        console.error("Session destruction error:", err);
+        return res.status(500).json({ error: "Failed to logout" });
+      }
+      res.clearCookie('connect.sid');
+      res.json({ message: "Logged out successfully" });
+    });
   } catch (error) {
     console.error("Logout error:", error);
     res.status(500).json({ error: "Logout failed" });

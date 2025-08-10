@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navigation from "@/components/navigation";
 import { LogIn, Mail, Lock, ArrowRight, Zap } from "lucide-react";
 
@@ -53,14 +53,20 @@ export default function LoginPage() {
         description: "Successfully signed in to your account.",
       });
       
-      // Redirect based on user type or to a general dashboard
-      if (data.userType === 'freelancer') {
-        setLocation("/freelancer-dashboard");
-      } else if (data.userType === 'client') {
-        setLocation("/client-dashboard");
-      } else {
-        setLocation("/freelancer-dashboard"); // Default to freelancer dashboard
-      }
+      // Small delay to ensure session is set before redirect
+      setTimeout(() => {
+        // Invalidate and refetch user data
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+        
+        // Redirect based on user type or to a general dashboard
+        if (data.userType === 'freelancer') {
+          setLocation("/freelancer-dashboard");
+        } else if (data.userType === 'client') {
+          setLocation("/client-dashboard");
+        } else {
+          setLocation("/freelancer-dashboard"); // Default to freelancer dashboard
+        }
+      }, 100);
     },
     onError: (error: any) => {
       toast({

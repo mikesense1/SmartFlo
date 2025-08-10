@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navigation from "@/components/navigation";
 import { UserPlus, Mail, Lock, User, Briefcase, Zap, CheckCircle } from "lucide-react";
 
@@ -70,12 +70,18 @@ export default function SignupPage() {
         description: "Welcome to SmartFlo. You can now access your dashboard.",
       });
       
-      // Redirect based on user type
-      if (data.userType === 'freelancer') {
-        setLocation("/freelancer-dashboard");
-      } else {
-        setLocation("/client-dashboard");
-      }
+      // Small delay to ensure session is set before redirect
+      setTimeout(() => {
+        // Invalidate and refetch user data
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+        
+        // Redirect based on user type
+        if (data.userType === 'freelancer') {
+          setLocation("/freelancer-dashboard");
+        } else {
+          setLocation("/client-dashboard");
+        }
+      }, 100);
     },
     onError: (error: any) => {
       toast({
