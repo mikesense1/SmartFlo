@@ -15,6 +15,8 @@ SmartFlo is built with a modern web application stack. The **Frontend** uses Rea
 
 **Recent Production Updates (January 2025)**: Added comprehensive contract document viewing functionality with full Vercel deployment support. Created dedicated API endpoints (`/api/contracts/[id]/document`) for retrieving AI-generated contract documents, updated database schema to store generated contracts, and implemented modal dialog interface for document viewing from dashboard. All endpoints are now production-ready with proper CORS configuration, database connection pooling, and error handling for Vercel serverless deployment at getsmartflo.com.
 
+**Latest Updates (January 2025)**: Completed major restructuring with separate freelancer and client dashboard modules. Removed payment method selection from contract creation process (moved to client funding phase). Added role-based navigation with separate dashboard access for freelancers and clients. Freelancers can create/edit contracts and track progress, while clients can fund contracts and track milestones. Mobile navigation includes dedicated menu items for both modules.
+
 ### External Dependencies
 **Frontend Dependencies**: Radix UI, TanStack React Query, React Hook Form, Zod, clsx, class-variance-authority, Lucide React.
 **Backend Dependencies**: Neon Database (PostgreSQL), Drizzle ORM, connect-pg-simple, date-fns.

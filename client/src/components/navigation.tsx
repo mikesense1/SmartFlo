@@ -96,30 +96,49 @@ export default function Navigation() {
               </SheetTrigger>
               <SheetContent>
                 <div className="flex flex-col space-y-4 mt-8">
-                  <button 
-                    onClick={() => scrollToSection("features")}
-                    className="text-left text-slate-600 hover:text-slate-900 py-2 text-sm font-medium"
-                  >
-                    Features
-                  </button>
-                  <button 
-                    onClick={() => scrollToSection("pricing")}
-                    className="text-left text-slate-600 hover:text-slate-900 py-2 text-sm font-medium"
-                  >
-                    Pricing
-                  </button>
-                  <button 
-                    onClick={() => scrollToSection("testimonials")}
-                    className="text-left text-slate-600 hover:text-slate-900 py-2 text-sm font-medium"
-                  >
-                    Reviews
-                  </button>
+                  {location === "/" ? (
+                    <>
+                      <button 
+                        onClick={() => scrollToSection("features")}
+                        className="text-left text-slate-600 hover:text-slate-900 py-2 text-sm font-medium"
+                      >
+                        Features
+                      </button>
+                      <button 
+                        onClick={() => scrollToSection("pricing")}
+                        className="text-left text-slate-600 hover:text-slate-900 py-2 text-sm font-medium"
+                      >
+                        Pricing
+                      </button>
+                      <button 
+                        onClick={() => scrollToSection("testimonials")}
+                        className="text-left text-slate-600 hover:text-slate-900 py-2 text-sm font-medium"
+                      >
+                        Reviews
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/" onClick={() => setIsOpen(false)} className="text-left text-slate-600 hover:text-slate-900 py-2 text-sm font-medium">
+                        Home
+                      </Link>
+                      <Link href="/freelancer-dashboard" onClick={() => setIsOpen(false)} className="text-left text-slate-600 hover:text-slate-900 py-2 text-sm font-medium">
+                        Freelancer Dashboard
+                      </Link>
+                      <Link href="/client-dashboard" onClick={() => setIsOpen(false)} className="text-left text-slate-600 hover:text-slate-900 py-2 text-sm font-medium">
+                        Client Dashboard
+                      </Link>
+                      <Link href="/pricing" onClick={() => setIsOpen(false)} className="text-left text-slate-600 hover:text-slate-900 py-2 text-sm font-medium">
+                        Pricing
+                      </Link>
+                    </>
+                  )}
                   <Button variant="ghost" className="justify-start text-slate-600 hover:text-slate-900">
                     Sign In
                   </Button>
-                  <Link href="/dashboard">
+                  <Link href="/freelancer-dashboard">
                     <Button className="bg-primary hover:bg-primary/90 w-full">
-                      Start Free Trial
+                      {location === "/" ? "Start Free Trial" : "Dashboard"}
                     </Button>
                   </Link>
                 </div>

@@ -652,7 +652,6 @@ const ContractGenerationStep = ({
   generateContract,
   customPrompt,
   setCustomPrompt,
-  selectedPaymentMethod,
   finalizeContract,
   isCreating
 }: Pick<StepProps, 'projectData' | 'clientData' | 'milestones'> & {
@@ -663,7 +662,6 @@ const ContractGenerationStep = ({
   generateContract: () => Promise<void>;
   customPrompt: string;
   setCustomPrompt: (value: string) => void;
-  selectedPaymentMethod: PaymentMethod;
   finalizeContract: () => Promise<void>;
   isCreating: boolean;
 }) => (
@@ -681,14 +679,14 @@ const ContractGenerationStep = ({
       <CardContent>
         {!generatedContract ? (
           <div className="space-y-6">
-            {/* Payment Method Preview */}
-            <div className="bg-slate-50 p-4 rounded-lg border">
+            {/* Payment Method Note */}
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
               <div className="flex items-center gap-2 mb-2">
-                <Wallet className="w-4 h-4 text-slate-600" />
-                <span className="font-medium text-sm">Selected Payment Method</span>
+                <Wallet className="w-4 h-4 text-blue-600" />
+                <span className="font-medium text-sm text-blue-900">Payment Method</span>
               </div>
-              <p className="text-sm text-slate-600">
-                {getPaymentMethodName(selectedPaymentMethod)}
+              <p className="text-sm text-blue-700">
+                Your client will select the payment method when they fund the contract
               </p>
             </div>
 
@@ -732,7 +730,7 @@ const ContractGenerationStep = ({
                 )}
               </Button>
               <p className="text-sm text-slate-500">
-                AI will create a professional contract based on your project details, milestones, and {getPaymentMethodName(selectedPaymentMethod)} preferences
+                AI will create a professional contract based on your project details and milestones
               </p>
             </div>
           </div>
@@ -1394,7 +1392,7 @@ export default function CreateContract() {
         projectData,
         clientData,
         milestones,
-        paymentMethod: selectedPaymentMethod,
+        paymentMethod: null, // Will be set during client funding
         customPrompt,
         selectedTemplate
       };
@@ -1426,7 +1424,7 @@ export default function CreateContract() {
       setIsGenerating(false);
       setIsAnalyzing(false);
     }
-  }, [projectData, clientData, milestones, selectedPaymentMethod, customPrompt, selectedTemplate, toast]);
+  }, [projectData, clientData, milestones, customPrompt, selectedTemplate, toast]);
 
   // Final Contract Creation Function
   const finalizeContract = useCallback(async () => {
@@ -1635,7 +1633,6 @@ export default function CreateContract() {
           generateContract={generateContract}
           customPrompt={customPrompt}
           setCustomPrompt={setCustomPrompt}
-          selectedPaymentMethod={undefined}
           finalizeContract={finalizeContract}
           isCreating={isCreating}
         />;
