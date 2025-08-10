@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { 
   Plus, FileText, DollarSign, Clock, CheckCircle, 
   AlertCircle, Wallet, CreditCard, Activity, Target,
-  TrendingUp, TrendingDown, Lock, Zap, Users, Eye
+  TrendingUp, TrendingDown, Lock, Zap, Users, Eye, Edit
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -519,50 +519,97 @@ export default function Dashboard() {
                         </div>
                       )}
                       <div className="mt-4 pt-4 border-t flex gap-2">
-                        <Link href={`/milestone-tracker/${contract.id}`}>
-                          <Button variant="outline" size="sm">
-                            <Target className="w-4 h-4 mr-2" />
-                            Track Milestones
-                          </Button>
-                        </Link>
-                        <Link href={`/client-payment/${contract.id}`}>
-                          <Button variant="outline" size="sm">
-                            <DollarSign className="w-4 h-4 mr-2" />
-                            Fund Contract
-                          </Button>
-                        </Link>
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm" onClick={() => handleViewContract(contract)}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              View Contract
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                            <DialogHeader>
-                              <DialogTitle>Contract Document - {selectedContract?.title}</DialogTitle>
-                            </DialogHeader>
-                            <div className="mt-4">
-                              {isLoadingDocument ? (
-                                <div className="flex items-center justify-center py-8">
-                                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                  <span className="ml-3 text-slate-600">Loading contract document...</span>
+                        {contract.status === 'draft' ? (
+                          // Draft contract actions
+                          <>
+                            <Link href={`/edit-contract/${contract.id}`}>
+                              <Button variant="default" size="sm">
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit Contract
+                              </Button>
+                            </Link>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="sm" onClick={() => handleViewContract(contract)}>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  Preview
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                                <DialogHeader>
+                                  <DialogTitle>Contract Preview - {selectedContract?.title}</DialogTitle>
+                                </DialogHeader>
+                                <div className="mt-4">
+                                  {isLoadingDocument ? (
+                                    <div className="flex items-center justify-center py-8">
+                                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                      <span className="ml-3 text-slate-600">Loading contract document...</span>
+                                    </div>
+                                  ) : contractDocument ? (
+                                    <div className="bg-white border rounded-lg p-6">
+                                      <div className="whitespace-pre-wrap text-sm leading-relaxed font-mono">
+                                        {contractDocument}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="text-center py-8 text-slate-500">
+                                      <FileText className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                                      <p>No contract document available</p>
+                                    </div>
+                                  )}
                                 </div>
-                              ) : contractDocument ? (
-                                <div className="bg-white border rounded-lg p-6">
-                                  <div className="whitespace-pre-wrap text-sm leading-relaxed font-mono">
-                                    {contractDocument}
-                                  </div>
+                              </DialogContent>
+                            </Dialog>
+                          </>
+                        ) : (
+                          // Active/completed contract actions
+                          <>
+                            <Link href={`/milestone-tracker/${contract.id}`}>
+                              <Button variant="outline" size="sm">
+                                <Target className="w-4 h-4 mr-2" />
+                                Track Milestones
+                              </Button>
+                            </Link>
+                            <Link href={`/client-payment/${contract.id}`}>
+                              <Button variant="outline" size="sm">
+                                <DollarSign className="w-4 h-4 mr-2" />
+                                Fund Contract
+                              </Button>
+                            </Link>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="sm" onClick={() => handleViewContract(contract)}>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View Contract
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                                <DialogHeader>
+                                  <DialogTitle>Contract Document - {selectedContract?.title}</DialogTitle>
+                                </DialogHeader>
+                                <div className="mt-4">
+                                  {isLoadingDocument ? (
+                                    <div className="flex items-center justify-center py-8">
+                                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                      <span className="ml-3 text-slate-600">Loading contract document...</span>
+                                    </div>
+                                  ) : contractDocument ? (
+                                    <div className="bg-white border rounded-lg p-6">
+                                      <div className="whitespace-pre-wrap text-sm leading-relaxed font-mono">
+                                        {contractDocument}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="text-center py-8 text-slate-500">
+                                      <FileText className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                                      <p>No contract document available</p>
+                                    </div>
+                                  )}
                                 </div>
-                              ) : (
-                                <div className="text-center py-8 text-slate-500">
-                                  <FileText className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-                                  <p>No contract document available</p>
-                                </div>
-                              )}
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                              </DialogContent>
+                            </Dialog>
+                          </>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
