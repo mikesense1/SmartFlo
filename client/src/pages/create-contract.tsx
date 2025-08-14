@@ -39,6 +39,13 @@ interface ClientDetailsData {
   hourlyRate?: string; // For hourly rate contracts
 }
 
+interface PaymentTermsData {
+  downPaymentEnabled: boolean;
+  downPaymentType: "percentage" | "fixed";
+  downPaymentValue: string;
+  finalPaymentAuto: boolean;
+}
+
 interface ContractPricing {
   contractAmount: number;
   transactionFee: number;
@@ -52,6 +59,13 @@ interface MilestoneData {
   amount: string;
   dueDate: string;
   percentage: number;
+}
+
+interface PaymentTermsData {
+  downPaymentEnabled: boolean;
+  downPaymentType: "percentage" | "fixed";
+  downPaymentValue: string;
+  finalPaymentAuto: boolean;
 }
 
 interface RiskAnalysis {
@@ -93,7 +107,6 @@ const SCOPE_OF_WORK_OPTIONS = [
 ];
 
 const MILESTONE_TITLE_OPTIONS = [
-  "Down Payment",
   "Project Initiation",
   "Design Phase Completion",
   "Development Phase 1",
@@ -114,14 +127,21 @@ interface StepProps {
   projectData: ProjectSetupData;
   clientData: ClientDetailsData;
   milestones: MilestoneData[];
+  paymentTerms: PaymentTermsData;
   updateProjectData: (field: keyof ProjectSetupData, value: string) => void;
   updateClientData: (field: keyof ClientDetailsData, value: string) => void;
+  updatePaymentTerms: (field: keyof PaymentTermsData, value: string | boolean) => void;
   updateMilestone: (index: number, field: keyof MilestoneData, value: string | number) => void;
   addMilestone: () => void;
   removeMilestone: (index: number) => void;
 }
 
-const ProjectSetupStep = ({ projectData, updateProjectData }: Pick<StepProps, 'projectData' | 'updateProjectData'>) => (
+const ProjectSetupStep = ({ 
+  projectData, 
+  updateProjectData, 
+  paymentTerms, 
+  updatePaymentTerms 
+}: Pick<StepProps, 'projectData' | 'updateProjectData' | 'paymentTerms' | 'updatePaymentTerms'>) => (
   <Card>
     <CardHeader>
       <CardTitle className="flex items-center gap-2">
@@ -227,6 +247,86 @@ const ProjectSetupStep = ({ projectData, updateProjectData }: Pick<StepProps, 'p
           </div>
         </RadioGroup>
       </div>
+
+      {/* Payment Terms Section */}
+      {projectData.pricingModel === "milestones" && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Wallet className="w-5 h-5" />
+              Payment Terms
+            </CardTitle>
+            <CardDescription>
+              Configure how payments will be structured for this project
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="downPaymentEnabled"
+                checked={paymentTerms.downPaymentEnabled}
+                onChange={(e) => updatePaymentTerms("downPaymentEnabled", e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <label htmlFor="downPaymentEnabled" className="text-sm font-medium">
+                Require down payment before work begins
+              </label>
+            </div>
+            
+            {paymentTerms.downPaymentEnabled && (
+              <div className="ml-6 space-y-3 border-l-2 border-blue-300 pl-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Down Payment Type</label>
+                  <RadioGroup 
+                    value={paymentTerms.downPaymentType}
+                    onValueChange={(value) => updatePaymentTerms("downPaymentType", value)}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="percentage" id="percentage" />
+                      <label htmlFor="percentage" className="text-sm">Percentage of total</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="fixed" id="fixed-amount" />
+                      <label htmlFor="fixed-amount" className="text-sm">Fixed dollar amount</label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
+                    Down Payment {paymentTerms.downPaymentType === "percentage" ? "Percentage" : "Amount"}
+                  </label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      value={paymentTerms.downPaymentValue}
+                      onChange={(e) => updatePaymentTerms("downPaymentValue", e.target.value)}
+                      placeholder={paymentTerms.downPaymentType === "percentage" ? "25" : "500"}
+                    />
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                      {paymentTerms.downPaymentType === "percentage" ? "%" : "$"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="finalPaymentAuto"
+                checked={paymentTerms.finalPaymentAuto}
+                onChange={(e) => updatePaymentTerms("finalPaymentAuto", e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <label htmlFor="finalPaymentAuto" className="text-sm font-medium">
+                Automatically calculate final payment amount
+              </label>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </CardContent>
   </Card>
 );
@@ -318,13 +418,27 @@ const MilestoneBuilderStep = ({
   addMilestone, 
   removeMilestone,
   clientData,
-  projectData
-}: Pick<StepProps, 'milestones' | 'updateMilestone' | 'addMilestone' | 'removeMilestone' | 'clientData' | 'projectData'>) => {
+  projectData,
+  paymentTerms
+}: Pick<StepProps, 'milestones' | 'updateMilestone' | 'addMilestone' | 'removeMilestone' | 'clientData' | 'projectData' | 'paymentTerms'>) => {
   
   // Calculate milestone amount based on percentage
   const calculateMilestoneAmount = (percentage: number): string => {
     const budget = parseFloat(clientData.projectBudget) || 0;
     return Math.round(budget * (percentage / 100)).toString();
+  };
+
+  // Calculate down payment amount
+  const calculateDownPaymentAmount = (): number => {
+    if (!paymentTerms.downPaymentEnabled) return 0;
+    
+    const budget = parseFloat(clientData.projectBudget) || 0;
+    if (paymentTerms.downPaymentType === "percentage") {
+      const percentage = parseFloat(paymentTerms.downPaymentValue) || 0;
+      return Math.round(budget * (percentage / 100));
+    } else {
+      return parseFloat(paymentTerms.downPaymentValue) || 0;
+    }
   };
 
   // Calculate total contract amount from all milestones
@@ -338,6 +452,14 @@ const MilestoneBuilderStep = ({
   // Get total percentage
   const getTotalPercentage = (): number => {
     return milestones.reduce((total, milestone) => total + (milestone.percentage || 0), 0);
+  };
+
+  // Calculate remaining amount for final payment
+  const getRemainingAmount = (): number => {
+    const budget = parseFloat(clientData.projectBudget) || 0;
+    const downPayment = calculateDownPaymentAmount();
+    const milestoneTotal = getTotalContractAmount();
+    return budget - downPayment - milestoneTotal;
   };
 
   return (
@@ -498,37 +620,44 @@ const MilestoneBuilderStep = ({
         Add Milestone
       </Button>
 
-      {/* Summary Section */}
-      <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <h4 className="font-medium text-blue-900 mb-2">Contract Summary</h4>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-blue-700">Project Budget:</span>
-            <span className="font-medium ml-2">${clientData.projectBudget || '0'}</span>
+      {/* Enhanced Payment Structure Summary */}
+      <Card className="bg-slate-50 border-slate-200">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Payment Structure Overview</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {paymentTerms.downPaymentEnabled && (
+            <div className="flex justify-between text-sm">
+              <span>Down Payment:</span>
+              <span className="font-medium">
+                ${calculateDownPaymentAmount().toLocaleString()} 
+                ({paymentTerms.downPaymentType === "percentage" ? paymentTerms.downPaymentValue + "%" : "Fixed"})
+              </span>
+            </div>
+          )}
+          <div className="flex justify-between text-sm">
+            <span>Milestones Total:</span>
+            <span className="font-medium">${getTotalContractAmount().toLocaleString()}</span>
           </div>
-          <div>
-            <span className="text-blue-700">Total Percentage:</span>
-            <span className={`font-medium ml-2 ${getTotalPercentage() === 100 ? 'text-green-600' : getTotalPercentage() > 100 ? 'text-red-600' : 'text-blue-900'}`}>
-              {getTotalPercentage()}%
-            </span>
+          {paymentTerms.finalPaymentAuto && getRemainingAmount() > 0 && (
+            <div className="flex justify-between text-sm">
+              <span>Remaining (Final Payment):</span>
+              <span className="font-medium text-blue-600">${getRemainingAmount().toLocaleString()}</span>
+            </div>
+          )}
+          <div className="border-t pt-2">
+            <div className="flex justify-between text-sm font-medium">
+              <span>Project Total:</span>
+              <span>${(parseFloat(clientData.projectBudget) || 0).toLocaleString()}</span>
+            </div>
           </div>
-          <div>
-            <span className="text-blue-700">Contract Total:</span>
-            <span className="font-medium ml-2">${getTotalContractAmount().toLocaleString()}</span>
-          </div>
-          <div>
-            <span className="text-blue-700">Remaining:</span>
-            <span className="font-medium ml-2">
-              ${(parseFloat(clientData.projectBudget) - getTotalContractAmount() || 0).toLocaleString()}
-            </span>
-          </div>
-        </div>
-        {getTotalPercentage() !== 100 && (
-          <div className="mt-2 text-xs text-amber-600">
-            💡 Tip: Total percentage should equal 100% for complete project coverage
-          </div>
-        )}
-      </div>
+          {paymentTerms.finalPaymentAuto && getRemainingAmount() > 0 && (
+            <div className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
+              💡 Final payment of ${getRemainingAmount().toLocaleString()} will be automatically calculated
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </CardContent>
   </Card>
   );
@@ -1286,6 +1415,14 @@ export default function CreateContract() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [customPrompt, setCustomPrompt] = useState("");
   
+  // Payment Terms State
+  const [paymentTerms, setPaymentTerms] = useState<PaymentTermsData>({
+    downPaymentEnabled: false,
+    downPaymentType: "percentage",
+    downPaymentValue: "25",
+    finalPaymentAuto: false
+  });
+
   // Payment Setup State
   // Payment method will be selected by client during funding process
   const [isCreating, setIsCreating] = useState(false);
@@ -1322,6 +1459,10 @@ export default function CreateContract() {
 
   const updateClientData = useCallback((field: keyof ClientDetailsData, value: string) => {
     setClientData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const updatePaymentTerms = useCallback((field: keyof PaymentTermsData, value: string | boolean) => {
+    setPaymentTerms(prev => ({ ...prev, [field]: value }));
   }, []);
 
   // Auto-populate first milestone when Fixed Price is selected
@@ -1381,6 +1522,29 @@ export default function CreateContract() {
     }
   }, [projectData.projectType, projectData.scopeOfWork, projectData.title, projectData.description, currentStep, loadTemplateRecommendations]);
 
+  // Helper functions for contract generation
+  const calculateDownPaymentAmount = (): number => {
+    if (!paymentTerms.downPaymentEnabled) return 0;
+    
+    const budget = parseFloat(clientData.projectBudget) || 0;
+    if (paymentTerms.downPaymentType === "percentage") {
+      const percentage = parseFloat(paymentTerms.downPaymentValue) || 0;
+      return Math.round(budget * (percentage / 100));
+    } else {
+      return parseFloat(paymentTerms.downPaymentValue) || 0;
+    }
+  };
+
+  const getRemainingAmount = (): number => {
+    const budget = parseFloat(clientData.projectBudget) || 0;
+    const downPayment = calculateDownPaymentAmount();
+    const milestoneTotal = milestones.reduce((total, milestone) => {
+      const amount = parseFloat(milestone.amount) || 0;
+      return total + amount;
+    }, 0);
+    return budget - downPayment - milestoneTotal;
+  };
+
   // AI Contract Generation Function
   const generateContract = useCallback(async () => {
     setIsGenerating(true);
@@ -1388,10 +1552,35 @@ export default function CreateContract() {
     
     try {
       // Include selected template in contract generation
+      // Include payment terms in milestone data for contract generation
+      const enhancedMilestones = [...milestones];
+      
+      // Add down payment as first milestone if enabled
+      if (paymentTerms.downPaymentEnabled) {
+        enhancedMilestones.unshift({
+          title: "Down Payment",
+          deliverables: "Initial payment to commence project work",
+          amount: calculateDownPaymentAmount().toString(),
+          dueDate: projectData.startDate || new Date().toISOString().split('T')[0],
+          percentage: paymentTerms.downPaymentType === "percentage" ? parseFloat(paymentTerms.downPaymentValue) : 0
+        });
+      }
+      
+      // Add final payment milestone if auto-calculation is enabled
+      if (paymentTerms.finalPaymentAuto && getRemainingAmount() > 0) {
+        enhancedMilestones.push({
+          title: "Final Delivery",
+          deliverables: "Final project delivery and completion",
+          amount: getRemainingAmount().toString(),
+          dueDate: projectData.endDate || new Date().toISOString().split('T')[0],
+          percentage: 0
+        });
+      }
+
       const contractParams = {
         projectData,
         clientData,
-        milestones,
+        milestones: enhancedMilestones,
         paymentMethod: null, // Will be set during client funding
         customPrompt,
         selectedTemplate
@@ -1399,9 +1588,14 @@ export default function CreateContract() {
       
       console.log("Generating contract with params:", contractParams);
 
+      const contractParamsFixed = {
+        ...contractParams,
+        paymentMethod: "stripe" as any // Default for generation
+      };
+      
       const [generatedText, riskAnalysisResult] = await Promise.all([
-        aiContractService.generateFreelanceContract(contractParams),
-        aiContractService.analyzeContractRisks(contractParams)
+        aiContractService.generateFreelanceContract(contractParamsFixed),
+        aiContractService.analyzeContractRisks(contractParamsFixed)
       ]);
       
       setGeneratedContract(generatedText);
@@ -1424,7 +1618,7 @@ export default function CreateContract() {
       setIsGenerating(false);
       setIsAnalyzing(false);
     }
-  }, [projectData, clientData, milestones, customPrompt, selectedTemplate, toast]);
+  }, [projectData, clientData, milestones, customPrompt, selectedTemplate, paymentTerms, toast]);
 
   // Final Contract Creation Function
   const finalizeContract = useCallback(async () => {
@@ -1602,7 +1796,12 @@ export default function CreateContract() {
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
-        return <ProjectSetupStep projectData={projectData} updateProjectData={updateProjectData} />;
+        return <ProjectSetupStep 
+          projectData={projectData} 
+          updateProjectData={updateProjectData}
+          paymentTerms={paymentTerms}
+          updatePaymentTerms={updatePaymentTerms}
+        />;
       case 2:
         return <ClientDetailsStep clientData={clientData} updateClientData={updateClientData} projectData={projectData} />;
       case 3:
@@ -1613,6 +1812,7 @@ export default function CreateContract() {
           removeMilestone={removeMilestone}
           clientData={clientData}
           projectData={projectData}
+          paymentTerms={paymentTerms}
         />;
       case 4:
         return <TemplateSelectionStep 
