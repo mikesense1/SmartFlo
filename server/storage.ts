@@ -9,6 +9,7 @@ import {
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
+  getUserById(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
@@ -37,7 +38,9 @@ export interface IStorage {
   
   // Activity tracking
   createActivity(activity: InsertContractActivity): Promise<ContractActivity>;
+  createContractActivity(activity: InsertContractActivity): Promise<ContractActivity>;
   getActivityByContract(contractId: string): Promise<ContractActivity[]>;
+  getContractActivity(contractId: string): Promise<ContractActivity[]>;
 }
 
 import { db } from "./db";
@@ -50,6 +53,11 @@ export class DatabaseStorage implements IStorage {
 
   // User operations
   async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserById(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
@@ -101,6 +109,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getContractsByUser(userId: string): Promise<Contract[]> {
+    return await db.select().from(contracts).where(eq(contracts.creatorId, userId));
+  }
+
+  async getContractsByCreator(userId: string): Promise<Contract[]> {
     return await db.select().from(contracts).where(eq(contracts.creatorId, userId));
   }
 
@@ -179,7 +191,22 @@ export class DatabaseStorage implements IStorage {
     return activity;
   }
 
+  async createContractActivity(insertActivity: InsertContractActivity): Promise<ContractActivity> {
+    const [activity] = await db
+      .insert(contractActivity)
+      .values(insertActivity)
+      .returning();
+    return activity;
+  }
+
   async getActivityByContract(contractId: string): Promise<ContractActivity[]> {
+    return await db.select()
+      .from(contractActivity)
+      .where(eq(contractActivity.contractId, contractId))
+      .orderBy(contractActivity.createdAt);
+  }
+
+  async getContractActivity(contractId: string): Promise<ContractActivity[]> {
     return await db.select()
       .from(contractActivity)
       .where(eq(contractActivity.contractId, contractId))
