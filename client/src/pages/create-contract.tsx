@@ -1646,6 +1646,17 @@ export default function CreateContract() {
 
   // Final Contract Creation Function
   const finalizeContract = useCallback(async () => {
+    // Validate user authentication before contract creation
+    if (!currentUser?.id) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to create contracts",
+        variant: "destructive",
+      });
+      window.location.href = "/login";
+      return;
+    }
+
     setIsCreating(true);
     
     // Show success screen immediately to prevent blank screen during async operations
@@ -1670,7 +1681,7 @@ export default function CreateContract() {
         contractType: "milestone_based",
         startDate: projectData.startDate,
         endDate: projectData.endDate,
-        creatorId: currentUser?.id || "6d52e85d-2ee5-4922-a7cf-0aef6f52b8ba", // Use authenticated user ID or fallback
+        creatorId: currentUser.id, // Use authenticated user ID (validated above)
         status: "draft"
       };
 
@@ -1745,7 +1756,7 @@ export default function CreateContract() {
       
       // Invalidate contracts cache to trigger refresh
       queryClient.invalidateQueries({
-        queryKey: ["/api/users", "6d52e85d-2ee5-4922-a7cf-0aef6f52b8ba", "contracts"]
+        queryKey: ["/api/contracts"]
       });
       
       // Invalidate milestone cache for the new contract
@@ -1782,10 +1793,11 @@ export default function CreateContract() {
         });
       }
       
-      // Redirect to dashboard after success (success state already set above)
+      // Redirect to appropriate dashboard after success (success state already set above)
       setTimeout(() => {
-        console.log("Redirecting to dashboard after successful contract creation");
-        window.location.href = '/dashboard';
+        const dashboardUrl = currentUser?.userType === "client" ? "/client-dashboard" : "/dashboard";
+        console.log(`Redirecting to ${dashboardUrl} after successful contract creation`);
+        window.location.href = dashboardUrl;
       }, 2500);
       
     } catch (error) {
@@ -1815,7 +1827,7 @@ export default function CreateContract() {
     } finally {
       setIsCreating(false);
     }
-  }, [projectData, clientData, milestones, generatedContract, toast]);
+  }, [projectData, clientData, milestones, generatedContract, currentUser, toast]);
 
   const renderStepContent = () => {
     switch (currentStep) {
