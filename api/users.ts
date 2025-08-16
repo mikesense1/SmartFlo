@@ -3,7 +3,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 // Dynamic imports for serverless compatibility
 async function getStorage() {
   try {
-    const { storage } = await import('../server/storage');
+    const { storage } = await import('../server/storage.js');
     return storage;
   } catch (error) {
     console.error('Storage import error:', error);

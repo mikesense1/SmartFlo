@@ -12,8 +12,8 @@ Vercel serverless function error `FUNCTION_INVOCATION_FAILED pgkl-247v-175370808
 
 ### **Solutions Applied:**
 
-#### 1. **Dynamic Imports Pattern** ✅
-Converted all static imports to dynamic imports in API endpoints:
+#### 1. **Dynamic Imports Pattern with .js Extensions** ✅
+Converted all static imports to dynamic imports with proper file extensions for Vercel:
 
 ```typescript
 // Before (❌ Failed in production)
@@ -23,11 +23,21 @@ import { insertUserRawSchema } from '../shared/schema';
 // After (✅ Works in production)
 async function getStorage() {
   try {
-    const { storage } = await import('../server/storage');
+    const { storage } = await import('../server/storage.js');
     return storage;
   } catch (error) {
     console.error('Storage import error:', error);
     throw new Error('Database connection failed');
+  }
+}
+
+async function getSchema() {
+  try {
+    const { insertUserRawSchema } = await import('../shared/schema.js');
+    return { insertUserRawSchema };
+  } catch (error) {
+    console.error('Schema import error:', error);
+    throw new Error('Schema validation failed');
   }
 }
 ```

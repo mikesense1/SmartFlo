@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 // Dynamic imports for serverless compatibility
 async function getStorage() {
   try {
-    const { storage } = await import('../server/storage');
+    const { storage } = await import('../server/storage.js');
     return storage;
   } catch (error) {
     console.error('Storage import error:', error);
@@ -14,7 +14,7 @@ async function getStorage() {
 
 async function getSchema() {
   try {
-    const { insertUserRawSchema } = await import('../shared/schema');
+    const { insertUserRawSchema } = await import('../shared/schema.js');
     return { insertUserRawSchema };
   } catch (error) {
     console.error('Schema import error:', error);
