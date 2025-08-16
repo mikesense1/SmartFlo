@@ -43,7 +43,7 @@ export interface IStorage {
   getContractActivity(contractId: string): Promise<ContractActivity[]>;
 }
 
-import { db } from "./db";
+import { db } from "./db.js";
 import { eq } from "drizzle-orm";
 
 export class DatabaseStorage implements IStorage {
