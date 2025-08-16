@@ -245,6 +245,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // AI Template Recommendations endpoint
+    if (path === 'ai/template-recommendations') {
+      if (req.method === 'POST') {
+        try {
+          const { projectType, scopeOfWork, projectDescription } = req.body;
+
+          const prompt = `Based on the following project details, recommend 3 specialized contract templates with risk mitigation strategies:
+
+Project Type: ${projectType}
+Scope of Work: ${scopeOfWork}
+Project Description: ${projectDescription}
+
+For each template, provide:
+1. Template name (specific to the work type)
+2. Brief description
+3. Key clauses that should be included
+4. Risk mitigation strategies
+5. Recommendation score (0-100 based on project fit)
+
+Respond with JSON in this exact format:
+{
+  "templates": [
+    {
+      "id": "template-1",
+      "name": "Template Name",
+      "description": "Brief description of when to use this template",
+      "projectTypes": ["Web Development", "Software Development"],
+      "template": "Template overview text",
+      "clauses": ["Clause 1", "Clause 2", "Clause 3"],
+      "riskMitigation": ["Risk strategy 1", "Risk strategy 2"],
+      "recommendationScore": 95
+    }
+  ]
+}`;
+
+          // Import OpenAI service dynamically
+          const { aiContractService } = await import('../server/openai-service.js');
+          const generatedRecommendations = await aiContractService.generateTemplateRecommendations(prompt);
+          
+          return res.status(200).json({ templates: generatedRecommendations });
+        } catch (error) {
+          console.error("Template recommendation error:", error);
+          return res.status(500).json({ 
+            message: "Failed to generate template recommendations",
+            error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+          });
+        }
+      }
+    }
+
     // Default route
     return res.status(404).json({ message: 'API endpoint not found' });
 

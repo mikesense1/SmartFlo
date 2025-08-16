@@ -305,7 +305,7 @@ const ProjectSetupStep = ({
                       onChange={(e) => updatePaymentTerms("downPaymentValue", e.target.value)}
                       onKeyDown={(e) => {
                         // Allow backspace to fully clear the field
-                        if (e.key === "Backspace" && e.target.value.length === 1) {
+                        if (e.key === "Backspace" && (e.target as HTMLInputElement).value.length === 1) {
                           updatePaymentTerms("downPaymentValue", "");
                         }
                       }}
@@ -567,7 +567,7 @@ const MilestoneBuilderStep = ({
                 onChange={(e) => updateMilestone(index, "amount", e.target.value)}
                 onKeyDown={(e) => {
                   // Allow backspace to fully clear the field
-                  if (e.key === "Backspace" && e.target.value.length === 1) {
+                  if (e.key === "Backspace" && (e.target as HTMLInputElement).value.length === 1) {
                     updateMilestone(index, "amount", "");
                   }
                 }}
@@ -601,7 +601,7 @@ const MilestoneBuilderStep = ({
                   }}
                   onKeyDown={(e) => {
                     // Allow backspace to fully clear the field
-                    if (e.key === "Backspace" && e.target.value.length === 1) {
+                    if (e.key === "Backspace" && (e.target as HTMLInputElement).value.length === 1) {
                       updateMilestone(index, "percentage", 0);
                       updateMilestone(index, "amount", "");
                     }
