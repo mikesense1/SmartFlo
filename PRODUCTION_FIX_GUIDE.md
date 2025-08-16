@@ -33,17 +33,7 @@ async function getStorage() {
 ```
 
 #### 2. **Runtime Configuration** ✅
-Added explicit Node.js runtime in `vercel.json`:
-
-```json
-{
-  "functions": {
-    "api/*.ts": {
-      "runtime": "nodejs18.x"
-    }
-  }
-}
-```
+Removed invalid runtime specification that was causing build errors. Vercel automatically uses Node.js 18.x for TypeScript functions.
 
 #### 3. **Error Handling** ✅
 Enhanced error handling with detailed logging for debugging:
