@@ -1,7 +1,26 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { storage } from '../server/storage';
 import bcrypt from 'bcrypt';
-import { insertUserRawSchema } from '../shared/schema';
+
+// Dynamic imports for serverless compatibility
+async function getStorage() {
+  try {
+    const { storage } = await import('../server/storage');
+    return storage;
+  } catch (error) {
+    console.error('Storage import error:', error);
+    throw new Error('Database connection failed');
+  }
+}
+
+async function getSchema() {
+  try {
+    const { insertUserRawSchema } = await import('../shared/schema');
+    return { insertUserRawSchema };
+  } catch (error) {
+    console.error('Schema import error:', error);
+    throw new Error('Schema validation failed');
+  }
+}
 
 // Set environment for project name change from "payflow" to "smartflo"
 function setupEnvironment() {
@@ -73,6 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ message: 'Email and password are required' });
       }
 
+      const storage = await getStorage();
       const user = await storage.getUserByEmail(email);
       
       if (!user || !await bcrypt.compare(password, user.passwordHash || '')) {
@@ -115,6 +135,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ message: 'Email, password, and full name are required' });
       }
 
+      const storage = await getStorage();
+      const { insertUserRawSchema } = await getSchema();
       const existingUser = await storage.getUserByEmail(email);
       
       if (existingUser) {
@@ -179,6 +201,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(401).json({ error: 'Not authenticated' });
       }
 
+      const storage = await getStorage();
       const user = await storage.getUserById(auth.userId);
       
       if (!user) {
@@ -202,6 +225,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (req.method === 'GET') {
         const contractId = req.query.contractId as string;
         if (contractId) {
+          const storage = await getStorage();
           const milestones = await storage.getMilestonesByContract(contractId);
           return res.status(200).json(milestones);
         }
@@ -214,6 +238,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (req.method === 'GET') {
         const contractId = req.query.contractId as string;
         if (contractId) {
+          const storage = await getStorage();
           const activity = await storage.getContractActivity(contractId);
           return res.status(200).json(activity);
         }

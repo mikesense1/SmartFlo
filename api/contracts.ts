@@ -1,6 +1,25 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { storage } from '../server/storage';
-import { insertContractSchema } from '../shared/schema';
+
+// Dynamic imports for serverless compatibility
+async function getStorage() {
+  try {
+    const { storage } = await import('../server/storage');
+    return storage;
+  } catch (error) {
+    console.error('Storage import error:', error);
+    throw new Error('Database connection failed');
+  }
+}
+
+async function getSchema() {
+  try {
+    const { insertContractSchema } = await import('../shared/schema');
+    return { insertContractSchema };
+  } catch (error) {
+    console.error('Schema import error:', error);
+    throw new Error('Schema validation failed');
+  }
+}
 
 // Set environment and CORS
 function setupEnvironment() {
@@ -57,12 +76,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Get contracts
     if (req.method === 'GET' && (!path || path === '')) {
+      const storage = await getStorage();
       const contracts = await storage.getContractsByUser(auth.userId);
       return res.status(200).json(contracts);
     }
 
     // Create contract
     if (req.method === 'POST' && (!path || path === '')) {
+      const storage = await getStorage();
+      const { insertContractSchema } = await getSchema();
       const contractData = insertContractSchema.parse({
         ...req.body,
         creatorId: auth.userId
@@ -77,6 +99,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const contractId = path.split('/')[0];
       const action = path.split('/')[1];
 
+      const storage = await getStorage();
       const contract = await storage.getContract(contractId);
       
       if (!contract || contract.creatorId !== auth.userId) {

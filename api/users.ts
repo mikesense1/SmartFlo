@@ -1,5 +1,15 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { storage } from '../server/storage';
+
+// Dynamic imports for serverless compatibility
+async function getStorage() {
+  try {
+    const { storage } = await import('../server/storage');
+    return storage;
+  } catch (error) {
+    console.error('Storage import error:', error);
+    throw new Error('Database connection failed');
+  }
+}
 
 // Set environment and CORS
 function setupEnvironment() {
@@ -64,6 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(403).json({ error: 'Access denied' });
       }
 
+      const storage = await getStorage();
       const user = await storage.getUserById(userId);
       
       if (!user) {
@@ -100,6 +111,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const updates = req.body;
       const { passwordHash, ...safeUpdates } = updates;
       
+      const storage = await getStorage();
       const updatedUser = await storage.updateUser(userId, safeUpdates);
       
       if (!updatedUser) {
