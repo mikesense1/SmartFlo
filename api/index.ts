@@ -47,12 +47,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const { endpoint } = req.query;
-  const path = Array.isArray(endpoint) ? endpoint.join('/') : endpoint;
+  // Extract path from URL for proper routing
+  let path = '';
+  if (req.url) {
+    const urlParts = req.url.split('?')[0].split('/api/')[1];
+    path = urlParts || '';
+  }
+  
+  // Fallback to query parameter
+  if (!path && req.query.endpoint) {
+    const { endpoint } = req.query;
+    path = Array.isArray(endpoint) ? endpoint.join('/') : endpoint;
+  }
 
   try {
-    // Auth endpoints
-    if (path === 'auth/login') {
+    // Auth endpoints - handle both URL paths and query parameters
+    if (path === 'auth/login' || path === 'login' || req.url?.includes('/auth/login')) {
       if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Method not allowed' });
       }
@@ -94,7 +104,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Auth signup
-    if (path === 'auth/signup') {
+    if (path === 'auth/signup' || path === 'signup' || req.url?.includes('/auth/signup')) {
       if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Method not allowed' });
       }
@@ -148,7 +158,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Auth logout
-    if (path === 'auth/logout') {
+    if (path === 'auth/logout' || path === 'logout' || req.url?.includes('/auth/logout')) {
       if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Method not allowed' });
       }
@@ -158,7 +168,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Auth me
-    if (path === 'auth/me') {
+    if (path === 'auth/me' || path === 'me' || req.url?.includes('/auth/me')) {
       if (req.method !== 'GET') {
         return res.status(405).json({ message: 'Method not allowed' });
       }
@@ -215,6 +225,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error) {
     console.error('API Error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ 
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      path: path,
+      url: req.url
+    });
   }
 }

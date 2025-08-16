@@ -69,10 +69,37 @@ vercel --prod
   - `https://smartflo.vercel.app` (default)
   - `https://getsmartflo.com` (if custom domain configured)
 
+## Post-Deployment Setup:
+
+1. **Push Database Schema:**
+   ```bash
+   npm run db:push
+   ```
+
+2. **Create Test User (for testing):**
+   ```sql
+   INSERT INTO users (email, password_hash, full_name, user_type, subscription_tier) 
+   VALUES ('test@gmail.com', '$2b$12$6AotarXzzlgfL0pQSUc.lOYILiB7Ie1FmOlOrY8MHYEW0.dVHaE2y', 'Test User', 'freelancer', 'free');
+   ```
+   **Login credentials:** test@gmail.com / test123
+
+## ✅ **LOGIN FIX APPLIED**
+
+**Issue Resolved:** The "Unexpected token 'A'" error was caused by:
+- Incorrect API routing in Vercel serverless functions
+- Database missing the `company_name` column
+
+**Fixed By:**
+- ✅ Updated `vercel.json` with explicit auth route rewrites
+- ✅ Enhanced API path detection in `api/index.ts`
+- ✅ Pushed database schema with `npm run db:push`
+- ✅ Added comprehensive error handling for JSON parsing
+- ✅ Created test user with proper password hashing
+
 ## Post-Deployment Checklist:
 
 1. ✅ Verify app loads correctly
-2. ✅ Test user registration/login 
+2. ✅ Test user registration/login (**FIXED**)
 3. ✅ Test contract creation flow
-4. ✅ Check database connections
-5. ✅ Verify API endpoints work
+4. ✅ Check database connections (**FIXED**)
+5. ✅ Verify API endpoints work (**FIXED**)
