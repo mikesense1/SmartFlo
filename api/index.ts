@@ -295,6 +295,67 @@ Respond with JSON in this exact format:
       }
     }
 
+    // AI Contract Generation endpoint
+    if (path === 'ai/generate-contract') {
+      if (req.method === 'POST') {
+        try {
+          console.log("=== AI Contract Generation Request ===");
+          console.log("OpenAI API Key exists:", !!process.env.OPENAI_API_KEY);
+          console.log("Request body:", JSON.stringify(req.body, null, 2));
+          
+          const contractParams = req.body;
+          console.log("Calling aiContractService.generateFreelanceContract...");
+          
+          // Import OpenAI service dynamically
+          const { aiContractService } = await import('../server/openai-service.js');
+          const generatedContract = await aiContractService.generateFreelanceContract(contractParams);
+          console.log("Contract generated successfully, length:", generatedContract.length);
+          
+          return res.status(200).json({ contract: generatedContract });
+        } catch (error) {
+          console.error("=== Contract Generation Error ===");
+          console.error("Error type:", (error as Error).constructor.name);
+          console.error("Error message:", (error as Error).message);
+          console.error("Full error:", error);
+          
+          // Check for specific OpenAI errors
+          if ((error as Error).message?.includes('API key')) {
+            console.error("This appears to be an API key issue");
+          }
+          
+          return res.status(500).json({ 
+            message: "Failed to generate contract",
+            error: error instanceof Error ? error.message : "Unknown error",
+            debug: {
+              hasApiKey: !!process.env.OPENAI_API_KEY,
+              errorType: (error as Error).constructor.name
+            }
+          });
+        }
+      }
+    }
+
+    // AI Risk Analysis endpoint
+    if (path === 'ai/analyze-risks') {
+      if (req.method === 'POST') {
+        try {
+          const contractParams = req.body;
+          
+          // Import OpenAI service dynamically
+          const { aiContractService } = await import('../server/openai-service.js');
+          const riskAnalysis = await aiContractService.analyzeContractRisks(contractParams);
+          
+          return res.status(200).json({ analysis: riskAnalysis });
+        } catch (error) {
+          console.error("Risk analysis error:", error);
+          return res.status(500).json({ 
+            message: "Failed to analyze contract risks",
+            error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+          });
+        }
+      }
+    }
+
     // Default route
     return res.status(404).json({ message: 'API endpoint not found' });
 
