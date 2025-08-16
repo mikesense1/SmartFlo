@@ -43,12 +43,16 @@ export default function LoginPage() {
       if (!response.ok) {
         let errorMessage = "Login failed";
         try {
-          const error = await response.json();
-          errorMessage = error.message || error.error || "Login failed";
-        } catch (parseError) {
-          // If response is not JSON, use response text
-          const text = await response.text();
-          errorMessage = text || `Login failed with status ${response.status}`;
+          const responseText = await response.text();
+          try {
+            const error = JSON.parse(responseText);
+            errorMessage = error.message || error.error || "Login failed";
+          } catch (parseError) {
+            // If not JSON, use the text response
+            errorMessage = responseText || `Login failed with status ${response.status}`;
+          }
+        } catch (readError) {
+          errorMessage = `Login failed with status ${response.status}`;
         }
         throw new Error(errorMessage);
       }

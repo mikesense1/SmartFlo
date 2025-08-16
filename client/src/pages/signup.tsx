@@ -58,8 +58,19 @@ export default function SignupPage() {
       });
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Sign up failed");
+        let errorMessage = "Sign up failed";
+        try {
+          const responseText = await response.text();
+          try {
+            const error = JSON.parse(responseText);
+            errorMessage = error.message || error.error || "Sign up failed";
+          } catch (parseError) {
+            errorMessage = responseText || `Sign up failed with status ${response.status}`;
+          }
+        } catch (readError) {
+          errorMessage = `Sign up failed with status ${response.status}`;
+        }
+        throw new Error(errorMessage);
       }
       
       return response.json();
