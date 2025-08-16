@@ -39,6 +39,15 @@
     }
   ],
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "VERCEL_PROJECT_NAME": "smartflo",
+    "VERCEL_URL": "getsmartflo.com",
+    "VERCEL_TOKEN_ISSUER": "https://token.vercel.app",
+    "VERCEL_TOKEN_AUDIENCE": "smartflo"
+  },
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "nodejs20.x"
+    }
   }
 }

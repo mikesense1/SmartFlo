@@ -14,8 +14,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'POST') {
     try {
-      // For serverless deployment, logout is handled client-side
-      // Clear any server-side session data if needed
+      // Clear authentication cookie
+      res.setHeader('Set-Cookie', 'smartflo-auth=; HttpOnly; Secure; SameSite=Strict; Max-Age=0; Path=/');
       
       res.status(200).json({
         message: 'Logout successful'

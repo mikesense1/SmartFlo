@@ -4,6 +4,10 @@ import bcrypt from 'bcrypt';
 import { insertUserSchema } from '../../shared/schema';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Set environment for project name change from "payflow" to "smartflo"
+  process.env.VERCEL_PROJECT_NAME = 'smartflo';
+  process.env.VERCEL_URL = process.env.VERCEL_URL || 'smartflo.vercel.app';
+  
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -45,6 +49,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Create user
       const user = await storage.createUser(userData);
 
+      // Create JWT token for authentication
+      const payload = {
+        userId: user.id,
+        email: user.email,
+        userType: user.userType
+      };
+      
+      // For serverless deployment, we'll use a simple token approach
+      const token = Buffer.from(JSON.stringify({
+        ...payload,
+        projectName: 'smartflo',
+        expires: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+      })).toString('base64');
+
+      // Set authentication cookie
+      res.setHeader('Set-Cookie', `smartflo-auth=${token}; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Path=/`);
+
       // Return user data (excluding password hash)
       const userResponse = {
         id: user.id,
@@ -57,7 +78,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       res.status(201).json({
         message: 'User created successfully',
-        user: userResponse
+        user: userResponse,
+        token
       });
     } catch (error) {
       console.error('Signup error:', error);

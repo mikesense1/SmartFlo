@@ -48,23 +48,28 @@ export default function LoginPage() {
       return response.json();
     },
     onSuccess: (data: any) => {
+      // Store authentication token in localStorage
+      if (data.token) {
+        localStorage.setItem('smartflo-auth', data.token);
+      }
+
       toast({
         title: "Welcome Back!",
         description: "Successfully signed in to your account.",
       });
       
-      // Small delay to ensure session is set before redirect
+      // Small delay to ensure token is stored before redirect
       setTimeout(() => {
         // Invalidate and refetch user data
         queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         
-        // Redirect based on user type or to a general dashboard
-        if (data.userType === 'freelancer') {
+        // Redirect based on user type
+        if (data.user?.userType === 'freelancer') {
           setLocation("/freelancer-dashboard");
-        } else if (data.userType === 'client') {
+        } else if (data.user?.userType === 'client') {
           setLocation("/client-dashboard");
         } else {
-          setLocation("/freelancer-dashboard"); // Default to freelancer dashboard
+          setLocation("/dashboard"); // Default dashboard
         }
       }, 100);
     },
