@@ -2,7 +2,10 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist/public",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/api/auth/(.*)", "destination": "/api/index?endpoint=auth/$1" },
+    { "source": "/api/contracts/(.*)", "destination": "/api/contracts?endpoint=$1" },
+    { "source": "/api/users/(.*)", "destination": "/api/users?endpoint=$1" },
+    { "source": "/api/(.*)", "destination": "/api/index?endpoint=$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

@@ -8,6 +8,7 @@ export const users = pgTable("users", {
   fullName: text("full_name").notNull(),
   passwordHash: text("password_hash").notNull(),
   userType: text("user_type").notNull(), // 'freelancer' or 'client'
+  companyName: text("company_name"), // Company name for clients
   freelanceType: text("freelance_type").default("other"), // 'developer', 'designer', 'writer', 'consultant', 'other'
   walletAddress: text("wallet_address"),
   stripeAccountId: text("stripe_account_id"),
@@ -101,11 +102,16 @@ export const contacts = pgTable("contacts", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Insert schemas
+// Insert schemas - for API endpoints
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
-  passwordHash: true,
+});
+
+// Raw insert schema - for storage layer with passwordHash
+export const insertUserRawSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
 });
 
 export const insertContractSchema = createInsertSchema(contracts).omit({
@@ -143,7 +149,7 @@ export const insertContactSchema = createInsertSchema(contacts).omit({
 });
 
 // Types
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export type InsertUser = z.infer<typeof insertUserRawSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertContract = z.infer<typeof insertContractSchema>;
 export type Contract = typeof contracts.$inferSelect;

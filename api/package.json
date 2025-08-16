@@ -1,8 +1,0 @@
-{
-  "name": "smartflo-api",
-  "version": "1.0.0",
-  "dependencies": {
-    "openai": "^4.28.0",
-    "pg": "^8.11.0"
-  }
-}
