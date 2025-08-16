@@ -38,11 +38,11 @@ After first deployment, run:
 npm run db:push
 ```
 
-### 3. **Create Test User:**
-```sql
-INSERT INTO users (email, password_hash, full_name, user_type, subscription_tier) 
-VALUES ('test@gmail.com', '$2b$12$6AotarXzzlgfL0pQSUc.lOYILiB7Ie1FmOlOrY8MHYEW0.dVHaE2y', 'Test User', 'freelancer', 'free');
-```
+### 3. **Production Test Users:**
+✅ **Already Created:**
+- `demo@smartflo.com` / `test123` (Freelancer)
+- `client@smartflo.com` / `test123` (Client)  
+- `test@gmail.com` / `test123` (Freelancer)
 
 ## **Test After Deployment:**
 
@@ -51,11 +51,18 @@ VALUES ('test@gmail.com', '$2b$12$6AotarXzzlgfL0pQSUc.lOYILiB7Ie1FmOlOrY8MHYEW0.
    curl https://yourapp.vercel.app/api/test
    ```
 
-2. **Login Test:**
-   - Navigate to: `https://yourapp.vercel.app/login`
-   - Email: `test@gmail.com`
+2. **Login Tests:**
+   Navigate to: `https://yourapp.vercel.app/login`
+   
+   **Freelancer Login:**
+   - Email: `demo@smartflo.com`
    - Password: `test123`
-   - Should redirect to dashboard successfully
+   - Should redirect to freelancer dashboard
+   
+   **Client Login:**
+   - Email: `client@smartflo.com` 
+   - Password: `test123`
+   - Should redirect to client dashboard
 
 3. **Function Count Check:**
    - Only 3 serverless functions deployed:
