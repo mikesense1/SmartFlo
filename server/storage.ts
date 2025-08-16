@@ -4,7 +4,7 @@ import {
   type Contract, type InsertContract, type Milestone, type InsertMilestone,
   type ContractSignature, type InsertContractSignature,
   type Payment, type InsertPayment, type ContractActivity, type InsertContractActivity
-} from "@shared/schema";
+} from "../shared/schema.js";
 
 export interface IStorage {
   // User operations
