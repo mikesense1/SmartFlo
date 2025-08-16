@@ -18,6 +18,7 @@ import Navigation from "@/components/navigation";
 import { aiContractService, type ContractTemplate } from "@/lib/openai-service";
 import { queryClient } from "@/lib/queryClient";
 import { calculateTotalWithFees, formatCurrency, getPaymentMethodName, getFeeBreakdown, type PaymentMethod } from "@shared/pricing";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 // Types
 interface ProjectSetupData {
@@ -37,13 +38,6 @@ interface ClientDetailsData {
   clientCompany?: string;
   projectBudget: string;
   hourlyRate?: string; // For hourly rate contracts
-}
-
-interface PaymentTermsData {
-  downPaymentEnabled: boolean;
-  downPaymentType: "percentage" | "fixed";
-  downPaymentValue: string;
-  finalPaymentAuto: boolean;
 }
 
 interface ContractPricing {
@@ -1376,6 +1370,7 @@ const PaymentSetupStep = ({
 
 export default function CreateContract() {
   const { toast } = useToast();
+  const { data: currentUser } = useCurrentUser();
   const [currentStep, setCurrentStep] = useState(1);
   const [milestones, setMilestones] = useState<MilestoneData[]>([
     {
@@ -1646,7 +1641,7 @@ export default function CreateContract() {
         contractType: "milestone_based",
         startDate: projectData.startDate,
         endDate: projectData.endDate,
-        creatorId: "6d52e85d-2ee5-4922-a7cf-0aef6f52b8ba", // Demo user from database (Alex Morgan)
+        creatorId: currentUser?.id || "6d52e85d-2ee5-4922-a7cf-0aef6f52b8ba", // Use authenticated user ID or fallback
         status: "draft"
       };
 

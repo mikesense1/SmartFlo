@@ -26,7 +26,7 @@ export const contracts = pgTable("contracts", {
   clientEmail: text("client_email").notNull(),
   projectDescription: text("project_description").notNull(),
   totalValue: decimal("total_value").notNull(),
-  paymentMethod: text("payment_method").notNull(), // 'stripe_card', 'stripe_ach', or 'usdc'
+  paymentMethod: text("payment_method"), // 'stripe_card', 'stripe_ach', or 'usdc' - nullable until client selects
   contractType: text("contract_type").notNull(), // 'fixed_price' or 'milestone_based'
   status: text("status").notNull().default("draft"), // 'draft', 'sent', 'active', 'completed', 'disputed'
   solanaProgramAddress: text("solana_program_address"),
