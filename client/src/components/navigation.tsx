@@ -2,11 +2,21 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Zap, Menu } from "lucide-react";
+import { Zap, Menu, User, LogOut } from "lucide-react";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
   const [location] = useLocation();
+  const { data: currentUser } = useCurrentUser();
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
@@ -75,16 +85,69 @@ export default function Navigation() {
                   </Link>
                 </>
               )}
-              <Link href="/login">
-                <Button variant="ghost" className="text-slate-600 hover:text-slate-900">
-                  Sign In
-                </Button>
-              </Link>
-              <Link href="/signup">
-                <Button className="bg-primary hover:bg-primary/90">
-                  {location === "/" ? "Start Free Trial" : "Dashboard"}
-                </Button>
-              </Link>
+              
+              {/* Authentication Section */}
+              {currentUser ? (
+                <div className="flex items-center gap-3">
+                  <Link href={currentUser.userType === "freelancer" ? "/dashboard" : "/client-dashboard"}>
+                    <Button variant="ghost" className="text-slate-600 hover:text-slate-900">
+                      Dashboard
+                    </Button>
+                  </Link>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                        <Avatar className="w-8 h-8">
+                          <AvatarFallback className="bg-primary text-white text-xs">
+                            {currentUser.fullName?.split(' ').map(n => n[0]).join('') || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="hidden sm:block text-sm font-medium">
+                          {currentUser.fullName?.split(' ')[0] || 'User'}
+                        </span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <div className="px-3 py-2">
+                        <p className="text-sm font-medium">{currentUser.fullName}</p>
+                        <p className="text-xs text-muted-foreground">{currentUser.email}</p>
+                        <p className="text-xs text-blue-600 capitalize">{currentUser.userType}</p>
+                      </div>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href={currentUser.userType === "freelancer" ? "/dashboard" : "/client-dashboard"}>
+                          <User className="w-4 h-4 mr-2" />
+                          Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={async () => {
+                          await fetch("/api/auth/logout", { method: "POST" });
+                          window.location.href = "/";
+                        }}
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Sign Out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <Link href="/login">
+                    <Button variant="ghost" className="text-slate-600 hover:text-slate-900">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/signup">
+                    <Button className="bg-primary hover:bg-primary/90">
+                      {location === "/" ? "Start Getting Paid Faster" : "Get Started"}
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
           

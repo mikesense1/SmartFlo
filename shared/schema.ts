@@ -21,6 +21,7 @@ export const users = pgTable("users", {
 export const contracts = pgTable("contracts", {
   id: uuid("id").primaryKey().defaultRandom(),
   creatorId: uuid("creator_id").notNull().references(() => users.id),
+  clientId: uuid("client_id").references(() => users.id), // For when client signs up
   title: text("title").notNull(),
   clientName: text("client_name").notNull(),
   clientEmail: text("client_email").notNull(),
@@ -36,6 +37,7 @@ export const contracts = pgTable("contracts", {
   blockchainStatus: text("blockchain_status").default("pending"), // 'pending', 'deployed', 'active', 'completed'
   metadataUri: text("metadata_uri"),
   generatedContract: text("generated_contract"), // AI-generated contract document text
+  sentAt: timestamp("sent_at"), // When contract was sent to client
   createdAt: timestamp("created_at").defaultNow(),
   activatedAt: timestamp("activated_at"),
   completedAt: timestamp("completed_at"),

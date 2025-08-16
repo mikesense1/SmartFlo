@@ -64,7 +64,7 @@ export class SmartContractDeploymentService {
       // Deploy the smart contract based on payment method
       let deploymentTx: string;
       
-      if (config.paymentMethod.startsWith('stripe_')) {
+      if (config.paymentMethod && config.paymentMethod.startsWith('stripe_')) {
         // Deploy hybrid Stripe-blockchain contract
         deploymentTx = await this.deployStripeBlockchainContract(config, contractAddress, escrowAddress);
       } else {

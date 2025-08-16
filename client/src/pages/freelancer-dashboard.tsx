@@ -10,15 +10,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { 
   Plus, FileText, DollarSign, Clock, CheckCircle, 
   AlertCircle, Wallet, CreditCard, Activity, Target,
-  TrendingUp, TrendingDown, Lock, Zap, Users, Eye, Edit, User
+  TrendingUp, TrendingDown, Lock, Zap, Users, Eye, Edit, User,
+  Send, RefreshCw, MessageSquare
 } from "lucide-react";
 import Navigation from "@/components/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 export default function FreelancerDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedContract, setSelectedContract] = useState(null);
   const [contractDocument, setContractDocument] = useState("");
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
+  const { toast } = useToast();
 
   // Fetch current user data
   const { data: userResponse, isLoading: userLoading } = useQuery({
@@ -34,6 +37,13 @@ export default function FreelancerDashboard() {
       window.location.href = "/login";
     }
   }, [currentUser, userLoading]);
+
+  // Redirect to setup if user hasn't completed profile
+  useEffect(() => {
+    if (currentUser && !currentUser.userType) {
+      window.location.href = "/setup";
+    }
+  }, [currentUser]);
 
   // Fetch contracts for authenticated user
   const { data: contracts = [], isLoading } = useQuery({
@@ -100,6 +110,71 @@ export default function FreelancerDashboard() {
       setContractDocument("Failed to load contract document");
     } finally {
       setIsLoadingDocument(false);
+    }
+  };
+
+  const handleSendToClient = async (contract: any) => {
+    try {
+      const response = await fetch(`/api/contracts/${contract.id}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Contract Sent",
+          description: `Contract "${contract.title}" has been sent to ${contract.clientEmail}`,
+        });
+        // Refresh contracts data
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Failed to Send Contract",
+          description: error.message || "Please try again",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send contract. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateMilestones = (contract: any) => {
+    // Redirect to milestone management page
+    window.location.href = `/milestone-tracker/${contract.id}`;
+  };
+
+  const handleRequestPayment = async (contract: any) => {
+    try {
+      const response = await fetch(`/api/contracts/${contract.id}/request-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Payment Requested",
+          description: `Payment request sent to ${contract.clientEmail} for "${contract.title}"`,
+        });
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Failed to Request Payment",
+          description: error.message || "Please try again",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to request payment. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -383,7 +458,7 @@ export default function FreelancerDashboard() {
                             <div className="text-sm text-slate-500 mb-2">Project Description</div>
                             <p className="text-sm text-slate-700">{contract.projectDescription}</p>
                           </div>
-                          <div className="mt-4 pt-4 border-t flex gap-2">
+                          <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
                             {contract.status === 'draft' ? (
                               <>
                                 <Link href={`/edit-contract/${contract.id}`}>
@@ -392,6 +467,15 @@ export default function FreelancerDashboard() {
                                     Edit Contract
                                   </Button>
                                 </Link>
+                                <Button 
+                                  variant="default" 
+                                  size="sm"
+                                  onClick={() => handleSendToClient(contract)}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <Send className="w-4 h-4 mr-2" />
+                                  Send to Client
+                                </Button>
                                 <Dialog>
                                   <DialogTrigger asChild>
                                     <Button variant="outline" size="sm" onClick={() => handleViewContract(contract)}>
@@ -433,6 +517,23 @@ export default function FreelancerDashboard() {
                                     Track Milestones
                                   </Button>
                                 </Link>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleUpdateMilestones(contract)}
+                                >
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Update Milestones
+                                </Button>
+                                <Button 
+                                  variant="default" 
+                                  size="sm"
+                                  onClick={() => handleRequestPayment(contract)}
+                                  className="bg-blue-600 hover:bg-blue-700"
+                                >
+                                  <DollarSign className="w-4 h-4 mr-2" />
+                                  Request Payment
+                                </Button>
                                 <Dialog>
                                   <DialogTrigger asChild>
                                     <Button variant="outline" size="sm" onClick={() => handleViewContract(contract)}>

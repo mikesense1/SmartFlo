@@ -83,6 +83,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/users/:id", async (req, res) => {
+    try {
+      const userId = (req as any).session?.userId;
+      
+      if (!userId || userId !== req.params.id) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const updateData = req.body;
+      console.log("Updating user profile:", updateData);
+      
+      const updatedUser = await storage.updateUser(req.params.id, updateData);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Failed to update user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // Client contract routes
+  app.get("/api/client-contracts", async (req, res) => {
+    try {
+      const userId = (req as any).session?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      // Get contracts where user is the client (by clientId or clientEmail)
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // For now, return contracts where clientEmail matches user email
+      const allContracts = await storage.getContracts();
+      const clientContracts = allContracts.filter(contract => 
+        contract.clientEmail === user.email || contract.clientId === userId
+      );
+      
+      res.json(clientContracts);
+    } catch (error) {
+      console.error("Failed to fetch client contracts:", error);
+      res.status(500).json({ message: "Failed to fetch contracts" });
+    }
+  });
+
+  // Contract management routes
+  app.post("/api/contracts/:id/send", async (req, res) => {
+    try {
+      const userId = (req as any).session?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const contract = await storage.getContract(req.params.id);
+      if (!contract || contract.creatorId !== userId) {
+        return res.status(404).json({ error: "Contract not found" });
+      }
+
+      // Update contract status to 'sent' and set sentAt timestamp
+      await storage.updateContract(req.params.id, {
+        status: "sent",
+        sentAt: new Date()
+      });
+
+      // Log activity
+      await storage.createActivity({
+        contractId: req.params.id,
+        action: "contract_sent",
+        description: `Contract sent to ${contract.clientEmail}`,
+        timestamp: new Date()
+      });
+
+      res.json({ message: "Contract sent successfully" });
+    } catch (error) {
+      console.error("Failed to send contract:", error);
+      res.status(500).json({ message: "Failed to send contract" });
+    }
+  });
+
+  app.post("/api/contracts/:id/request-payment", async (req, res) => {
+    try {
+      const userId = (req as any).session?.userId;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const contract = await storage.getContract(req.params.id);
+      if (!contract || contract.creatorId !== userId) {
+        return res.status(404).json({ error: "Contract not found" });
+      }
+
+      // Log activity
+      await storage.createActivity({
+        contractId: req.params.id,
+        action: "payment_requested",
+        description: `Payment request sent to ${contract.clientEmail}`,
+        timestamp: new Date()
+      });
+
+      res.json({ message: "Payment request sent successfully" });
+    } catch (error) {
+      console.error("Failed to request payment:", error);
+      res.status(500).json({ message: "Failed to request payment" });
+    }
+  });
+
   // Contract routes with authentication
   app.get("/api/contracts", async (req, res) => {
     try {

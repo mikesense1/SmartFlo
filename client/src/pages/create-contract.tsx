@@ -243,7 +243,7 @@ const ProjectSetupStep = ({
       </div>
 
       {/* Payment Terms Section */}
-      {projectData.pricingModel === "milestones" && (
+      {(projectData.pricingModel === "milestones" || projectData.pricingModel === "fixed") && (
         <Card className="border-blue-200 bg-blue-50">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -295,7 +295,20 @@ const ProjectSetupStep = ({
                     <Input
                       type="number"
                       value={paymentTerms.downPaymentValue}
+                      onFocus={(e) => {
+                        // Clear suggested value on focus
+                        const placeholder = paymentTerms.downPaymentType === "percentage" ? "25" : "500";
+                        if (e.target.value === placeholder) {
+                          updatePaymentTerms("downPaymentValue", "");
+                        }
+                      }}
                       onChange={(e) => updatePaymentTerms("downPaymentValue", e.target.value)}
+                      onKeyDown={(e) => {
+                        // Allow backspace to fully clear the field
+                        if (e.key === "Backspace" && e.target.value.length === 1) {
+                          updatePaymentTerms("downPaymentValue", "");
+                        }
+                      }}
                       placeholder={paymentTerms.downPaymentType === "percentage" ? "25" : "500"}
                     />
                     <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
@@ -544,7 +557,20 @@ const MilestoneBuilderStep = ({
                 type="number"
                 placeholder="1000"
                 value={milestone.amount}
+                onFocus={(e) => {
+                  // Clear placeholder value on focus for easier input
+                  if (e.target.value === "1000") {
+                    e.target.value = "";
+                    updateMilestone(index, "amount", "");
+                  }
+                }}
                 onChange={(e) => updateMilestone(index, "amount", e.target.value)}
+                onKeyDown={(e) => {
+                  // Allow backspace to fully clear the field
+                  if (e.key === "Backspace" && e.target.value.length === 1) {
+                    updateMilestone(index, "amount", "");
+                  }
+                }}
                 required
               />
             </div>
@@ -564,20 +590,20 @@ const MilestoneBuilderStep = ({
               <div className="relative">
                 <Input
                   type="text"
-                  placeholder="25%"
-                  value={milestone.percentage ? `${milestone.percentage}%` : ''}
+                  placeholder="25"
+                  value={milestone.percentage || ''}
                   onFocus={(e) => {
-                    // Clear the % symbol on focus for easier editing
-                    e.target.value = milestone.percentage ? milestone.percentage.toString() : '';
+                    // Clear suggested value on focus for easier input
+                    if (e.target.value === "25") {
+                      e.target.value = "";
+                      updateMilestone(index, "percentage", 0);
+                    }
                   }}
-                  onBlur={(e) => {
-                    // Add % symbol back on blur
-                    const numValue = parseInt(e.target.value) || 0;
-                    updateMilestone(index, "percentage", numValue);
-                    // Auto-calculate amount based on percentage
-                    if (numValue > 0) {
-                      const calculatedAmount = calculateMilestoneAmount(numValue);
-                      updateMilestone(index, "amount", calculatedAmount);
+                  onKeyDown={(e) => {
+                    // Allow backspace to fully clear the field
+                    if (e.key === "Backspace" && e.target.value.length === 1) {
+                      updateMilestone(index, "percentage", 0);
+                      updateMilestone(index, "amount", "");
                     }
                   }}
                   onChange={(e) => {
@@ -589,9 +615,12 @@ const MilestoneBuilderStep = ({
                     if (numValue > 0) {
                       const calculatedAmount = calculateMilestoneAmount(numValue);
                       updateMilestone(index, "amount", calculatedAmount);
+                    } else {
+                      updateMilestone(index, "amount", "");
                     }
                   }}
                 />
+                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">%</span>
               </div>
             </div>
             <div className="md:col-span-2">

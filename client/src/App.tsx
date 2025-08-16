@@ -11,6 +11,7 @@ import CreateContract from "@/pages/create-contract";
 import EditContract from "@/pages/edit-contract";
 import SignupPage from "@/pages/signup";
 import LoginPage from "@/pages/login";
+import UserSetup from "@/pages/user-setup";
 import Pricing from "@/pages/pricing";
 import Features from "@/pages/features";
 import About from "@/pages/about";
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/client-payment/:id?" component={ClientPayment} />
       <Route path="/signup" component={SignupPage} />
       <Route path="/login" component={LoginPage} />
+      <Route path="/setup" component={UserSetup} />
       <Route component={NotFound} />
     </Switch>
   );
