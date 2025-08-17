@@ -60,7 +60,9 @@ export default function LoginPage() {
       return response.json();
     },
     onSuccess: (data: any) => {
-      // Store authentication token in localStorage
+      console.log("Login success data:", data);
+      
+      // Store authentication token in localStorage if provided
       if (data.token) {
         localStorage.setItem('smartflo-auth', data.token);
       }
@@ -70,20 +72,25 @@ export default function LoginPage() {
         description: "Successfully signed in to your account.",
       });
       
-      // Small delay to ensure token is stored before redirect
+      // Invalidate and refetch user data to ensure fresh state
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      
+      // Small delay to ensure session is established before redirect
       setTimeout(() => {
-        // Invalidate and refetch user data
-        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+        // Check userType from either location in response
+        const userType = data.user?.userType || data.userType;
+        
+        console.log("Redirecting user with type:", userType);
         
         // Redirect based on user type
-        if (data.user?.userType === 'freelancer') {
-          setLocation("/freelancer-dashboard");
-        } else if (data.user?.userType === 'client') {
-          setLocation("/client-dashboard");
+        if (userType === 'freelancer') {
+          setLocation("/dashboard"); // Freelancer dashboard
+        } else if (userType === 'client') {
+          setLocation("/client-dashboard"); // Client dashboard
         } else {
           setLocation("/dashboard"); // Default dashboard
         }
-      }, 100);
+      }, 200); // Slightly longer delay for session establishment
     },
     onError: (error: any) => {
       toast({
