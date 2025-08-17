@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "wouter";
+import { useParams, Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { apiRequest } from "@/lib/queryClient";
-import { CheckCircle, Clock, AlertTriangle, CreditCard, Wallet, Shield, ExternalLink } from "lucide-react";
+import { CheckCircle, Clock, AlertTriangle, CreditCard, Wallet, Shield, ArrowLeft } from "lucide-react";
 import { formatCurrency } from "@shared/pricing";
 
 interface Milestone {
@@ -96,9 +96,9 @@ export default function ContractMilestones() {
     );
   }
 
-  const contract: Contract = contractData?.contract;
-  const milestones: Milestone[] = milestonesData?.milestones || [];
-  const authorization: PaymentAuthorization = authorizationData?.authorization;
+  const contract: Contract = (contractData as any)?.contract || contractData;
+  const milestones: Milestone[] = (milestonesData as any)?.milestones || milestonesData || [];
+  const authorization: PaymentAuthorization = (authorizationData as any)?.authorization || authorizationData;
 
   const completedMilestones = milestones.filter(m => m.status === 'paid').length;
   const totalMilestones = milestones.length;
@@ -114,7 +114,7 @@ export default function ContractMilestones() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants = {
+    const variants: { [key: string]: "default" | "secondary" | "outline" | "destructive" } = {
       'paid': 'default',
       'approved': 'secondary',
       'submitted': 'outline',
@@ -122,7 +122,7 @@ export default function ContractMilestones() {
       'pending': 'outline'
     };
     return (
-      <Badge variant={variants[status as keyof typeof variants] || 'outline'}>
+      <Badge variant={variants[status] || 'outline'}>
         {status.replace('_', ' ').toUpperCase()}
       </Badge>
     );
@@ -175,10 +175,10 @@ export default function ContractMilestones() {
           <p className="text-gray-600 mt-1">{contract?.title}</p>
         </div>
         <Button variant="outline" asChild>
-          <a href={`/dashboard/contracts/${id}`}>
-            <ExternalLink className="h-4 w-4 mr-2" />
+          <Link href={`/dashboard/contracts/${id}`}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Contract
-          </a>
+          </Link>
         </Button>
       </div>
 
@@ -191,7 +191,7 @@ export default function ContractMilestones() {
               Payment Authorization Status
             </CardTitle>
             <Button variant="outline" size="sm" asChild>
-              <a href="/dashboard/payment-methods">Manage Payment Methods</a>
+              <Link href="/dashboard/payment-methods">Manage Payment Methods</Link>
             </Button>
           </div>
         </CardHeader>
@@ -205,7 +205,7 @@ export default function ContractMilestones() {
                 <span>Authorized: {new Date(authorization.authorizedAt).toLocaleDateString()}</span>
               </div>
               <Button variant="outline" size="sm" asChild>
-                <a href="/dashboard/payment-methods">Change Payment Method</a>
+                <Link href="/dashboard/payment-methods">Change Payment Method</Link>
               </Button>
             </div>
           ) : (
@@ -214,7 +214,7 @@ export default function ContractMilestones() {
               <AlertDescription>
                 Payment authorization required before milestone work can begin. 
                 <Button variant="link" className="p-0 h-auto ml-2" asChild>
-                  <a href={`/contracts/${contract?.id}/authorize-payment`}>Set up payment method</a>
+                  <Link href={`/contracts/${contract?.id}/authorize-payment`}>Set up payment method</Link>
                 </Button>
               </AlertDescription>
             </Alert>

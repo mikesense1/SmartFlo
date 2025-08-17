@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { 
   ArrowLeft, CheckCircle, Clock, DollarSign, FileText, 
   Upload, ExternalLink, AlertCircle, Calendar, 
-  Send, Shield, Zap, Target, Wallet
+  Send, Shield, Zap, Target, Wallet, Plus
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/navigation";
@@ -94,10 +94,11 @@ export default function MilestoneTracker() {
 
   // Use real data if available, otherwise fall back to mock data
   const displayContract = contract || mockContract;
-  const displayMilestones = milestones.length > 0 ? milestones.map(m => ({
-    ...m,
-    status: m.status as "pending" | "in_progress" | "submitted" | "approved" | "paid"
-  })) : mockMilestones;
+  const displayMilestones = (Array.isArray(milestones) && milestones.length > 0) ? 
+    milestones.map((m: any) => ({
+      ...m,
+      status: m.status as "pending" | "in_progress" | "submitted" | "approved" | "paid"
+    })) : mockMilestones;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -199,10 +200,10 @@ export default function MilestoneTracker() {
     setIsApprovalModalOpen(true);
   };
 
-  const completedMilestones = displayMilestones.filter(m => m.status === "paid").length;
+  const completedMilestones = displayMilestones.filter((m: any) => m.status === "paid").length;
   const totalProgress = displayMilestones.length > 0 ? (completedMilestones / displayMilestones.length) * 100 : 0;
-  const amountReleased = parseFloat(displayContract.amountReleased || "0");
-  const totalValue = parseFloat(displayContract.totalValue || "0");
+  const amountReleased = parseFloat((displayContract as any).amountReleased || "0");
+  const totalValue = parseFloat((displayContract as any).totalValue || "0");
 
   // Show loading state while fetching data
   if ((contractLoading || milestonesLoading) && contractId !== "demo-contract") {
@@ -238,12 +239,12 @@ export default function MilestoneTracker() {
                 </Button>
               </Link>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">{displayContract.title}</h1>
-                <p className="text-sm text-slate-500">Contract with {displayContract.clientName}</p>
+                <h1 className="text-xl font-bold text-slate-900">{(displayContract as any).title}</h1>
+                <p className="text-sm text-slate-500">Contract with {(displayContract as any).clientName}</p>
               </div>
             </div>
-            <Badge className={getStatusColor(displayContract.status)}>
-              {displayContract.status}
+            <Badge className={getStatusColor((displayContract as any).status)}>
+              {(displayContract as any).status}
             </Badge>
           </div>
         </div>
@@ -280,7 +281,7 @@ export default function MilestoneTracker() {
               <Shield className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">${parseFloat(displayContract.escrowBalance || "0").toLocaleString()}</div>
+              <div className="text-2xl font-bold text-blue-600">${parseFloat((displayContract as any).escrowBalance || "0").toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">Secured by blockchain</p>
             </CardContent>
           </Card>
@@ -303,7 +304,7 @@ export default function MilestoneTracker() {
           <Alert>
             <Zap className="h-4 w-4" />
             <AlertDescription>
-              <strong>Smart Payment Automation:</strong> Payments are automatically released via {displayContract.paymentMethod === "usdc" ? "USDC cryptocurrency" : "Stripe bank transfer"} 
+              <strong>Smart Payment Automation:</strong> Payments are automatically released via {(displayContract as any).paymentMethod === "usdc" ? "USDC cryptocurrency" : "Stripe bank transfer"} 
               when milestones are approved. Funds are secured in blockchain escrow.
             </AlertDescription>
           </Alert>
@@ -342,7 +343,7 @@ export default function MilestoneTracker() {
                 </Link>
               </div>
             ) : (
-              displayMilestones.map((milestone, index) => (
+              displayMilestones.map((milestone: any, index: number) => (
                 <div key={milestone.id}>
                 <Card className="relative">
                   <CardHeader>
@@ -390,7 +391,7 @@ export default function MilestoneTracker() {
                       <div className="mb-4">
                         <h4 className="font-medium text-sm mb-2">Deliverables:</h4>
                         <div className="flex flex-wrap gap-2">
-                          {milestone.deliverables.map((file, idx) => (
+                          {milestone.deliverables.map((file: any, idx: number) => (
                             <Badge key={idx} variant="secondary" className="text-xs">
                               <FileText className="w-3 h-3 mr-1" />
                               {file}
