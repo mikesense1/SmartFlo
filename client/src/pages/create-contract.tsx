@@ -1660,7 +1660,8 @@ export default function CreateContract() {
         description: "Please log in to create contracts",
         variant: "destructive",
       });
-      // Don't automatically redirect, show login form instead
+      // Redirect to login page
+      window.location.href = "/login";
       return;
     }
 
@@ -1887,63 +1888,7 @@ export default function CreateContract() {
     }
   };
 
-  // Show login prompt if user is not authenticated
-  if (userLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <Navigation />
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex justify-center items-center py-16">
-            <div className="text-center">
-              <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-              <p className="text-slate-600">Checking authentication...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
-  if (!currentUser?.id) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <Navigation />
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="max-w-md mx-auto">
-            <Card className="border-amber-200 bg-amber-50">
-              <CardContent className="text-center py-12">
-                <Lock className="w-16 h-16 mx-auto text-amber-600 mb-4" />
-                <h2 className="text-2xl font-bold text-amber-800 mb-3">Authentication Required</h2>
-                <p className="text-amber-700 mb-6">
-                  You need to be logged in as a freelancer to create contracts. Please sign in to continue.
-                </p>
-                <div className="space-y-3">
-                  <Button 
-                    onClick={() => window.location.href = '/login'}
-                    className="w-full"
-                  >
-                    <Users className="w-4 h-4 mr-2" />
-                    Sign In to SmartFlo
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => window.location.href = '/signup'}
-                    className="w-full"
-                  >
-                    New to SmartFlo? Create Account
-                  </Button>
-                </div>
-                <div className="mt-6 text-sm text-amber-600">
-                  <p>Demo credentials for testing:</p>
-                  <p className="font-mono">demo@smartflo.com / test123</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
