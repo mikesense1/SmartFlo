@@ -24,6 +24,8 @@ import ClientPayment from "@/pages/client-payment";
 import BlockchainTest from "@/pages/blockchain-test";
 import NotFound from "@/pages/not-found";
 import ContractSign from "@/pages/contract-sign";
+import ContractMilestones from "@/pages/contract-milestones";
+import PaymentMethods from "@/pages/payment-methods";
 
 function Router() {
   return (
@@ -49,6 +51,8 @@ function Router() {
       <Route path="/login" component={LoginPage} />
       <Route path="/setup" component={UserSetup} />
       <Route path="/contracts/:shareToken/sign" component={ContractSign} />
+      <Route path="/dashboard/contracts/:id/milestones" component={ContractMilestones} />
+      <Route path="/dashboard/payment-methods" component={PaymentMethods} />
       <Route component={NotFound} />
     </Switch>
   );

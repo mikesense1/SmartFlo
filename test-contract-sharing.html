@@ -57,11 +57,29 @@
     </div>
     
     <div class="test-section">
-        <h2>5. Test Stripe Setup Intent (Mock)</h2>
-        <p>Test Stripe payment method setup for future charges.</p>
-        <input type="text" id="stripeContractId" placeholder="Contract ID" style="width: 200px;">
-        <button onclick="testStripeSetupIntent()">Create Setup Intent</button>
-        <div id="stripe-setup-result" class="result" style="display: none;"></div>
+        <h2>5. Test Milestone Management System</h2>
+        <p>Test the complete milestone system with payment authorization controls.</p>
+        <input type="text" id="milestoneContractId" placeholder="Contract ID" style="width: 200px;">
+        <select id="milestoneAction">
+            <option value="view">View Milestones</option>
+            <option value="submit">Submit Milestone</option>
+            <option value="check_auth">Check Payment Authorization</option>
+        </select>
+        <button onclick="testMilestoneSystem()">Test Milestone System</button>
+        <div id="milestone-system-result" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>6. Test Payment Authorization Management</h2>
+        <p>Test the payment method authorization and monitoring system.</p>
+        <select id="authAction">
+            <option value="list">List Authorizations</option>
+            <option value="history">View History</option>
+            <option value="revoke">Revoke Authorization</option>
+        </select>
+        <input type="text" id="authActionId" placeholder="Authorization ID (for revoke)" style="width: 200px;">
+        <button onclick="testAuthorizationManagement()">Test Authorization Management</button>
+        <div id="auth-management-result" class="result" style="display: none;"></div>
     </div>
 
     <script>
@@ -179,20 +197,70 @@
             showResult('auth-payment-result', result, result.success);
         }
         
-        async function testStripeSetupIntent() {
-            const contractId = document.getElementById('stripeContractId').value;
+        async function testMilestoneSystem() {
+            const contractId = document.getElementById('milestoneContractId').value;
+            const action = document.getElementById('milestoneAction').value;
             
             if (!contractId) {
-                showResult('stripe-setup-result', { error: 'Please enter contract ID' }, false);
+                showResult('milestone-system-result', { error: 'Please enter contract ID' }, false);
                 return;
             }
             
-            const result = await makeRequest('/api/stripe/create-setup-intent', {
-                method: 'POST',
-                body: JSON.stringify({ contractId })
-            });
+            let result;
+            switch (action) {
+                case 'view':
+                    result = await makeRequest(`/api/contracts/${contractId}/milestones`);
+                    break;
+                case 'submit':
+                    result = await makeRequest(`/api/milestones/${contractId}/submit`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            completionNotes: 'Test milestone submission',
+                            proofUrl: 'https://example.com/proof',
+                            deliverables: ['Test deliverable']
+                        })
+                    });
+                    break;
+                case 'check_auth':
+                    result = await makeRequest(`/api/contracts/${contractId}/payment-authorization`);
+                    break;
+                default:
+                    result = { error: 'Unknown action' };
+            }
             
-            showResult('stripe-setup-result', result, result.success);
+            showResult('milestone-system-result', result, result.success);
+        }
+        
+        async function testAuthorizationManagement() {
+            const action = document.getElementById('authAction').value;
+            const authId = document.getElementById('authActionId').value;
+            
+            let result;
+            switch (action) {
+                case 'list':
+                    result = await makeRequest('/api/payment-authorizations');
+                    break;
+                case 'history':
+                    result = await makeRequest('/api/payment-authorizations/history');
+                    break;
+                case 'revoke':
+                    if (!authId) {
+                        showResult('auth-management-result', { error: 'Please enter authorization ID for revoke' }, false);
+                        return;
+                    }
+                    result = await makeRequest('/api/payment/revoke-authorization', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            authorizationId: authId,
+                            reason: 'Test revocation'
+                        })
+                    });
+                    break;
+                default:
+                    result = { error: 'Unknown action' };
+            }
+            
+            showResult('auth-management-result', result, result.success);
         }
     </script>
 </body>

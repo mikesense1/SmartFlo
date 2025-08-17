@@ -58,6 +58,9 @@ export interface IStorage {
   
   // Extended milestone operations
   getMilestones(contractId: string): Promise<Milestone[]>;
+  
+  // Payment authorization updates
+  updatePaymentAuthorization(id: string, updates: Partial<PaymentAuthorization>): Promise<PaymentAuthorization | undefined>;
 }
 
 import { db } from "./db.js";
@@ -276,6 +279,16 @@ export class DatabaseStorage implements IStorage {
   // Extended milestone operations
   async getMilestones(contractId: string): Promise<Milestone[]> {
     return await db.select().from(milestones).where(eq(milestones.contractId, contractId));
+  }
+
+  // Payment authorization updates
+  async updatePaymentAuthorization(id: string, updates: Partial<PaymentAuthorization>): Promise<PaymentAuthorization | undefined> {
+    const [authorization] = await db
+      .update(paymentAuthorizations)
+      .set(updates)
+      .where(eq(paymentAuthorizations.id, id))
+      .returning();
+    return authorization || undefined;
   }
 }
 

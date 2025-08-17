@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { 
   Plus, FileText, DollarSign, Clock, CheckCircle, 
   AlertCircle, Wallet, CreditCard, Activity, Target,
-  TrendingUp, TrendingDown, Lock, Zap, Users, Eye, Edit, Globe
+  TrendingUp, TrendingDown, Lock, Zap, Users, Eye, Edit, Globe, Shield
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -299,12 +299,20 @@ export default function Dashboard() {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="contracts">Contracts</TabsTrigger>
-            <TabsTrigger value="payments">Payments</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="contracts">Contracts</TabsTrigger>
+              <TabsTrigger value="payments">Payments</TabsTrigger>
+              <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            </TabsList>
+            <Button variant="outline" asChild>
+              <a href="/dashboard/payment-methods">
+                <Shield className="w-4 h-4 mr-2" />
+                Manage Payment Methods
+              </a>
+            </Button>
+          </div>
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -350,10 +358,10 @@ export default function Dashboard() {
                               <Progress value={60} className="h-2" />
                             </div>
                             <div className="flex gap-2 mt-4">
-                              <Link href={`/milestone-tracker/${contract.id}`}>
+                              <Link href={`/dashboard/contracts/${contract.id}/milestones`}>
                                 <Button variant="outline" size="sm">
                                   <Target className="w-4 h-4 mr-2" />
-                                  Track Progress
+                                  Milestones
                                 </Button>
                               </Link>
                               <Link href={`/client-payment/${contract.id}`}>
@@ -601,10 +609,10 @@ export default function Dashboard() {
                         ) : (
                           // Active/completed contract actions
                           <>
-                            <Link href={`/milestone-tracker/${contract.id}`}>
+                            <Link href={`/dashboard/contracts/${contract.id}/milestones`}>
                               <Button variant="outline" size="sm">
                                 <Target className="w-4 h-4 mr-2" />
-                                Update Milestones
+                                Manage Milestones
                               </Button>
                             </Link>
                             <Button 

@@ -1091,6 +1091,235 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payment authorization management routes
+  app.get("/api/payment-authorizations", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const userId = (req as any).session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: "Authentication required" });
+        }
+
+        // Get all contracts for the user
+        const userContracts = await storage.getContractsByUser(userId);
+        const contractIds = userContracts.map(c => c.id);
+
+        // Get payment authorizations for user's contracts
+        const authorizations = [];
+        for (const contractId of contractIds) {
+          const auth = await storage.getPaymentAuthorizationByContract(contractId);
+          if (auth) {
+            const contract = userContracts.find(c => c.id === contractId);
+            authorizations.push({
+              ...auth,
+              contractTitle: contract?.title || 'Unknown Contract'
+            });
+          }
+        }
+
+        res.json({ authorizations });
+      });
+    } catch (error) {
+      console.error("Error fetching payment authorizations:", error);
+      res.status(500).json({ error: "Failed to fetch payment authorizations" });
+    }
+  });
+
+  app.get("/api/payment-authorizations/history", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const userId = (req as any).session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: "Authentication required" });
+        }
+
+        // Get contracts for the user and their authorization history
+        const userContracts = await storage.getContractsByUser(userId);
+        const contractIds = userContracts.map(c => c.id);
+
+        // Mock authorization history for now
+        const history = contractIds.flatMap(contractId => [
+          {
+            id: `hist_${contractId}_1`,
+            contractId,
+            action: 'authorized',
+            timestamp: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+            details: 'Payment method authorized for milestone payments'
+          }
+        ]);
+
+        res.json({ history: history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) });
+      });
+    } catch (error) {
+      console.error("Error fetching authorization history:", error);
+      res.status(500).json({ error: "Failed to fetch authorization history" });
+    }
+  });
+
+  app.get("/api/contracts/:id/payment-authorization", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const authorization = await storage.getPaymentAuthorizationByContract(id);
+      
+      res.json({ authorization });
+    } catch (error) {
+      console.error("Error fetching contract authorization:", error);
+      res.status(500).json({ error: "Failed to fetch authorization" });
+    }
+  });
+
+  app.get("/api/contracts/:id/milestones", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const milestones = await storage.getMilestones(id);
+      
+      res.json({ milestones });
+    } catch (error) {
+      console.error("Error fetching milestones:", error);
+      res.status(500).json({ error: "Failed to fetch milestones" });
+    }
+  });
+
+  app.post("/api/milestones/:id/submit", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { completionNotes, proofUrl, deliverables } = req.body;
+
+      // Get milestone and contract
+      const milestone = await storage.getMilestone(id);
+      if (!milestone) {
+        return res.status(404).json({ error: "Milestone not found" });
+      }
+
+      const contract = await storage.getContract(milestone.contractId);
+      if (!contract) {
+        return res.status(404).json({ error: "Contract not found" });
+      }
+
+      // Check payment authorization
+      const authorization = await storage.getPaymentAuthorizationByContract(milestone.contractId);
+      if (!authorization || !authorization.isActive) {
+        // Send "Action Required" email to client
+        const { EmailService } = await import('./email-service');
+        const emailService = EmailService.getInstance();
+        
+        await emailService.sendPaymentPending({
+          clientName: contract.clientEmail,
+          clientEmail: contract.clientEmail,
+          contractTitle: contract.title,
+          milestoneTitle: milestone.title,
+          amount: milestone.amount.toString(),
+          paymentMethod: 'Not configured',
+          contractId: contract.id,
+          milestoneId: milestone.id,
+          chargeDate: 'Payment method required',
+          timeRemaining: 'Setup required'
+        });
+
+        return res.status(400).json({ 
+          error: "Client payment method not configured",
+          message: "Payment authorization required before milestone submission"
+        });
+      }
+
+      // Update milestone status
+      await storage.updateMilestone(id, {
+        status: 'submitted',
+        submittedAt: new Date().toISOString()
+      });
+
+      // Log activity
+      await storage.createActivity({
+        contractId: milestone.contractId,
+        action: "milestone_submitted",
+        actorEmail: contract.freelancerEmail,
+        details: { milestoneId: id, completionNotes, proofUrl }
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Milestone submitted successfully"
+      });
+    } catch (error) {
+      console.error("Error submitting milestone:", error);
+      res.status(500).json({ error: "Failed to submit milestone" });
+    }
+  });
+
+  app.post("/api/payment/revoke-authorization", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { authorizationId, reason } = req.body;
+        const userId = (req as any).session?.userId;
+
+        if (!authorizationId) {
+          return res.status(400).json({ error: "Authorization ID is required" });
+        }
+
+        // Get authorization and verify ownership through contract
+        const authorization = await storage.getPaymentAuthorizationByContract(authorizationId);
+        if (!authorization) {
+          return res.status(404).json({ error: "Authorization not found" });
+        }
+
+        const contract = await storage.getContract(authorization.contractId);
+        if (!contract) {
+          return res.status(404).json({ error: "Contract not found" });
+        }
+
+        // Verify user owns this contract (client or freelancer)
+        const user = await storage.getUser(userId);
+        if (!user || (contract.clientEmail !== user.email && contract.freelancerEmail !== user.email)) {
+          return res.status(403).json({ error: "Unauthorized" });
+        }
+
+        // Update authorization to inactive
+        await storage.updatePaymentAuthorization(authorizationId, { 
+          isActive: false,
+          revokedAt: new Date().toISOString(),
+          revocationReason: reason || 'Revoked by client'
+        });
+
+        // Update contract status if needed
+        await storage.updateContract(authorization.contractId, {
+          status: 'payment_authorization_revoked'
+        });
+
+        // Log activity
+        await storage.createActivity({
+          contractId: authorization.contractId,
+          action: "payment_authorization_revoked",
+          actorEmail: user.email,
+          details: { authorizationId, reason: reason || 'Revoked by client' }
+        });
+
+        // Send confirmation email
+        const { EmailService } = await import('./email-service');
+        const emailService = EmailService.getInstance();
+        
+        await emailService.sendAuthorizationRevoked({
+          clientName: contract.clientEmail,
+          clientEmail: contract.clientEmail,
+          contractTitle: contract.title,
+          revocationDate: new Date().toLocaleDateString(),
+          contractId: contract.id,
+          reason: reason || 'Payment authorization revoked by client'
+        });
+
+        res.json({ 
+          success: true, 
+          message: "Payment authorization revoked successfully"
+        });
+      });
+    } catch (error) {
+      console.error("Error revoking authorization:", error);
+      res.status(500).json({ error: "Failed to revoke authorization" });
+    }
+  });
+
   // Email service routes
   app.use("/api/emails", emailRoutes);
 
