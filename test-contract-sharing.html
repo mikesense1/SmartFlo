@@ -104,7 +104,24 @@
     </div>
 
     <div class="test-section">
-        <h2>8. Test Payment Authorization Management</h2>
+        <h2>8. Test Compliance and Audit System</h2>
+        <p>Test the comprehensive compliance monitoring and audit logging system.</p>
+        <select id="complianceAction">
+            <option value="pci-status">Get PCI Compliance Status</option>
+            <option value="metrics">Get Compliance Metrics</option>
+            <option value="authorizations">Get Authorization Records</option>
+            <option value="disputes">Get Dispute Records</option>
+            <option value="create-dispute">Create Test Dispute</option>
+            <option value="run-jobs">Run Monthly Jobs</option>
+            <option value="export">Export Compliance Report</option>
+        </select>
+        <input type="text" id="complianceParam" placeholder="Parameter (e.g., dispute reason)" style="width: 200px;">
+        <button onclick="testComplianceSystem()">Test Compliance</button>
+        <div id="compliance-system-result" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>9. Test Payment Authorization Management</h2>
         <p>Test the payment method authorization and monitoring system.</p>
         <select id="authAction">
             <option value="list">List Authorizations</option>
@@ -401,6 +418,65 @@
             }
             
             showResult('security-monitoring-result', result, result.success);
+        }
+        
+        async function testComplianceSystem() {
+            const action = document.getElementById('complianceAction').value;
+            const param = document.getElementById('complianceParam').value;
+            
+            let result;
+            switch (action) {
+                case 'pci-status':
+                    result = await makeRequest('/api/compliance/pci-status');
+                    break;
+                case 'metrics':
+                    result = await makeRequest('/api/compliance/metrics?period=month');
+                    break;
+                case 'authorizations':
+                    result = await makeRequest('/api/compliance/authorizations');
+                    break;
+                case 'disputes':
+                    result = await makeRequest('/api/compliance/disputes');
+                    break;
+                case 'create-dispute':
+                    if (!param) {
+                        showResult('compliance-system-result', { error: 'Please enter dispute reason' }, false);
+                        return;
+                    }
+                    result = await makeRequest('/api/compliance/disputes', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            paymentId: 'test_payment_123',
+                            contractId: 'test_contract_456',
+                            freelancerId: 'test_freelancer_789',
+                            amount: 50000,
+                            reason: param
+                        })
+                    });
+                    break;
+                case 'run-jobs':
+                    result = await makeRequest('/api/compliance/run-monthly-jobs', {
+                        method: 'POST'
+                    });
+                    break;
+                case 'export':
+                    result = await makeRequest('/api/compliance/export-report', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            period: 'month',
+                            includeAuthorizations: true,
+                            includeDisputes: true
+                        })
+                    });
+                    if (result.ok) {
+                        result = { success: true, message: 'Compliance report export initiated' };
+                    }
+                    break;
+                default:
+                    result = { error: 'Unknown action' };
+            }
+            
+            showResult('compliance-system-result', result, result.success);
         }
     </script>
 </body>

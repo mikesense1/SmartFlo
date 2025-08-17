@@ -54,6 +54,7 @@ function Router() {
       <Route path="/dashboard/contracts/:id/milestones" component={ContractMilestones} />
       <Route path="/dashboard/payment-methods" component={PaymentMethods} />
       <Route path="/dashboard/security" component={() => import("./pages/security-dashboard")} />
+      <Route path="/dashboard/compliance" component={() => import("./pages/compliance-dashboard")} />
       <Route path="/milestone-approval/:id" component={() => import("./pages/milestone-approval")} />
       <Route component={NotFound} />
     </Switch>

@@ -400,6 +400,36 @@ export async function track2FAEvent(event: TwoFactorAnalytics): Promise<void> {
       }
     });
 
+    // Also log to audit system
+    const { AuditLogger } = await import('../audit/audit-logger');
+    const auditLogger = AuditLogger.getInstance();
+    
+    if (event.type === '2fa_success') {
+      await auditLogger.logApprovalEvent(
+        event.userId,
+        'granted',
+        'milestone_approval',
+        event.amount || 0,
+        {
+          method: event.method,
+          timeToComplete: event.timeToComplete,
+          deviceId: event.deviceId
+        }
+      );
+    } else if (event.type === '2fa_failed') {
+      await auditLogger.logApprovalEvent(
+        event.userId,
+        'denied',
+        'milestone_approval',
+        event.amount || 0,
+        {
+          method: event.method,
+          reason: event.reason,
+          deviceId: event.deviceId
+        }
+      );
+    }
+
     // Also store in analytics table
     await storage.createActivity({
       contractId: '2fa-analytics',

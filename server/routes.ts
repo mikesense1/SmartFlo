@@ -1806,6 +1806,200 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Compliance and audit endpoints
+  app.get("/api/compliance/pci-status", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { ComplianceManager } = await import('./lib/compliance/compliance-manager');
+        const complianceManager = ComplianceManager.getInstance();
+        
+        const pciStatus = await complianceManager.getPCIComplianceStatus();
+        res.json(pciStatus);
+      });
+    } catch (error: any) {
+      console.error("Error getting PCI compliance status:", error);
+      res.status(500).json({ error: "Failed to get PCI compliance status" });
+    }
+  });
+
+  app.get("/api/compliance/metrics", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { period } = req.query;
+        const { AuditLogger } = await import('./lib/audit/audit-logger');
+        const auditLogger = AuditLogger.getInstance();
+        
+        const metrics = await auditLogger.getComplianceMetrics(period as 'day' | 'week' | 'month' | 'year');
+        res.json(metrics);
+      });
+    } catch (error: any) {
+      console.error("Error getting compliance metrics:", error);
+      res.status(500).json({ error: "Failed to get compliance metrics" });
+    }
+  });
+
+  app.get("/api/compliance/authorizations", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { ComplianceManager } = await import('./lib/compliance/compliance-manager');
+        const complianceManager = ComplianceManager.getInstance();
+        
+        const authorizations = await complianceManager.getAuthorizationRecords();
+        res.json(authorizations);
+      });
+    } catch (error: any) {
+      console.error("Error getting authorization records:", error);
+      res.status(500).json({ error: "Failed to get authorization records" });
+    }
+  });
+
+  app.get("/api/compliance/disputes", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { ComplianceManager } = await import('./lib/compliance/compliance-manager');
+        const complianceManager = ComplianceManager.getInstance();
+        
+        const disputes = await complianceManager.getDisputes();
+        res.json(disputes);
+      });
+    } catch (error: any) {
+      console.error("Error getting dispute records:", error);
+      res.status(500).json({ error: "Failed to get dispute records" });
+    }
+  });
+
+  app.post("/api/compliance/disputes", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const userId = (req as any).session?.userId;
+        const { paymentId, contractId, freelancerId, amount, reason } = req.body;
+
+        if (!paymentId || !contractId || !freelancerId || !amount || !reason) {
+          return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        const { ComplianceManager } = await import('./lib/compliance/compliance-manager');
+        const complianceManager = ComplianceManager.getInstance();
+        
+        const disputeId = await complianceManager.createDispute(
+          paymentId,
+          contractId,
+          userId,
+          freelancerId,
+          amount,
+          reason
+        );
+
+        res.json({ success: true, disputeId });
+      });
+    } catch (error: any) {
+      console.error("Error creating dispute:", error);
+      res.status(500).json({ error: "Failed to create dispute" });
+    }
+  });
+
+  app.post("/api/compliance/disputes/:disputeId/resolve", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { disputeId } = req.params;
+        const adminUserId = (req as any).session?.userId;
+        const { resolution, refundAmount } = req.body;
+
+        if (!resolution) {
+          return res.status(400).json({ error: "Resolution required" });
+        }
+
+        const { ComplianceManager } = await import('./lib/compliance/compliance-manager');
+        const complianceManager = ComplianceManager.getInstance();
+        
+        await complianceManager.resolveDispute(disputeId, resolution, refundAmount, adminUserId);
+        res.json({ success: true });
+      });
+    } catch (error: any) {
+      console.error("Error resolving dispute:", error);
+      res.status(500).json({ error: "Failed to resolve dispute" });
+    }
+  });
+
+  app.post("/api/compliance/run-monthly-jobs", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { ComplianceManager } = await import('./lib/compliance/compliance-manager');
+        const complianceManager = ComplianceManager.getInstance();
+        
+        const results = await complianceManager.runMonthlyComplianceJobs();
+        res.json(results);
+      });
+    } catch (error: any) {
+      console.error("Error running monthly compliance jobs:", error);
+      res.status(500).json({ error: "Failed to run compliance jobs" });
+    }
+  });
+
+  app.post("/api/compliance/export-report", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { period, includeAuthorizations, includeDisputes } = req.body;
+        const userId = (req as any).session?.userId;
+
+        const { ComplianceManager } = await import('./lib/compliance/compliance-manager');
+        const { AuditLogger } = await import('./lib/audit/audit-logger');
+        
+        const complianceManager = ComplianceManager.getInstance();
+        const auditLogger = AuditLogger.getInstance();
+
+        // Generate comprehensive compliance report
+        const endDate = new Date();
+        const startDate = new Date();
+        
+        switch (period) {
+          case 'quarter':
+            startDate.setMonth(startDate.getMonth() - 3);
+            break;
+          case 'year':
+            startDate.setFullYear(startDate.getFullYear() - 1);
+            break;
+          default:
+            startDate.setMonth(startDate.getMonth() - 1);
+        }
+
+        const report = await complianceManager.generateComplianceReport(startDate, endDate);
+
+        // Generate CSV content
+        let csvContent = "Type,Date,Event,Details,Amount,Status\n";
+        
+        if (includeAuthorizations) {
+          const auths = await complianceManager.getAuthorizationRecords();
+          auths.forEach(auth => {
+            csvContent += `Authorization,${auth.authorizedAt},${auth.method}_auth,Contract:${auth.contractId},${auth.totalAuthorized},${auth.status}\n`;
+          });
+        }
+
+        if (includeDisputes) {
+          const disputes = await complianceManager.getDisputes();
+          disputes.forEach(dispute => {
+            csvContent += `Dispute,${dispute.openedAt},dispute_${dispute.status},${dispute.reason},${dispute.amount},${dispute.status}\n`;
+          });
+        }
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="compliance-report-${period}-${new Date().toISOString().split('T')[0]}.csv"`);
+        res.send(csvContent);
+      });
+    } catch (error: any) {
+      console.error("Error exporting compliance report:", error);
+      res.status(500).json({ error: "Failed to export compliance report" });
+    }
+  });
+
   // Get milestone details (for approval page)
   app.get("/api/milestones/:id", async (req, res) => {
     try {

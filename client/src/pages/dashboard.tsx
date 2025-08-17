@@ -319,6 +319,12 @@ export default function Dashboard() {
                   Security Dashboard
                 </a>
               </Button>
+              <Button variant="outline" asChild>
+                <a href="/dashboard/compliance">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Compliance
+                </a>
+              </Button>
             </div>
           </div>
 
