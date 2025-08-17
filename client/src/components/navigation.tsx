@@ -77,7 +77,7 @@ export default function Navigation() {
                   <Link href="/about" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
                     About
                   </Link>
-                  <Link href="/freelancer-dashboard" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
+                  <Link href="/dashboard" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
                     Freelancer
                   </Link>
                   <Link href="/client-dashboard" className="text-slate-600 hover:text-slate-900 px-3 py-2 text-sm font-medium transition-colors">
@@ -184,7 +184,7 @@ export default function Navigation() {
                     </>
                   ) : (
                     <>
-                      <Link href="/freelancer-dashboard" onClick={() => setIsOpen(false)} className="text-left text-slate-600 hover:text-slate-900 py-2 text-sm font-medium">
+                      <Link href="/dashboard" onClick={() => setIsOpen(false)} className="text-left text-slate-600 hover:text-slate-900 py-2 text-sm font-medium">
                         Freelancer Dashboard
                       </Link>
                       <Link href="/client-dashboard" onClick={() => setIsOpen(false)} className="text-left text-slate-600 hover:text-slate-900 py-2 text-sm font-medium">
