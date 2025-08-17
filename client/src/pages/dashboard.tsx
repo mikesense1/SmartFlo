@@ -34,12 +34,6 @@ export default function Dashboard() {
     completedProjects: 12
   });
 
-  // Redirect to login if not authenticated
-  if (!userLoading && !currentUser) {
-    window.location.href = "/login";
-    return null;
-  }
-
   // Show loading state while user data is loading
   if (userLoading) {
     return (
@@ -57,9 +51,25 @@ export default function Dashboard() {
     );
   }
 
-  // Ensure we have a current user before proceeding
+  // Redirect to login if not authenticated (after loading completes)
   if (!currentUser) {
-    return null;
+    console.log("Dashboard: No current user found, redirecting to login");
+    // Use a timeout to prevent immediate redirect loops
+    setTimeout(() => {
+      window.location.href = "/login";
+    }, 100);
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <Navigation />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex justify-center items-center py-16">
+            <div className="text-center">
+              <p className="text-slate-600">Redirecting to login...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Fetch user contracts with proper authentication

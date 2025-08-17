@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -1400,6 +1401,7 @@ const PaymentSetupStep = ({
 export default function CreateContract() {
   const { toast } = useToast();
   const { data: currentUser, isLoading: userLoading, error: userError } = useCurrentUser();
+  const [, setLocation] = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
   const [milestones, setMilestones] = useState<MilestoneData[]>([
     {
@@ -1791,11 +1793,16 @@ export default function CreateContract() {
       // Set success state to show the success screen
       setIsContractCreated(true);
       
-      // Redirect to appropriate dashboard after success
+      // Redirect to appropriate dashboard after success using client-side routing
       setTimeout(() => {
         const dashboardUrl = currentUser?.userType === "client" ? "/client-dashboard" : "/dashboard";
         console.log(`Redirecting to ${dashboardUrl} after successful contract creation`);
-        window.location.href = dashboardUrl;
+        
+        // Force refresh auth data before redirect to ensure user is authenticated
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+        
+        // Use wouter's client-side routing instead of full page refresh to preserve session
+        setLocation(dashboardUrl);
       }, 2000);
       
     } catch (error) {
