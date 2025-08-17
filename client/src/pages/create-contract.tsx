@@ -1646,9 +1646,15 @@ export default function CreateContract() {
 
   // Final Contract Creation Function
   const finalizeContract = useCallback(async () => {
+    // Check authentication state with more comprehensive logging
+    console.log("Contract creation - checking authentication:", {
+      currentUser,
+      hasCurrentUser: !!currentUser?.id
+    });
+
     // Validate user authentication before contract creation
     if (!currentUser?.id) {
-      console.log("No current user found, retrying authentication...");
+      console.log("No current user found - redirecting to login");
       toast({
         title: "Authentication Required",
         description: "Please log in to create contracts",
