@@ -8,13 +8,23 @@ The authentication issue in production was caused by:
 
 ## Fixes Applied
 
-### 1. CORS Configuration (api/index.ts)
+### 1. CORS Configuration (api/index.ts, api/contracts.ts, api/users.ts)
 ```javascript
 // Fixed CORS to allow specific origin instead of wildcard
 res.setHeader('Access-Control-Allow-Origin', process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173');
 
 // Fixed cookie settings for cross-environment compatibility
 res.setHeader('Set-Cookie', `smartflo-auth=${token}; HttpOnly; ${process.env.NODE_ENV === 'production' ? 'Secure;' : ''} SameSite=Lax; Max-Age=86400; Path=/`);
+```
+
+### 2. Project Name Transition Fix (ALL API files)
+```javascript
+// More lenient project name validation to handle Vercel project ID change
+const validProjectNames = ['smartflo', 'payflow']; // Allow both during transition
+if (!validProjectNames.includes(decoded.projectName) || decoded.expires < Date.now()) {
+  console.log('Token validation failed');
+  return null;
+}
 ```
 
 ### 2. Frontend Authentication (client/src/pages/create-contract.tsx)

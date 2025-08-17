@@ -26,6 +26,12 @@ async function getSchema() {
 function setupEnvironment() {
   process.env.VERCEL_PROJECT_NAME = 'smartflo';
   process.env.VERCEL_URL = process.env.VERCEL_URL || 'smartflo.vercel.app';
+  // Debug: Log current environment for troubleshooting
+  console.log('Environment setup:', {
+    NODE_ENV: process.env.NODE_ENV,
+    VERCEL_URL: process.env.VERCEL_URL,
+    VERCEL_PROJECT_NAME: process.env.VERCEL_PROJECT_NAME
+  });
 }
 
 // Set CORS headers
@@ -42,17 +48,31 @@ async function authenticateRequest(req: VercelRequest): Promise<{ userId: string
     const token = req.cookies?.['smartflo-auth'] || req.headers.authorization?.replace('Bearer ', '');
     
     if (!token) {
+      console.log('No auth token found');
       return null;
     }
 
     const decoded = JSON.parse(Buffer.from(token, 'base64').toString());
     
-    if (decoded.projectName !== 'smartflo' || decoded.expires < Date.now()) {
+    // Debug: Log token validation for troubleshooting
+    console.log('Token validation:', {
+      projectName: decoded.projectName,
+      expectedProject: 'smartflo',
+      expires: decoded.expires,
+      currentTime: Date.now(),
+      isExpired: decoded.expires < Date.now()
+    });
+    
+    // More lenient project name validation to handle potential naming conflicts
+    const validProjectNames = ['smartflo', 'payflow']; // Allow both during transition
+    if (!validProjectNames.includes(decoded.projectName) || decoded.expires < Date.now()) {
+      console.log('Token validation failed');
       return null;
     }
 
     return { userId: decoded.userId, email: decoded.email };
   } catch (error) {
+    console.error('Authentication error:', error);
     return null;
   }
 }
