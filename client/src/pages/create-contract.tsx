@@ -1677,8 +1677,8 @@ export default function CreateContract() {
         clientName: clientData.clientName,
         clientEmail: clientData.clientEmail,
         totalValue: milestoneTotal.toString(),
-        paymentMethod: null, // Client will select payment method during funding
-        contractType: "milestone_based",
+        paymentMethod: projectData.pricingModel === "fixed" ? null : null, // Client will select payment method during funding
+        contractType: projectData.pricingModel === "fixed" ? "fixed_price" : "milestone_based",
         startDate: projectData.startDate,
         endDate: projectData.endDate,
         creatorId: currentUser.id, // Use authenticated user ID (validated above)
@@ -1691,6 +1691,7 @@ export default function CreateContract() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include cookies for authentication
         body: JSON.stringify({
           ...contractData,
           generatedContract: generatedContract // Include the AI-generated contract document
@@ -1723,6 +1724,7 @@ export default function CreateContract() {
             headers: {
               'Content-Type': 'application/json',
             },
+            credentials: 'include', // Include cookies for authentication
             body: JSON.stringify({
               contractId: createdContract.id,
               title: milestone.title,
@@ -1743,6 +1745,7 @@ export default function CreateContract() {
       // Create activity log entry
       await fetch('/api/activity', {
         method: 'POST',
+        credentials: 'include', // Include cookies for authentication
         headers: {
           'Content-Type': 'application/json',
         },
