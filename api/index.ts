@@ -31,7 +31,7 @@ function setupEnvironment() {
 // Set CORS headers
 function setCorsHeaders(res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5173');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
 }
@@ -107,7 +107,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         expires: Date.now() + (24 * 60 * 60 * 1000)
       })).toString('base64');
 
-      res.setHeader('Set-Cookie', `smartflo-auth=${token}; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Path=/`);
+      res.setHeader('Set-Cookie', `smartflo-auth=${token}; HttpOnly; ${process.env.NODE_ENV === 'production' ? 'Secure;' : ''} SameSite=Lax; Max-Age=86400; Path=/`);
 
       return res.status(200).json({
         message: 'Login successful',
@@ -163,7 +163,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         expires: Date.now() + (24 * 60 * 60 * 1000)
       })).toString('base64');
 
-      res.setHeader('Set-Cookie', `smartflo-auth=${token}; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Path=/`);
+      res.setHeader('Set-Cookie', `smartflo-auth=${token}; HttpOnly; ${process.env.NODE_ENV === 'production' ? 'Secure;' : ''} SameSite=Lax; Max-Age=86400; Path=/`);
 
       return res.status(201).json({
         message: 'User created successfully',

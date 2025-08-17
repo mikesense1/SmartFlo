@@ -1648,6 +1648,7 @@ export default function CreateContract() {
   const finalizeContract = useCallback(async () => {
     // Validate user authentication before contract creation
     if (!currentUser?.id) {
+      console.log("No current user found, retrying authentication...");
       toast({
         title: "Authentication Required",
         description: "Please log in to create contracts",
@@ -1681,7 +1682,7 @@ export default function CreateContract() {
         contractType: projectData.pricingModel === "fixed" ? "fixed_price" : "milestone_based",
         startDate: projectData.startDate,
         endDate: projectData.endDate,
-        creatorId: currentUser.id, // Use authenticated user ID (validated above)
+        creatorId: currentUser?.id, // Use authenticated user ID
         status: "draft"
       };
 
