@@ -1320,7 +1320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 2FA and secure payment approval routes
+  // Enhanced 2FA routes with smart triggers
   app.post("/api/payment/send-otp", async (req, res) => {
     try {
       const { requireAuth } = await import("./auth");
@@ -1343,30 +1343,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // Check if 2FA is required for this amount
-        const { is2FARequired, sendPaymentOTP } = await import('./lib/auth/two-factor');
+        // Smart 2FA check with context
+        const { requires2FA } = await import('./lib/auth/smart-2fa');
+        const context = {
+          deviceId: req.headers['x-device-id'] as string,
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+          contractId: milestoneId
+        };
         
-        const require2FA = await is2FARequired(userId, amount);
-        if (!require2FA) {
+        const requirement = await requires2FA(userId, amount, context);
+        if (!requirement.required) {
           return res.json({ 
             success: true, 
             require2FA: false,
-            message: "2FA not required for this payment amount"
+            reason: requirement.reason,
+            message: "2FA not required for this payment"
           });
         }
 
         // Send OTP
+        const { sendPaymentOTP } = await import('./lib/auth/two-factor');
         const result = await sendPaymentOTP(userId, milestoneId, amount);
         
         res.json({
           success: true,
           require2FA: true,
+          reason: requirement.reason,
           otpId: result.otpId,
           expiresAt: result.expiresAt
         });
       });
     } catch (error) {
       console.error("Error sending OTP:", error);
+      res.status(500).json({ error: "Failed to send verification code" });
+    }
+  });
+
+  // Batch OTP sending
+  app.post("/api/payment/batch-send-otp", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { milestoneIds, totalAmount } = req.body;
+        const userId = (req as any).session?.userId;
+
+        if (!userId || !milestoneIds?.length || !totalAmount) {
+          return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        // Rate limiting
+        const { otpRateLimiter } = await import('./lib/auth/two-factor');
+        const rateLimitKey = `batch_otp_${userId}`;
+        
+        if (!otpRateLimiter.isAllowed(rateLimitKey)) {
+          return res.status(429).json({ 
+            error: "Too many batch attempts. Please try again later."
+          });
+        }
+
+        // Smart 2FA check for batch
+        const { requires2FA } = await import('./lib/auth/smart-2fa');
+        const context = {
+          deviceId: req.headers['x-device-id'] as string,
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+          isBatchPayment: true
+        };
+        
+        const requirement = await requires2FA(userId, totalAmount, context);
+        if (!requirement.required) {
+          return res.json({ 
+            success: true, 
+            require2FA: false,
+            reason: requirement.reason
+          });
+        }
+
+        // Send OTP for batch approval
+        const { sendPaymentOTP } = await import('./lib/auth/two-factor');
+        const result = await sendPaymentOTP(userId, `batch_${milestoneIds.join('_')}`, totalAmount);
+        
+        res.json({
+          success: true,
+          require2FA: true,
+          reason: requirement.reason,
+          otpId: result.otpId,
+          expiresAt: result.expiresAt,
+          milestoneCount: milestoneIds.length
+        });
+      });
+    } catch (error) {
+      console.error("Error sending batch OTP:", error);
       res.status(500).json({ error: "Failed to send verification code" });
     }
   });
@@ -1521,6 +1589,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           expectedDeposit: '1-3 business days'
         });
 
+        // Mark device as trusted if requested
+        if (req.body.trustDevice && req.headers['x-device-id']) {
+          const { trustDevice } = await import('./lib/auth/smart-2fa');
+          await trustDevice(userId, req.headers['x-device-id'] as string, {
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent']
+          });
+        }
+
         res.json({
           success: true,
           paymentId: payment.id,
@@ -1530,6 +1607,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error processing payment:", error);
       res.status(500).json({ error: "Failed to process payment" });
+    }
+  });
+
+  // Batch milestone approval
+  app.post("/api/milestones/batch-approve", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { milestoneIds, otpCode, trustDevice } = req.body;
+        const userId = (req as any).session?.userId;
+
+        if (!userId || !milestoneIds?.length || !otpCode) {
+          return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        // Process batch approval
+        const { batchApproveWithOTP } = await import('./lib/auth/smart-2fa');
+        const results = await batchApproveWithOTP(userId, milestoneIds, otpCode);
+
+        // Mark device as trusted if requested
+        if (trustDevice && req.headers['x-device-id']) {
+          const { trustDevice: trustDeviceFunc } = await import('./lib/auth/smart-2fa');
+          await trustDeviceFunc(userId, req.headers['x-device-id'] as string, {
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent']
+          });
+        }
+
+        const successCount = results.filter(r => r.success).length;
+        
+        res.json({
+          success: true,
+          results,
+          summary: {
+            total: milestoneIds.length,
+            successful: successCount,
+            failed: milestoneIds.length - successCount
+          }
+        });
+      });
+    } catch (error: any) {
+      console.error("Error in batch approval:", error);
+      res.status(500).json({ error: error.message || "Failed to process batch approval" });
+    }
+  });
+
+  // Analytics endpoint for 2FA events
+  app.post("/api/analytics/2fa-event", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const userId = (req as any).session?.userId;
+        const eventData = { ...req.body, userId };
+
+        const { track2FAEvent } = await import('./lib/auth/smart-2fa');
+        await track2FAEvent(eventData);
+
+        res.json({ success: true });
+      });
+    } catch (error) {
+      console.error("Error tracking 2FA event:", error);
+      res.status(500).json({ error: "Failed to track event" });
     }
   });
 

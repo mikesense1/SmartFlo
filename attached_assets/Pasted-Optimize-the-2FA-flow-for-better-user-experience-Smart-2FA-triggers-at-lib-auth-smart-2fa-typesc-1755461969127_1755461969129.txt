@@ -1,0 +1,104 @@
+Optimize the 2FA flow for better user experience:
+
+Smart 2FA triggers at /lib/auth/smart-2fa:
+typescriptexport async function requires2FA(
+  userId: string, 
+  amount: number,
+  context: PaymentContext
+): Promise<boolean> {
+  const settings = await getUserSecuritySettings(userId);
+  
+  // Always require for first payment
+  if (context.isFirstPayment) return true;
+  
+  // Check user preferences
+  if (settings.always2FA) return true;
+  
+  // Amount-based triggers
+  if (amount > (settings.tfaThreshold || 1000)) return true;
+  
+  // Unusual activity triggers
+  if (await detectUnusualActivity(userId, context)) return true;
+  
+  // Trusted device check
+  if (await isTrustedDevice(context.deviceId)) return false;
+  
+  return false;
+}
+
+Streamlined 2FA UI component:
+typescriptconst TwoFactorModal = ({ 
+  amount, 
+  onSuccess, 
+  onCancel 
+}: TwoFactorProps) => {
+  return (
+    <Modal>
+      <div className="text-center">
+        <Shield className="w-12 h-12 mx-auto text-blue-500 mb-4" />
+        <h3 className="text-lg font-semibold mb-2">
+          Verify Payment of {formatCurrency(amount)}
+        </h3>
+        <p className="text-gray-600 mb-6">
+          For your security, please enter the code sent to your email
+        </p>
+        
+        <OTPInput
+          autoFocus
+          length={6}
+          className="justify-center mb-4"
+          onComplete={handleVerify}
+        />
+        
+        <div className="flex justify-between text-sm">
+          <button onClick={resendCode}>
+            Resend code
+          </button>
+          <button onClick={useBackupCode}>
+            Use backup code
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+2FA analytics and monitoring:
+typescript// Track 2FA usage and success rates
+export async function track2FAEvent(event: {
+  userId: string;
+  type: '2fa_sent' | '2fa_success' | '2fa_failed';
+  method: 'email' | 'sms' | 'authenticator';
+  amount?: number;
+  timeToComplete?: number;
+}) {
+  await analytics.track({
+    userId: event.userId,
+    event: event.type,
+    properties: {
+      method: event.method,
+      amount: event.amount,
+      completionTime: event.timeToComplete
+    }
+  });
+}
+
+Batch approval with single 2FA:
+typescript// Allow multiple milestone approvals with one 2FA
+export async function batchApproveWithOTP(
+  milestoneIds: string[],
+  otpCode: string
+) {
+  const totalAmount = await calculateTotalAmount(milestoneIds);
+  
+  // Verify OTP for total amount
+  const valid = await verifyPaymentOTP(userId, otpCode, totalAmount);
+  if (!valid) throw new Error('Invalid code');
+  
+  // Process all approvals
+  const results = await Promise.allSettled(
+    milestoneIds.map(id => approveMilestone(id))
+  );
+  
+  return results;
+}

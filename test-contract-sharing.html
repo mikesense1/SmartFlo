@@ -75,9 +75,10 @@
         <input type="text" id="tfaMilestoneId" placeholder="Milestone ID" style="width: 200px;">
         <input type="number" id="tfaAmount" placeholder="Amount in cents" style="width: 200px;">
         <select id="tfaAction">
-            <option value="send">Send OTP</option>
+            <option value="send">Send OTP (Smart Triggers)</option>
             <option value="verify">Verify OTP</option>
             <option value="approve">Complete Approval</option>
+            <option value="batch">Batch Approval</option>
         </select>
         <input type="text" id="tfaCode" placeholder="6-digit OTP (for verify)" style="width: 150px;">
         <button onclick="test2FASystem()">Test 2FA System</button>
@@ -298,7 +299,11 @@
                     }
                     result = await makeRequest('/api/payment/send-otp', {
                         method: 'POST',
-                        body: JSON.stringify({ milestoneId, amount })
+                        body: JSON.stringify({ milestoneId, amount }),
+                        headers: {
+                            'X-Device-Id': 'test-device-123',
+                            'User-Agent': navigator.userAgent
+                        }
                     });
                     break;
                 case 'verify':
@@ -316,8 +321,26 @@
                         method: 'POST',
                         body: JSON.stringify({ 
                             milestoneId, 
-                            otpId: otpCode || 'no_2fa_required' 
-                        })
+                            otpId: otpCode || 'no_2fa_required',
+                            trustDevice: true
+                        }),
+                        headers: {
+                            'X-Device-Id': 'test-device-123'
+                        }
+                    });
+                    break;
+                case 'batch':
+                    const milestoneIds = milestoneId.split(',').map(id => id.trim());
+                    result = await makeRequest('/api/milestones/batch-approve', {
+                        method: 'POST',
+                        body: JSON.stringify({ 
+                            milestoneIds,
+                            otpCode,
+                            trustDevice: true
+                        }),
+                        headers: {
+                            'X-Device-Id': 'test-device-123'
+                        }
                     });
                     break;
                 default:

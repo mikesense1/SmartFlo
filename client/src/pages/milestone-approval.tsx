@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { TwoFactorVerification } from "@/components/TwoFactorVerification";
+import { TwoFactorModal } from "@/components/TwoFactorModal";
 import { CheckCircle, Clock, Shield, CreditCard, Wallet, AlertTriangle, ArrowLeft, DollarSign } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -59,12 +59,13 @@ export default function MilestoneApproval() {
     enabled: !!milestone?.contractId
   });
 
-  // Process payment after 2FA
+  // Process payment after 2FA with device trust
   const processPaymentMutation = useMutation({
-    mutationFn: async ({ otpId }: { otpId: string }) => {
+    mutationFn: async ({ otpId, trustDevice }: { otpId: string; trustDevice?: boolean }) => {
       const response = await apiRequest("POST", "/api/milestones/verify-and-pay", {
         milestoneId: id,
-        otpId
+        otpId,
+        trustDevice
       });
       if (!response.ok) {
         const error = await response.json();
@@ -96,27 +97,49 @@ export default function MilestoneApproval() {
     }
   });
 
-  // Initiate approval process
+  // Initiate approval process with smart 2FA checking
   const initiateApproval = async () => {
     if (!milestone || !currentUser) return;
 
-    // Check if 2FA is required for this payment amount
-    const require2FA = milestone.amount >= 10000; // $100 threshold
+    try {
+      // Check if 2FA is required using smart triggers
+      const response = await apiRequest("POST", "/api/payment/send-otp", {
+        milestoneId: id,
+        amount: milestone.amount
+      });
 
-    if (require2FA) {
-      setApprovalStep('2fa');
-      setShow2FA(true);
-    } else {
-      // Process payment directly without 2FA
-      setApprovalStep('processing');
-      processPaymentMutation.mutate({ otpId: 'no_2fa_required' });
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.require2FA) {
+          setApprovalStep('2fa');
+          setShow2FA(true);
+        } else {
+          // Process payment directly without 2FA
+          setApprovalStep('processing');
+          processPaymentMutation.mutate({ otpId: 'no_2fa_required' });
+        }
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Error",
+          description: error.message || "Failed to initiate approval",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error", 
+        description: "Failed to check 2FA requirements",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleTwoFactorVerified = (otpId: string) => {
+  const handleTwoFactorVerified = (otpId: string, trustDevice?: boolean) => {
     setApprovalStep('processing');
     setShow2FA(false);
-    processPaymentMutation.mutate({ otpId });
+    processPaymentMutation.mutate({ otpId, trustDevice });
   };
 
   const handleCancel2FA = () => {
@@ -372,24 +395,16 @@ export default function MilestoneApproval() {
           </div>
         )}
 
-        {/* 2FA Dialog */}
-        <Dialog open={show2FA} onOpenChange={setShow2FA}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Payment Security Verification</DialogTitle>
-              <DialogDescription>
-                Additional verification is required for this payment amount
-              </DialogDescription>
-            </DialogHeader>
-            <TwoFactorVerification
-              milestoneId={id!}
-              amount={milestone.amount}
-              userEmail={currentUser?.email || ''}
-              onVerified={handleTwoFactorVerified}
-              onCancel={handleCancel2FA}
-            />
-          </DialogContent>
-        </Dialog>
+        {/* Enhanced 2FA Modal */}
+        <TwoFactorModal
+          open={show2FA}
+          amount={milestone.amount}
+          milestoneIds={[id!]}
+          userEmail={currentUser?.email || ''}
+          reason="Payment security verification required"
+          onSuccess={handleTwoFactorVerified}
+          onCancel={handleCancel2FA}
+        />
 
         {/* Processing State */}
         {approvalStep === 'processing' && (
