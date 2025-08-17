@@ -400,10 +400,12 @@ export default function FreelancerDashboard() {
                       <Target className="w-4 h-4 mr-2" />
                       Submit Milestone
                     </Button>
-                    <Button variant="outline" className="w-full justify-start">
-                      <DollarSign className="w-4 h-4 mr-2" />
-                      Request Payment
-                    </Button>
+                    <Link href="/dashboard/payment-methods">
+                      <Button variant="outline" className="w-full justify-start">
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Payment Methods
+                      </Button>
+                    </Link>
                   </CardContent>
                 </Card>
               </div>

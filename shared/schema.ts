@@ -93,10 +93,33 @@ export const contractActivity = pgTable("contract_activity", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const paymentMethods = pgTable("payment_methods", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  type: text("type").notNull(), // 'stripe_card', 'stripe_ach', 'crypto_wallet'
+  stripePaymentMethodId: text("stripe_payment_method_id"),
+  stripeCustomerId: text("stripe_customer_id"),
+  walletAddress: text("wallet_address"),
+  walletType: text("wallet_type"), // 'phantom', 'solflare', etc.
+  cardLast4: text("card_last4"),
+  cardBrand: text("card_brand"), // 'visa', 'mastercard', etc.
+  cardExpMonth: text("card_exp_month"),
+  cardExpYear: text("card_exp_year"),
+  bankLast4: text("bank_last4"),
+  bankName: text("bank_name"),
+  isDefault: boolean("is_default").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  lastUsedAt: timestamp("last_used_at"),
+  expiryNotificationSent: boolean("expiry_notification_sent").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const paymentAuthorizations = pgTable("payment_authorizations", {
   id: uuid("id").primaryKey().defaultRandom(),
   contractId: uuid("contract_id").notNull().references(() => contracts.id),
   clientId: uuid("client_id").references(() => users.id),
+  paymentMethodId: uuid("payment_method_id").references(() => paymentMethods.id),
   paymentMethod: text("payment_method").notNull(), // 'stripe' or 'usdc'
   stripeSetupIntentId: text("stripe_setup_intent_id"),
   stripePaymentMethodId: text("stripe_payment_method_id"),
@@ -179,6 +202,12 @@ export const insertContactSchema = createInsertSchema(contacts).omit({
   createdAt: true,
 });
 
+export const insertPaymentMethodSchema = createInsertSchema(paymentMethods).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertPaymentAuthorizationSchema = createInsertSchema(paymentAuthorizations).omit({
   id: true,
   authorizedAt: true,
@@ -204,6 +233,8 @@ export type InsertContractActivity = z.infer<typeof insertContractActivitySchema
 export type ContractActivity = typeof contractActivity.$inferSelect;
 export type InsertContact = z.infer<typeof insertContactSchema>;
 export type Contact = typeof contacts.$inferSelect;
+export type InsertPaymentMethod = z.infer<typeof insertPaymentMethodSchema>;
+export type PaymentMethod = typeof paymentMethods.$inferSelect;
 export type InsertPaymentAuthorization = z.infer<typeof insertPaymentAuthorizationSchema>;
 export type PaymentAuthorization = typeof paymentAuthorizations.$inferSelect;
 export type InsertContractShare = z.infer<typeof insertContractShareSchema>;

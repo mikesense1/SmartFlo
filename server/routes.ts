@@ -2212,6 +2212,10 @@ Respond with JSON in this exact format:
     }
   });
 
+  // Register payment method routes
+  const { registerPaymentMethodRoutes } = await import("./payment-methods");
+  registerPaymentMethodRoutes(app);
+
   const httpServer = createServer(app);
   return httpServer;
 }

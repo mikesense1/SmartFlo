@@ -1,380 +1,334 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { apiRequest } from "@/lib/queryClient";
-import { CreditCard, Wallet, Shield, AlertTriangle, Trash2, Edit, History, ExternalLink } from "lucide-react";
-import { formatCurrency } from "@shared/pricing";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  CreditCard, 
+  Building2, 
+  Wallet, 
+  Star, 
+  MoreVertical, 
+  Shield, 
+  AlertTriangle, 
+  Calendar,
+  Plus,
+  Trash2,
+  Edit,
+  Check,
+  X
+} from "lucide-react";
+import { PaymentMethodCard } from "@/components/payment-method-card";
+import { AddPaymentMethodDialog } from "@/components/add-payment-method-dialog";
+import { UpdatePaymentMethodDialog } from "@/components/update-payment-method-dialog";
 
-interface PaymentAuthorization {
+interface PaymentMethod {
   id: string;
-  contractId: string;
-  contractTitle: string;
-  paymentMethod: 'stripe' | 'usdc';
-  maxPerMilestone: string;
-  totalAuthorized: string;
-  isActive: boolean;
-  authorizedAt: string;
-  expiresAt?: string;
+  type: "stripe_card" | "stripe_ach" | "crypto_wallet";
   stripePaymentMethodId?: string;
   walletAddress?: string;
-  ipAddress?: string;
-  userAgent?: string;
+  walletType?: string;
+  cardLast4?: string;
+  cardBrand?: string;
+  cardExpMonth?: string;
+  cardExpYear?: string;
+  bankLast4?: string;
+  bankName?: string;
+  isDefault: boolean;
+  isActive: boolean;
+  lastUsedAt?: string;
+  expiryNotificationSent: boolean;
+  createdAt: string;
+  contractCount: number;
+  contracts: Array<{
+    contractTitle: string;
+    contractId: string;
+    totalAuthorized: string;
+  }>;
+  isExpiring: boolean;
+  isExpired: boolean;
 }
 
-interface AuthorizationHistory {
-  id: string;
-  contractId: string;
-  action: 'authorized' | 'revoked' | 'updated';
-  timestamp: string;
-  details: string;
-}
-
-export default function PaymentMethods() {
+export default function PaymentMethodsPage() {
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
+  const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
-  const [selectedAuthorization, setSelectedAuthorization] = useState<PaymentAuthorization | null>(null);
-  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
 
-  const { data: authorizationsData, isLoading } = useQuery({
-    queryKey: ['/api/payment-authorizations'],
+  const { data: paymentMethods = [], isLoading } = useQuery<PaymentMethod[]>({
+    queryKey: ["/api/payment-methods"],
   });
 
-  const { data: historyData, isLoading: historyLoading } = useQuery({
-    queryKey: ['/api/payment-authorizations/history'],
+  const { data: expiringMethods = [] } = useQuery<PaymentMethod[]>({
+    queryKey: ["/api/payment-methods/expiring"],
   });
 
-  const revokeAuthorizationMutation = useMutation({
-    mutationFn: async (authorizationId: string) => {
-      return apiRequest("POST", `/api/payment/revoke-authorization`, {
-        authorizationId,
-        reason: "Revoked by client"
+  const updateMethodMutation = useMutation({
+    mutationFn: (data: { id: string; updates: any }) =>
+      apiRequest("PATCH", `/api/payment-methods/${data.id}`, data.updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/payment-methods"] });
+      toast({
+        title: "Payment Method Updated",
+        description: "Your payment method has been updated successfully.",
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/payment-authorizations'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/payment-authorizations/history'] });
-      setRevokeDialogOpen(false);
-      setSelectedAuthorization(null);
-    }
+    onError: (error: any) => {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update payment method.",
+        variant: "destructive",
+      });
+    },
   });
+
+  const removeMethodMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/payment-methods/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/payment-methods"] });
+      toast({
+        title: "Payment Method Removed",
+        description: "Your payment method has been removed successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Removal Failed",
+        description: error.message || "Failed to remove payment method.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSetDefault = (method: PaymentMethod) => {
+    updateMethodMutation.mutate({
+      id: method.id,
+      updates: { isDefault: true },
+    });
+  };
+
+  const handleRemoveMethod = (method: PaymentMethod) => {
+    if (method.contractCount > 0) {
+      toast({
+        title: "Cannot Remove",
+        description: "This payment method is used in active contracts and cannot be removed.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    removeMethodMutation.mutate(method.id);
+  };
+
+  const getMethodIcon = (type: string) => {
+    switch (type) {
+      case "stripe_card":
+        return <CreditCard className="h-5 w-5" />;
+      case "stripe_ach":
+        return <Building2 className="h-5 w-5" />;
+      case "crypto_wallet":
+        return <Wallet className="h-5 w-5" />;
+      default:
+        return <CreditCard className="h-5 w-5" />;
+    }
+  };
+
+  const getStatusBadge = (method: PaymentMethod) => {
+    if (method.isExpired) {
+      return <Badge variant="destructive">Expired</Badge>;
+    }
+    if (method.isExpiring) {
+      return <Badge variant="outline" className="border-orange-500 text-orange-700">Expiring Soon</Badge>;
+    }
+    if (!method.isActive) {
+      return <Badge variant="secondary">Revoked</Badge>;
+    }
+    return <Badge variant="outline" className="border-green-500 text-green-700">Active</Badge>;
+  };
+
+  const formatLastUsed = (date?: string) => {
+    if (!date) return "Never used";
+    return `Last used ${new Date(date).toLocaleDateString()}`;
+  };
 
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
-          <div className="h-48 bg-gray-200 rounded"></div>
+        <div className="h-8 bg-gray-200 rounded w-1/4 mb-4 animate-pulse"></div>
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="h-6 bg-gray-200 rounded w-1/3 mb-2 animate-pulse"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     );
   }
 
-  const authorizations: PaymentAuthorization[] = authorizationsData?.authorizations || [];
-  const history: AuthorizationHistory[] = historyData?.history || [];
-  const activeAuthorizations = authorizations.filter(auth => auth.isActive);
-  const expiredAuthorizations = authorizations.filter(auth => !auth.isActive);
-
-  const getPaymentMethodIcon = (method: string) => {
-    return method === 'stripe' ? 
-      <CreditCard className="h-5 w-5 text-blue-600" /> : 
-      <Wallet className="h-5 w-5 text-purple-600" />;
-  };
-
-  const formatPaymentMethodDisplay = (auth: PaymentAuthorization) => {
-    if (auth.paymentMethod === 'stripe') {
-      return "Visa •••• 4242";
-    } else if (auth.paymentMethod === 'usdc') {
-      return auth.walletAddress ? 
-        `${auth.walletAddress.slice(0, 6)}...${auth.walletAddress.slice(-4)}` : 
-        'USDC Wallet';
-    }
-    return auth.paymentMethod.toUpperCase();
-  };
-
-  const handleRevokeAuthorization = (auth: PaymentAuthorization) => {
-    setSelectedAuthorization(auth);
-    setRevokeDialogOpen(true);
-  };
-
-  const handleConfirmRevoke = () => {
-    if (selectedAuthorization) {
-      revokeAuthorizationMutation.mutate(selectedAuthorization.id);
-    }
-  };
-
-  const isExpiringSoon = (expiresAt?: string) => {
-    if (!expiresAt) return false;
-    const daysUntilExpiry = Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
-  };
-
-  const isExpired = (expiresAt?: string) => {
-    if (!expiresAt) return false;
-    return new Date(expiresAt).getTime() < Date.now();
-  };
+  const hasExpiringCards = expiringMethods.length > 0;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto p-6 max-w-4xl">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Payment Method Management</h1>
-          <p className="text-gray-600 mt-1">Manage your authorized payment methods for all contracts</p>
+          <h1 className="text-3xl font-bold">Payment Methods</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage your saved payment methods and authorizations
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setHistoryDialogOpen(true)}>
-            <History className="h-4 w-4 mr-2" />
-            View History
-          </Button>
-          <Button asChild>
-            <a href="/dashboard">Back to Dashboard</a>
-          </Button>
-        </div>
+        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Payment Method
+            </Button>
+          </DialogTrigger>
+          <AddPaymentMethodDialog onClose={() => setAddDialogOpen(false)} />
+        </Dialog>
       </div>
 
-      {/* Active Authorizations */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-green-600" />
-            Active Payment Authorizations ({activeAuthorizations.length})
-          </CardTitle>
-          <CardDescription>
-            Payment methods currently authorized for milestone payments
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {activeAuthorizations.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              No active payment authorizations found.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {activeAuthorizations.map((auth) => (
-                <Card key={auth.id} className="border-l-4 border-l-green-500">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {getPaymentMethodIcon(auth.paymentMethod)}
-                        <div>
-                          <div className="font-semibold">{auth.contractTitle}</div>
-                          <div className="text-sm text-gray-600">
-                            {formatPaymentMethodDisplay(auth)}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right text-sm">
-                          <div className="font-medium">Max per milestone: {formatCurrency(parseInt(auth.maxPerMilestone))}</div>
-                          <div className="text-gray-600">Total: {formatCurrency(parseInt(auth.totalAuthorized))}</div>
-                        </div>
-                        <Badge variant="outline" className="bg-green-50 text-green-700">
-                          Active
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    {/* Expiration Warning */}
-                    {auth.expiresAt && (isExpiringSoon(auth.expiresAt) || isExpired(auth.expiresAt)) && (
-                      <Alert className="mt-3">
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertDescription>
-                          {isExpired(auth.expiresAt) ? 
-                            "This authorization has expired and needs to be renewed." :
-                            `This authorization expires on ${new Date(auth.expiresAt).toLocaleDateString()}. Consider updating your payment method.`
-                          }
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    <Separator className="my-3" />
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs text-gray-500">
-                        Authorized: {new Date(auth.authorizedAt).toLocaleDateString()} • 
-                        IP: {auth.ipAddress?.slice(0, 12)}...
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={`/contracts/${auth.contractId}/update-payment`}>
-                            <Edit className="h-4 w-4 mr-1" />
-                            Update
-                          </a>
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleRevokeAuthorization(auth)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Revoke
-                        </Button>
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={`/dashboard/contracts/${auth.contractId}/milestones`}>
-                            <ExternalLink className="h-4 w-4 mr-1" />
-                            View Contract
-                          </a>
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Expired/Revoked Authorizations */}
-      {expiredAuthorizations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-orange-600" />
-              Expired/Revoked Authorizations ({expiredAuthorizations.length})
-            </CardTitle>
-            <CardDescription>
-              Payment authorizations that are no longer active
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {expiredAuthorizations.map((auth) => (
-                <Card key={auth.id} className="border-l-4 border-l-orange-500 opacity-60">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {getPaymentMethodIcon(auth.paymentMethod)}
-                        <div>
-                          <div className="font-semibold">{auth.contractTitle}</div>
-                          <div className="text-sm text-gray-600">
-                            {formatPaymentMethodDisplay(auth)}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right text-sm">
-                          <div className="font-medium">Was: {formatCurrency(parseInt(auth.maxPerMilestone))}</div>
-                          <div className="text-gray-600">Total: {formatCurrency(parseInt(auth.totalAuthorized))}</div>
-                        </div>
-                        <Badge variant="outline" className="bg-orange-50 text-orange-700">
-                          Inactive
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="flex justify-end mt-3">
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={`/contracts/${auth.contractId}/authorize-payment`}>
-                          Reauthorize Payment
-                        </a>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {hasExpiringCards && (
+        <Alert className="mb-6 border-orange-200 bg-orange-50">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            You have {expiringMethods.length} payment method{expiringMethods.length > 1 ? "s" : ""} expiring within 30 days.
+            Update them to avoid payment issues.
+          </AlertDescription>
+        </Alert>
       )}
 
-      {/* Revoke Confirmation Dialog */}
-      <Dialog open={revokeDialogOpen} onOpenChange={setRevokeDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Revoke Payment Authorization</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to revoke the payment authorization for "{selectedAuthorization?.contractTitle}"?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                This will immediately prevent any future milestone payments. 
-                Any pending auto-approvals will be paused. You can reauthorize payments later.
-              </AlertDescription>
-            </Alert>
-            {selectedAuthorization && (
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="text-sm space-y-1">
-                  <div><strong>Contract:</strong> {selectedAuthorization.contractTitle}</div>
-                  <div><strong>Payment Method:</strong> {formatPaymentMethodDisplay(selectedAuthorization)}</div>
-                  <div><strong>Authorized Amount:</strong> {formatCurrency(parseInt(selectedAuthorization.totalAuthorized))}</div>
-                </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRevokeDialogOpen(false)}>
-              Cancel
+      <div className="space-y-4">
+        {paymentMethods.length === 0 ? (
+          <Card className="p-12 text-center">
+            <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4">
+              <CreditCard className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">No Payment Methods</h3>
+            <p className="text-muted-foreground mb-4">
+              Add your first payment method to start accepting payments
+            </p>
+            <Button onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Payment Method
             </Button>
-            <Button 
-              variant="destructive"
-              onClick={handleConfirmRevoke}
-              disabled={revokeAuthorizationMutation.isPending}
-            >
-              {revokeAuthorizationMutation.isPending ? "Revoking..." : "Revoke Authorization"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* History Dialog */}
-      <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Authorization History</DialogTitle>
-            <DialogDescription>
-              Complete log of all payment authorization activities
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {historyLoading ? (
-              <div className="animate-pulse space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-16 bg-gray-200 rounded"></div>
-                ))}
-              </div>
-            ) : history.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                No authorization history found.
-              </div>
-            ) : (
-              <ScrollArea className="h-96">
-                <div className="space-y-3">
-                  {history.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="text-sm text-gray-500">
-                          {new Date(item.timestamp).toLocaleDateString()}
-                        </div>
-                        <div className="font-medium">{item.contractId}</div>
-                        <Badge variant={item.action === 'authorized' ? 'default' : 
-                                      item.action === 'revoked' ? 'destructive' : 'outline'}>
-                          {item.action.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {item.details}
-                      </div>
+          </Card>
+        ) : (
+          paymentMethods.map((method) => (
+            <Card key={method.id} className={method.isDefault ? "ring-2 ring-primary" : ""}>
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-4">
+                    <div className="p-2 bg-muted rounded-lg">
+                      {getMethodIcon(method.type)}
                     </div>
-                  ))}
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <PaymentMethodCard method={method} />
+                        {method.isDefault && (
+                          <Badge variant="default" className="text-xs">
+                            <Star className="h-3 w-3 mr-1" />
+                            Default
+                          </Badge>
+                        )}
+                        {getStatusBadge(method)}
+                      </div>
+                      
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {formatLastUsed(method.lastUsedAt)}
+                      </p>
+
+                      {method.contracts.length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-sm font-medium mb-2">
+                            Used in {method.contracts.length} contract{method.contracts.length > 1 ? "s" : ""}:
+                          </p>
+                          <div className="space-y-1">
+                            {method.contracts.map((contract) => (
+                              <div key={contract.contractId} className="flex justify-between text-sm text-muted-foreground">
+                                <span>{contract.contractTitle}</span>
+                                <span>${contract.totalAuthorized}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {(method.isExpiring || method.isExpired) && (
+                        <div className="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                          <div className="flex items-center space-x-2">
+                            <AlertTriangle className="h-4 w-4 text-orange-600" />
+                            <p className="text-sm text-orange-700">
+                              {method.isExpired 
+                                ? "This card has expired and needs to be updated" 
+                                : `This card expires ${method.cardExpMonth}/${method.cardExpYear}`}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {!method.isDefault && (
+                        <DropdownMenuItem onClick={() => handleSetDefault(method)}>
+                          <Star className="h-4 w-4 mr-2" />
+                          Set as Default
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem 
+                        onClick={() => {
+                          setSelectedMethod(method);
+                          setUpdateDialogOpen(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Update Method
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={() => handleRemoveMethod(method)}
+                        className="text-destructive"
+                        disabled={method.contractCount > 0}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Remove Method
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-              </ScrollArea>
-            )}
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setHistoryDialogOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {selectedMethod && (
+        <UpdatePaymentMethodDialog
+          method={selectedMethod}
+          open={updateDialogOpen}
+          onClose={() => {
+            setUpdateDialogOpen(false);
+            setSelectedMethod(null);
+          }}
+        />
+      )}
     </div>
   );
 }
