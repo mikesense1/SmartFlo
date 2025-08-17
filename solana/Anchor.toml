@@ -3,25 +3,20 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-freelance_escrow = "Your_Program_ID"
+payment_auth = "SmartF1oPaymentAuth1111111111111111111111"
 
 [programs.devnet]
-freelance_escrow = "Your_Program_ID"
+payment_auth = "SmartF1oPaymentAuth1111111111111111111111"
 
 [programs.mainnet]
-freelance_escrow = "Your_Program_ID"
+payment_auth = "SmartF1oPaymentAuth1111111111111111111111"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "Localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-
-[workspace]
-members = [
-    "programs/*"
-]
