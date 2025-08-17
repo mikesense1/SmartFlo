@@ -1320,6 +1320,236 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 2FA and secure payment approval routes
+  app.post("/api/payment/send-otp", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { milestoneId, amount } = req.body;
+        const userId = (req as any).session?.userId;
+
+        if (!userId || !milestoneId || !amount) {
+          return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        // Rate limiting
+        const { otpRateLimiter } = await import('./lib/auth/two-factor');
+        const rateLimitKey = `otp_${userId}`;
+        
+        if (!otpRateLimiter.isAllowed(rateLimitKey)) {
+          return res.status(429).json({ 
+            error: "Too many attempts. Please try again later.",
+            remainingAttempts: otpRateLimiter.getRemainingAttempts(rateLimitKey)
+          });
+        }
+
+        // Check if 2FA is required for this amount
+        const { is2FARequired, sendPaymentOTP } = await import('./lib/auth/two-factor');
+        
+        const require2FA = await is2FARequired(userId, amount);
+        if (!require2FA) {
+          return res.json({ 
+            success: true, 
+            require2FA: false,
+            message: "2FA not required for this payment amount"
+          });
+        }
+
+        // Send OTP
+        const result = await sendPaymentOTP(userId, milestoneId, amount);
+        
+        res.json({
+          success: true,
+          require2FA: true,
+          otpId: result.otpId,
+          expiresAt: result.expiresAt
+        });
+      });
+    } catch (error) {
+      console.error("Error sending OTP:", error);
+      res.status(500).json({ error: "Failed to send verification code" });
+    }
+  });
+
+  app.post("/api/payment/verify-otp", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { milestoneId, otpCode } = req.body;
+        const userId = (req as any).session?.userId;
+
+        if (!userId || !milestoneId || !otpCode) {
+          return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        // Rate limiting for verification attempts
+        const { otpRateLimiter } = await import('./lib/auth/two-factor');
+        const rateLimitKey = `verify_${userId}`;
+        
+        if (!otpRateLimiter.isAllowed(rateLimitKey)) {
+          return res.status(429).json({ 
+            error: "Too many verification attempts. Please try again later.",
+            remainingAttempts: otpRateLimiter.getRemainingAttempts(rateLimitKey)
+          });
+        }
+
+        // Verify OTP
+        const { verifyPaymentOTP } = await import('./lib/auth/two-factor');
+        const result = await verifyPaymentOTP(userId, milestoneId, otpCode);
+
+        if (result.valid) {
+          res.json({
+            success: true,
+            valid: true,
+            otpId: result.otpId
+          });
+        } else {
+          res.status(400).json({
+            success: false,
+            valid: false,
+            error: "Invalid or expired verification code"
+          });
+        }
+      });
+    } catch (error) {
+      console.error("Error verifying OTP:", error);
+      res.status(500).json({ error: "Failed to verify code" });
+    }
+  });
+
+  app.post("/api/milestones/verify-and-pay", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { milestoneId, otpId } = req.body;
+        const userId = (req as any).session?.userId;
+
+        if (!userId || !milestoneId) {
+          return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        // Get milestone and contract details
+        const milestone = await storage.getMilestone(milestoneId);
+        if (!milestone) {
+          return res.status(404).json({ error: "Milestone not found" });
+        }
+
+        const contract = await storage.getContract(milestone.contractId);
+        if (!contract) {
+          return res.status(404).json({ error: "Contract not found" });
+        }
+
+        // Verify user has permission (client only)
+        const user = await storage.getUser(userId);
+        if (!user || contract.clientEmail !== user.email) {
+          return res.status(403).json({ error: "Unauthorized" });
+        }
+
+        // Check if 2FA verification is required and valid
+        if (otpId !== 'no_2fa_required') {
+          // Additional verification that OTP was used for this milestone
+          const activities = await storage.getActivitiesByContract(milestoneId) || [];
+          const otpUsed = activities.some((activity: any) => {
+            if (activity.action !== 'payment_otp_used') return false;
+            try {
+              const details = typeof activity.details === 'string' ? JSON.parse(activity.details) : activity.details;
+              return details.otpId === otpId;
+            } catch {
+              return false;
+            }
+          });
+
+          if (!otpUsed) {
+            return res.status(400).json({ error: "Invalid or expired verification" });
+          }
+        }
+
+        // Check payment authorization is still valid
+        const authorization = await storage.getPaymentAuthorizationByContract(milestone.contractId);
+        if (!authorization || !authorization.isActive) {
+          return res.status(400).json({ 
+            error: "Payment authorization expired. Please reauthorize your payment method."
+          });
+        }
+
+        // Update milestone status to approved
+        await storage.updateMilestone(milestoneId, {
+          status: 'approved',
+          approvedAt: new Date().toISOString(),
+          approvedBy: user.email
+        });
+
+        // Create payment record
+        const payment = await storage.createPayment({
+          contractId: milestone.contractId,
+          milestoneId,
+          amount: milestone.amount.toString(),
+          method: authorization.paymentMethod,
+          status: 'completed',
+          processedAt: new Date().toISOString(),
+          paymentIntentId: `sim_${Date.now()}`, // Simulated payment ID
+          clientId: user.id.toString()
+        });
+
+        // Log successful payment approval with 2FA
+        await storage.createActivity({
+          contractId: milestone.contractId,
+          action: "milestone_payment_approved_2fa",
+          actorEmail: user.email,
+          details: JSON.stringify({
+            milestoneId,
+            paymentId: payment.id,
+            amount: milestone.amount,
+            otpVerified: otpId !== 'no_2fa_required'
+          })
+        });
+
+        // Send confirmation email to freelancer
+        const { EmailService } = await import('./email-service');
+        const emailService = EmailService.getInstance();
+        
+        await emailService.sendPaymentProcessed({
+          freelancerName: contract.freelancerEmail,
+          freelancerEmail: contract.freelancerEmail,
+          contractTitle: contract.title,
+          milestoneTitle: milestone.title,
+          amount: (milestone.amount / 100).toFixed(2),
+          paymentMethod: authorization.paymentMethod === 'card' ? 'Credit Card' : 'USDC',
+          contractId: contract.id,
+          transactionId: payment.id,
+          processedDate: new Date().toLocaleDateString(),
+          expectedDeposit: '1-3 business days'
+        });
+
+        res.json({
+          success: true,
+          paymentId: payment.id,
+          message: "Payment approved and processed successfully"
+        });
+      });
+    } catch (error) {
+      console.error("Error processing payment:", error);
+      res.status(500).json({ error: "Failed to process payment" });
+    }
+  });
+
+  // Get milestone details (for approval page)
+  app.get("/api/milestones/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const milestone = await storage.getMilestone(id);
+      
+      if (!milestone) {
+        return res.status(404).json({ error: "Milestone not found" });
+      }
+
+      res.json(milestone);
+    } catch (error) {
+      console.error("Error fetching milestone:", error);
+      res.status(500).json({ error: "Failed to fetch milestone" });
+    }
+  });
+
   // Email service routes
   app.use("/api/emails", emailRoutes);
 

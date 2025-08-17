@@ -53,6 +53,7 @@ function Router() {
       <Route path="/contracts/:shareToken/sign" component={ContractSign} />
       <Route path="/dashboard/contracts/:id/milestones" component={ContractMilestones} />
       <Route path="/dashboard/payment-methods" component={PaymentMethods} />
+      <Route path="/milestone-approval/:id" component={() => import("./pages/milestone-approval")} />
       <Route component={NotFound} />
     </Switch>
   );

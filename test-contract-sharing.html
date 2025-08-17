@@ -70,7 +70,22 @@
     </div>
     
     <div class="test-section">
-        <h2>6. Test Payment Authorization Management</h2>
+        <h2>6. Test 2FA Milestone Approval</h2>
+        <p>Test the complete 2FA verification system for secure milestone approval.</p>
+        <input type="text" id="tfaMilestoneId" placeholder="Milestone ID" style="width: 200px;">
+        <input type="number" id="tfaAmount" placeholder="Amount in cents" style="width: 200px;">
+        <select id="tfaAction">
+            <option value="send">Send OTP</option>
+            <option value="verify">Verify OTP</option>
+            <option value="approve">Complete Approval</option>
+        </select>
+        <input type="text" id="tfaCode" placeholder="6-digit OTP (for verify)" style="width: 150px;">
+        <button onclick="test2FASystem()">Test 2FA System</button>
+        <div id="tfa-system-result" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>7. Test Payment Authorization Management</h2>
         <p>Test the payment method authorization and monitoring system.</p>
         <select id="authAction">
             <option value="list">List Authorizations</option>
@@ -261,6 +276,55 @@
             }
             
             showResult('auth-management-result', result, result.success);
+        }
+        
+        async function test2FASystem() {
+            const milestoneId = document.getElementById('tfaMilestoneId').value;
+            const amount = parseInt(document.getElementById('tfaAmount').value);
+            const action = document.getElementById('tfaAction').value;
+            const otpCode = document.getElementById('tfaCode').value;
+            
+            if (!milestoneId) {
+                showResult('tfa-system-result', { error: 'Please enter milestone ID' }, false);
+                return;
+            }
+            
+            let result;
+            switch (action) {
+                case 'send':
+                    if (!amount) {
+                        showResult('tfa-system-result', { error: 'Please enter amount for OTP generation' }, false);
+                        return;
+                    }
+                    result = await makeRequest('/api/payment/send-otp', {
+                        method: 'POST',
+                        body: JSON.stringify({ milestoneId, amount })
+                    });
+                    break;
+                case 'verify':
+                    if (!otpCode) {
+                        showResult('tfa-system-result', { error: 'Please enter OTP code for verification' }, false);
+                        return;
+                    }
+                    result = await makeRequest('/api/payment/verify-otp', {
+                        method: 'POST',
+                        body: JSON.stringify({ milestoneId, otpCode })
+                    });
+                    break;
+                case 'approve':
+                    result = await makeRequest('/api/milestones/verify-and-pay', {
+                        method: 'POST',
+                        body: JSON.stringify({ 
+                            milestoneId, 
+                            otpId: otpCode || 'no_2fa_required' 
+                        })
+                    });
+                    break;
+                default:
+                    result = { error: 'Unknown action' };
+            }
+            
+            showResult('tfa-system-result', result, result.success);
         }
     </script>
 </body>
