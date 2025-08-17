@@ -16,18 +16,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { paymentTriggers } from "@/lib/payments/smart-triggers";
 import Navigation from "@/components/navigation";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import type { Contract, Milestone, Payment } from "@shared/schema";
 
-// Demo user data from database
-const DEMO_USER = {
-  id: "6d52e85d-2ee5-4922-a7cf-0aef6f52b8ba",
-  fullName: "Alex Morgan",
-  email: "alex.morgan@smartflo.dev",
-  specialization: "Full-Stack Developer",
-  joinedDate: "2025-07-13"
-};
-
 export default function Dashboard() {
+  const { data: currentUser, isLoading: userLoading } = useCurrentUser();
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [contractDocument, setContractDocument] = useState<string | null>(null);
@@ -41,45 +34,55 @@ export default function Dashboard() {
     completedProjects: 12
   });
 
-  // Fetch user contracts with improved error handling and graceful fallbacks
+  // Show loading state while user data is loading
+  if (userLoading || !currentUser) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <Navigation />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex justify-center items-center py-16">
+            <div className="text-center">
+              <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-slate-600">Loading your dashboard...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Fetch user contracts with proper authentication
   const { data: contracts = [], isLoading: contractsLoading, error: contractsError } = useQuery({
-    queryKey: ["/api/contracts", "user", DEMO_USER.id],
+    queryKey: ["/api/contracts", currentUser.id],
     queryFn: async () => {
       try {
-        console.log("Fetching user contracts...");
+        console.log(`Fetching contracts for user: ${currentUser.fullName} (${currentUser.id})`);
         const response = await fetch('/api/contracts', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
             'Cache-Control': 'no-cache'
-          }
+          },
+          credentials: 'include' // Include authentication cookies
         });
         
         if (!response.ok) {
-          console.warn(`Contract fetch returned ${response.status}, using fallback data`);
-          // Return empty array but don't throw error to prevent blank dashboard
+          console.warn(`Contract fetch returned ${response.status}, using empty data`);
           return [];
         }
         
         const data = await response.json();
-        console.log("Successfully fetched contracts:", data);
+        console.log("Successfully fetched user-specific contracts:", data.length);
         
         if (!Array.isArray(data)) {
-          console.warn("Invalid contract data format, using fallback");
+          console.warn("Invalid contract data format, using empty array");
           return [];
         }
         
-        // Filter by creator_id on client side - handle both field name formats
-        const userContracts = data.filter(contract => 
-          contract && (contract.creator_id === DEMO_USER.id || contract.creatorId === DEMO_USER.id)
-        );
-        console.log("User contracts filtered:", userContracts.length);
-        console.log("Sample contract fields:", data[0] ? Object.keys(data[0]) : "No contracts");
-        return userContracts;
+        return data; // API already filters by authenticated user
         
       } catch (error) {
-        console.error("Contract fetch error (using fallback):", error);
-        // Always return empty array instead of throwing to prevent dashboard crash
+        console.error("Contract fetch error:", error);
         return [];
       }
     },
@@ -103,7 +106,7 @@ export default function Dashboard() {
         body: JSON.stringify(contractData)
       }).then(res => res.json()),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users", DEMO_USER.id, "contracts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contracts", currentUser.id] });
     }
   });
 
@@ -201,8 +204,8 @@ export default function Dashboard() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">Welcome back, {DEMO_USER.fullName}</h1>
-                <p className="text-sm text-slate-500">{DEMO_USER.specialization} • Freelancer since {new Date(DEMO_USER.joinedDate).getFullYear()}</p>
+                <h1 className="text-2xl font-bold text-slate-900">Welcome back, {currentUser.fullName}</h1>
+                <p className="text-sm text-slate-500">{currentUser.userType === 'freelancer' ? 'Freelancer' : 'Client'} • Member since {new Date(currentUser.createdAt || Date.now()).getFullYear()}</p>
               </div>
             </div>
             <Link href="/create-contract">
