@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { aiContractService } from "./openai-service";
 import { blockchainService } from "./blockchain-service";
+import emailRoutes from "./email-routes";
 import { 
   insertUserSchema, insertContactSchema, insertContractSchema, 
   insertMilestoneSchema, insertPaymentSchema, insertContractActivitySchema 
@@ -903,6 +904,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch contacts" });
     }
   });
+
+  // Email service routes
+  app.use("/api/emails", emailRoutes);
 
   // Debug endpoint to test OpenAI API key
   app.get("/api/debug/openai-status", async (req, res) => {

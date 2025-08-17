@@ -15,6 +15,9 @@ import UserSetup from "@/pages/user-setup";
 import Pricing from "@/pages/pricing";
 import Features from "@/pages/features";
 import About from "@/pages/about";
+import TermsOfService from "@/pages/terms-of-service";
+import PrivacyPolicy from "@/pages/privacy-policy";
+import PaymentAuthorization from "@/pages/payment-authorization";
 import BlockchainStatus from "@/pages/blockchain-status";
 import MilestoneTracker from "@/pages/milestone-tracker";
 import ClientPayment from "@/pages/client-payment";
@@ -34,6 +37,9 @@ function Router() {
       <Route path="/pricing" component={Pricing} />
       <Route path="/features" component={Features} />
       <Route path="/about" component={About} />
+      <Route path="/terms-of-service" component={TermsOfService} />
+      <Route path="/privacy-policy" component={PrivacyPolicy} />
+      <Route path="/payment-authorization" component={PaymentAuthorization} />
       <Route path="/blockchain-status" component={BlockchainStatus} />
       <Route path="/blockchain-test" component={BlockchainTest} />
       <Route path="/milestone-tracker/:id?" component={MilestoneTracker} />
