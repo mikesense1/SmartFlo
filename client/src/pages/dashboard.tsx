@@ -34,8 +34,14 @@ export default function Dashboard() {
     completedProjects: 12
   });
 
+  // Redirect to login if not authenticated
+  if (!userLoading && !currentUser) {
+    window.location.href = "/login";
+    return null;
+  }
+
   // Show loading state while user data is loading
-  if (userLoading || !currentUser) {
+  if (userLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
         <Navigation />
@@ -49,6 +55,11 @@ export default function Dashboard() {
         </div>
       </div>
     );
+  }
+
+  // Ensure we have a current user before proceeding
+  if (!currentUser) {
+    return null;
   }
 
   // Fetch user contracts with proper authentication
@@ -92,9 +103,7 @@ export default function Dashboard() {
     staleTime: 60000,
     // Ensure the query doesn't cause the dashboard to go blank on errors
     throwOnError: false,
-    refetchOnWindowFocus: false,
-    // Add error boundary to catch any remaining issues
-    suspense: false
+    refetchOnWindowFocus: false
   });
 
   // Create new contract mutation
@@ -136,7 +145,7 @@ export default function Dashboard() {
 
   const handleCreateContract = () => {
     createContractMutation.mutate({
-      creatorId: DEMO_USER.id,
+      creatorId: currentUser.id,
       title: "Sample Web Development Project",
       clientName: "Tech Startup Inc",
       clientEmail: "client@techstartup.com",
@@ -205,7 +214,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-slate-900">Welcome back, {currentUser.fullName}</h1>
-                <p className="text-sm text-slate-500">{currentUser.userType === 'freelancer' ? 'Freelancer' : 'Client'} • Member since {new Date(currentUser.createdAt || Date.now()).getFullYear()}</p>
+                <p className="text-sm text-slate-500">{currentUser.userType === 'freelancer' ? 'Freelancer' : 'Client'} • Member since 2025</p>
               </div>
             </div>
             <Link href="/create-contract">
