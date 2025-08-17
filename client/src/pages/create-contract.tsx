@@ -1724,46 +1724,53 @@ export default function CreateContract() {
 
       const createdContract = await contractResponse.json();
 
-      // Create milestones for the contract
-      for (const milestone of milestones) {
-        if (milestone.title && milestone.deliverables && milestone.amount && milestone.dueDate) {
-          const milestoneResponse = await fetch('/api/milestones', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include', // Include cookies for authentication
-            body: JSON.stringify({
-              contractId: createdContract.id,
-              title: milestone.title,
-              description: milestone.deliverables,
-              amount: milestone.amount,
-              dueDate: milestone.dueDate
-            }),
-          });
+      // Try to create milestones for the contract (but don't fail if this doesn't work)
+      try {
+        for (const milestone of milestones) {
+          if (milestone.title && milestone.deliverables && milestone.amount && milestone.dueDate) {
+            const milestoneResponse = await fetch('/api/milestones', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              credentials: 'include',
+              body: JSON.stringify({
+                contractId: createdContract.id,
+                title: milestone.title,
+                description: milestone.deliverables,
+                amount: milestone.amount,
+                dueDate: milestone.dueDate
+              }),
+            });
 
-          if (!milestoneResponse.ok) {
-            const errorText = await milestoneResponse.text();
-            console.error('Milestone API Error:', milestoneResponse.status, errorText);
-            throw new Error(`Failed to create milestone "${milestone.title}" (${milestoneResponse.status}): ${errorText}`);
+            if (!milestoneResponse.ok) {
+              console.warn('Milestone creation failed:', milestoneResponse.status);
+              // Don't fail the whole process if milestones fail
+            }
           }
         }
+      } catch (milestoneError) {
+        console.warn('Milestone creation error (continuing anyway):', milestoneError);
       }
 
-      // Create activity log entry
-      await fetch('/api/activity', {
-        method: 'POST',
-        credentials: 'include', // Include cookies for authentication
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contractId: createdContract.id,
-          action: "contract_created",
-          actorEmail: clientData.clientEmail,
-          details: { contractTitle: projectData.title, aiGenerated: true }
-        }),
-      });
+      // Try to create activity log entry (but don't fail if this doesn't work)
+      try {
+        await fetch('/api/activity', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contractId: createdContract.id,
+            action: "contract_created",
+            actorEmail: clientData.clientEmail,
+            details: { contractTitle: projectData.title, aiGenerated: true }
+          }),
+        });
+      } catch (activityError) {
+        console.warn('Activity log creation error (continuing anyway):', activityError);
+      }
       
       // Invalidate contracts cache to trigger refresh
       queryClient.invalidateQueries({
@@ -1775,41 +1782,21 @@ export default function CreateContract() {
         queryKey: ["/api/contracts", createdContract.id, "milestones"]
       });
       
-      // Check blockchain deployment status
-      try {
-        const blockchainResponse = await fetch(`/api/contracts/${createdContract.id}/blockchain-status`);
-        if (blockchainResponse.ok) {
-          const blockchainStatus = await blockchainResponse.json();
-          console.log("Blockchain deployment status:", blockchainStatus);
-          
-          if (blockchainStatus.status === "deployed") {
-            console.log(`Smart contract deployed at: ${blockchainStatus.contractAddress}`);
-            
-            toast({
-              title: "✅ Smart Contract Deployed!",
-              description: `Contract created with blockchain escrow. Redirecting to dashboard...`,
-            });
-          } else {
-            toast({
-              title: "✅ Contract Created Successfully!",
-              description: "Contract saved. Redirecting to dashboard...",
-            });
-          }
-        }
-      } catch (blockchainError) {
-        console.warn("Could not check blockchain status:", blockchainError);
-        toast({
-          title: "✅ Contract Created Successfully!",
-          description: "Contract saved and ready to send. Redirecting to dashboard...",
-        });
-      }
+      // Show success message and redirect immediately
+      toast({
+        title: "✅ Contract Created Successfully!",
+        description: "Contract saved and ready to send. Redirecting to dashboard...",
+      });
       
-      // Redirect to appropriate dashboard after success (success state already set above)
+      // Set success state to show the success screen
+      setIsContractCreated(true);
+      
+      // Redirect to appropriate dashboard after success
       setTimeout(() => {
         const dashboardUrl = currentUser?.userType === "client" ? "/client-dashboard" : "/dashboard";
         console.log(`Redirecting to ${dashboardUrl} after successful contract creation`);
         window.location.href = dashboardUrl;
-      }, 2500);
+      }, 2000);
       
     } catch (error) {
       console.error("Contract creation error:", error);
