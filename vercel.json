@@ -3,6 +3,7 @@
   "outputDirectory": "dist/public",
 
   "rewrites": [
+    { "source": "/api/bypass", "destination": "/api/bypass" },
     { "source": "/api/test", "destination": "/api/test" },
     { "source": "/api/auth/login", "destination": "/api/index" },
     { "source": "/api/auth/signup", "destination": "/api/index" },
@@ -23,8 +24,8 @@
           "value": "true"
         },
         {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
+          "key": "Access-Control-Allow-Origin", 
+          "value": "https://getsmartflo.com"
         },
         {
           "key": "Access-Control-Allow-Methods",
@@ -42,6 +43,12 @@
     "VERCEL_PROJECT_NAME": "smartflo",
     "VERCEL_URL": "getsmartflo.com",
     "VERCEL_TOKEN_ISSUER": "https://token.vercel.app",
-    "VERCEL_TOKEN_AUDIENCE": "smartflo"
+    "VERCEL_TOKEN_AUDIENCE": "smartflo",
+    "VERCEL_PROTECTION_BYPASS": "true",
+    "DISABLE_SSO": "true"
+  },
+  "regions": ["sfo1"],
+  "github": {
+    "silent": true
   }
 }
