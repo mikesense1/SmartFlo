@@ -93,6 +93,37 @@ export const contractActivity = pgTable("contract_activity", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const paymentAuthorizations = pgTable("payment_authorizations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contractId: uuid("contract_id").notNull().references(() => contracts.id),
+  clientId: uuid("client_id").references(() => users.id),
+  paymentMethod: text("payment_method").notNull(), // 'stripe' or 'usdc'
+  stripeSetupIntentId: text("stripe_setup_intent_id"),
+  stripePaymentMethodId: text("stripe_payment_method_id"),
+  stripeCustomerId: text("stripe_customer_id"),
+  walletAddress: text("wallet_address"),
+  walletSignature: text("wallet_signature"),
+  authorizationMessage: text("authorization_message"),
+  maxPerMilestone: decimal("max_per_milestone").notNull(),
+  totalAuthorized: decimal("total_authorized").notNull(),
+  termsVersion: text("terms_version").notNull().default("1.0"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  isActive: boolean("is_active").notNull().default(true),
+  authorizedAt: timestamp("authorized_at").defaultNow(),
+  revokedAt: timestamp("revoked_at"),
+});
+
+export const contractShares = pgTable("contract_shares", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contractId: uuid("contract_id").notNull().references(() => contracts.id),
+  shareToken: text("share_token").notNull().unique(),
+  clientEmail: text("client_email").notNull(),
+  expiresAt: timestamp("expires_at"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const contacts = pgTable("contacts", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
@@ -148,6 +179,16 @@ export const insertContactSchema = createInsertSchema(contacts).omit({
   createdAt: true,
 });
 
+export const insertPaymentAuthorizationSchema = createInsertSchema(paymentAuthorizations).omit({
+  id: true,
+  authorizedAt: true,
+});
+
+export const insertContractShareSchema = createInsertSchema(contractShares).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserRawSchema>;
 export type User = typeof users.$inferSelect;
@@ -163,3 +204,7 @@ export type InsertContractActivity = z.infer<typeof insertContractActivitySchema
 export type ContractActivity = typeof contractActivity.$inferSelect;
 export type InsertContact = z.infer<typeof insertContactSchema>;
 export type Contact = typeof contacts.$inferSelect;
+export type InsertPaymentAuthorization = z.infer<typeof insertPaymentAuthorizationSchema>;
+export type PaymentAuthorization = typeof paymentAuthorizations.$inferSelect;
+export type InsertContractShare = z.infer<typeof insertContractShareSchema>;
+export type ContractShare = typeof contractShares.$inferSelect;

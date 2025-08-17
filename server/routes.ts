@@ -905,6 +905,192 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Contract sharing and payment authorization routes
+  app.get("/api/contracts/shared/:shareToken", async (req, res) => {
+    try {
+      const { shareToken } = req.params;
+      
+      // Get contract share by token
+      const contractShare = await storage.getContractByShareToken(shareToken);
+      if (!contractShare || !contractShare.isActive) {
+        return res.status(404).json({ error: "Contract not found or expired" });
+      }
+      
+      // Get contract details
+      const contract = await storage.getContract(contractShare.contractId);
+      if (!contract) {
+        return res.status(404).json({ error: "Contract not found" });
+      }
+      
+      // Get milestones
+      const milestones = await storage.getMilestones(contractShare.contractId);
+      
+      res.json({
+        contract,
+        milestones,
+        shareInfo: {
+          shareToken,
+          expiresAt: contractShare.expiresAt,
+          clientEmail: contractShare.clientEmail
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching shared contract:", error);
+      res.status(500).json({ error: "Failed to fetch contract" });
+    }
+  });
+
+  app.post("/api/contracts/:shareToken/sign", async (req, res) => {
+    try {
+      const { shareToken } = req.params;
+      const { signature } = req.body;
+      
+      if (!signature) {
+        return res.status(400).json({ error: "Signature is required" });
+      }
+      
+      // Get contract share by token
+      const contractShare = await storage.getContractByShareToken(shareToken);
+      if (!contractShare || !contractShare.isActive) {
+        return res.status(404).json({ error: "Contract not found or expired" });
+      }
+      
+      // Create signature record
+      await storage.createContractSignature({
+        contractId: contractShare.contractId,
+        signerEmail: contractShare.clientEmail,
+        signerRole: 'client',
+        signatureMethod: 'email',
+        signatureData: signature
+      });
+      
+      // Update contract status to signed
+      await storage.updateContract(contractShare.contractId, {
+        status: 'signed'
+      });
+      
+      // Log activity
+      await storage.createActivity({
+        contractId: contractShare.contractId,
+        action: "contract_signed",
+        actorEmail: contractShare.clientEmail,
+        details: { signature, method: 'electronic' }
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Contract signed successfully" 
+      });
+    } catch (error) {
+      console.error("Error signing contract:", error);
+      res.status(500).json({ error: "Failed to sign contract" });
+    }
+  });
+
+  app.post("/api/contracts/authorize-payment", async (req, res) => {
+    try {
+      const { 
+        contractId, 
+        paymentMethod, 
+        totalAmount, 
+        largestMilestone,
+        stripeSetupIntentId,
+        stripePaymentMethodId,
+        stripeCustomerId,
+        walletAddress,
+        signature,
+        message
+      } = req.body;
+      
+      if (!contractId || !paymentMethod || !totalAmount || !largestMilestone) {
+        return res.status(400).json({ error: "Missing required authorization data" });
+      }
+      
+      const contract = await storage.getContract(contractId);
+      if (!contract) {
+        return res.status(404).json({ error: "Contract not found" });
+      }
+      
+      // Get client IP and user agent for authorization record
+      const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+      const userAgent = req.headers['user-agent'];
+      
+      // Create payment authorization record
+      const authorizationData = {
+        contractId,
+        paymentMethod,
+        maxPerMilestone: largestMilestone.toString(),
+        totalAuthorized: totalAmount.toString(),
+        ipAddress: ipAddress?.toString(),
+        userAgent,
+        isActive: true,
+        ...(paymentMethod === 'stripe' && {
+          stripeSetupIntentId,
+          stripePaymentMethodId,
+          stripeCustomerId
+        }),
+        ...(paymentMethod === 'usdc' && {
+          walletAddress,
+          walletSignature: signature ? JSON.stringify(signature) : undefined,
+          authorizationMessage: message
+        })
+      };
+      
+      await storage.createPaymentAuthorization(authorizationData);
+      
+      // Update contract status to payment_authorized
+      await storage.updateContract(contractId, {
+        status: 'payment_authorized',
+        paymentMethod
+      });
+      
+      // Log activity
+      await storage.createActivity({
+        contractId,
+        action: "payment_authorized",
+        actorEmail: contract.clientEmail,
+        details: { 
+          paymentMethod, 
+          maxPerMilestone: largestMilestone,
+          totalAuthorized: totalAmount
+        }
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Payment authorization completed successfully" 
+      });
+    } catch (error) {
+      console.error("Error authorizing payment:", error);
+      res.status(500).json({ error: "Failed to authorize payment" });
+    }
+  });
+
+  app.post("/api/stripe/create-setup-intent", async (req, res) => {
+    try {
+      const { contractId } = req.body;
+      
+      if (!contractId) {
+        return res.status(400).json({ error: "Contract ID is required" });
+      }
+      
+      // Mock Stripe SetupIntent creation for development
+      const mockSetupIntent = {
+        id: `seti_${Math.random().toString(36).substr(2, 12)}`,
+        clientSecret: `seti_${Math.random().toString(36).substr(2, 12)}_secret_${Math.random().toString(36).substr(2, 12)}`,
+        status: 'requires_payment_method'
+      };
+      
+      res.json({
+        clientSecret: mockSetupIntent.clientSecret,
+        setupIntentId: mockSetupIntent.id
+      });
+    } catch (error) {
+      console.error("Error creating setup intent:", error);
+      res.status(500).json({ error: "Failed to create setup intent" });
+    }
+  });
+
   // Email service routes
   app.use("/api/emails", emailRoutes);
 

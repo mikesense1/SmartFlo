@@ -351,7 +351,7 @@ const feeNote = {
 
 const disputeBox = {
   backgroundColor: "#fef3c7",
-  border: "1px solid "#f59e0b",
+  border: "1px solid #f59e0b",
   borderRadius: "8px",
   padding: "20px",
   margin: "24px 0",
@@ -379,7 +379,7 @@ const deadline = {
 
 const surveyBox = {
   backgroundColor: "#e0f2fe",
-  border: "1px solid "#0ea5e9",
+  border: "1px solid #0ea5e9",
   borderRadius: "8px",
   padding: "20px",
   margin: "24px 0",

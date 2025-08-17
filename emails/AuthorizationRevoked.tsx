@@ -293,7 +293,7 @@ const text = {
 
 const revocationBox = {
   backgroundColor: "#fee2e2",
-  border: "1px solid "#dc2626",
+  border: "1px solid #dc2626",
   borderRadius: "8px",
   padding: "24px",
   margin: "24px 0",
@@ -318,7 +318,7 @@ const statusRevoked = {
 
 const impactBox = {
   backgroundColor: "#fef3c7",
-  border: "1px solid "#f59e0b",
+  border: "1px solid #f59e0b",
   borderRadius: "8px",
   padding: "20px",
   margin: "24px 0",
@@ -341,7 +341,7 @@ const impactList = {
 
 const balanceBox = {
   backgroundColor: "#e0f2fe",
-  border: "1px solid "#0ea5e9",
+  border: "1px solid #0ea5e9",
   borderRadius: "8px",
   padding: "20px",
   margin: "24px 0",
@@ -364,7 +364,7 @@ const optionsList = {
 
 const reauthorizeBox = {
   backgroundColor: "#f3f4f6",
-  border: "1px solid "#d1d5db",
+  border: "1px solid #d1d5db",
   borderRadius: "8px",
   padding: "20px",
   margin: "24px 0",

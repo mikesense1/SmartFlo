@@ -1,9 +1,12 @@
 import { 
   users, contacts, contracts, milestones, contractSignatures, payments, contractActivity,
+  paymentAuthorizations, contractShares,
   type User, type InsertUser, type Contact, type InsertContact,
   type Contract, type InsertContract, type Milestone, type InsertMilestone,
   type ContractSignature, type InsertContractSignature,
-  type Payment, type InsertPayment, type ContractActivity, type InsertContractActivity
+  type Payment, type InsertPayment, type ContractActivity, type InsertContractActivity,
+  type PaymentAuthorization, type InsertPaymentAuthorization,
+  type ContractShare, type InsertContractShare
 } from "../shared/schema.js";
 
 export interface IStorage {
@@ -41,6 +44,20 @@ export interface IStorage {
   createContractActivity(activity: InsertContractActivity): Promise<ContractActivity>;
   getActivityByContract(contractId: string): Promise<ContractActivity[]>;
   getContractActivity(contractId: string): Promise<ContractActivity[]>;
+  
+  // Contract signature operations
+  createContractSignature(signature: InsertContractSignature): Promise<ContractSignature>;
+  
+  // Contract sharing operations
+  createContractShare(share: InsertContractShare): Promise<ContractShare>;
+  getContractByShareToken(shareToken: string): Promise<ContractShare | undefined>;
+  
+  // Payment authorization operations
+  createPaymentAuthorization(authorization: InsertPaymentAuthorization): Promise<PaymentAuthorization>;
+  getPaymentAuthorizationByContract(contractId: string): Promise<PaymentAuthorization | undefined>;
+  
+  // Extended milestone operations
+  getMilestones(contractId: string): Promise<Milestone[]>;
 }
 
 import { db } from "./db.js";
@@ -211,6 +228,54 @@ export class DatabaseStorage implements IStorage {
       .from(contractActivity)
       .where(eq(contractActivity.contractId, contractId))
       .orderBy(contractActivity.createdAt);
+  }
+
+  // Contract signature operations
+  async createContractSignature(insertSignature: InsertContractSignature): Promise<ContractSignature> {
+    const [signature] = await db
+      .insert(contractSignatures)
+      .values(insertSignature)
+      .returning();
+    return signature;
+  }
+
+  // Contract sharing operations
+  async createContractShare(insertShare: InsertContractShare): Promise<ContractShare> {
+    const [share] = await db
+      .insert(contractShares)
+      .values(insertShare)
+      .returning();
+    return share;
+  }
+
+  async getContractByShareToken(shareToken: string): Promise<ContractShare | undefined> {
+    const [share] = await db
+      .select()
+      .from(contractShares)
+      .where(eq(contractShares.shareToken, shareToken));
+    return share || undefined;
+  }
+
+  // Payment authorization operations
+  async createPaymentAuthorization(insertAuth: InsertPaymentAuthorization): Promise<PaymentAuthorization> {
+    const [authorization] = await db
+      .insert(paymentAuthorizations)
+      .values(insertAuth)
+      .returning();
+    return authorization;
+  }
+
+  async getPaymentAuthorizationByContract(contractId: string): Promise<PaymentAuthorization | undefined> {
+    const [authorization] = await db
+      .select()
+      .from(paymentAuthorizations)
+      .where(eq(paymentAuthorizations.contractId, contractId));
+    return authorization || undefined;
+  }
+
+  // Extended milestone operations
+  async getMilestones(contractId: string): Promise<Milestone[]> {
+    return await db.select().from(milestones).where(eq(milestones.contractId, contractId));
   }
 }
 

@@ -23,6 +23,7 @@ import MilestoneTracker from "@/pages/milestone-tracker";
 import ClientPayment from "@/pages/client-payment";
 import BlockchainTest from "@/pages/blockchain-test";
 import NotFound from "@/pages/not-found";
+import ContractSign from "@/pages/contract-sign";
 
 function Router() {
   return (
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/signup" component={SignupPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/setup" component={UserSetup} />
+      <Route path="/contracts/:shareToken/sign" component={ContractSign} />
       <Route component={NotFound} />
     </Switch>
   );

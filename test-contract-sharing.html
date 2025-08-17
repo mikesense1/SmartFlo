@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contract Sharing Test - SmartFlo</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 20px; margin: 10px 5px 0 0; background: #007cba; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .result { margin-top: 10px; padding: 10px; background: #f5f5f5; border-left: 4px solid #007cba; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        input, select { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>SmartFlo Contract Sharing System Test</h1>
+    
+    <div class="test-section">
+        <h2>1. Test Contract Creation & Sharing Link Generation</h2>
+        <p>Create a contract share token to enable client access without authentication.</p>
+        <button onclick="testCreateContractShare()">Create Share Token</button>
+        <div id="create-share-result" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Test Shared Contract Access</h2>
+        <p>Access contract details using the generated share token.</p>
+        <input type="text" id="shareToken" placeholder="Enter share token" style="width: 300px;">
+        <button onclick="testAccessSharedContract()">Access Contract</button>
+        <div id="access-contract-result" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Test Contract Signing</h2>
+        <p>Test electronic signature functionality.</p>
+        <input type="text" id="signToken" placeholder="Share token for signing" style="width: 250px;">
+        <input type="text" id="signature" placeholder="Enter signature" style="width: 200px;">
+        <button onclick="testContractSigning()">Sign Contract</button>
+        <div id="sign-contract-result" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Test Payment Authorization</h2>
+        <p>Test payment method authorization for milestone payments.</p>
+        <select id="paymentMethod">
+            <option value="stripe">Stripe Card/ACH</option>
+            <option value="usdc">USDC Crypto</option>
+        </select>
+        <input type="text" id="authContractId" placeholder="Contract ID" style="width: 200px;">
+        <input type="number" id="totalAmount" placeholder="Total Amount" style="width: 150px;">
+        <input type="number" id="largestMilestone" placeholder="Largest Milestone" style="width: 150px;">
+        <button onclick="testPaymentAuthorization()">Authorize Payment</button>
+        <div id="auth-payment-result" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. Test Stripe Setup Intent (Mock)</h2>
+        <p>Test Stripe payment method setup for future charges.</p>
+        <input type="text" id="stripeContractId" placeholder="Contract ID" style="width: 200px;">
+        <button onclick="testStripeSetupIntent()">Create Setup Intent</button>
+        <div id="stripe-setup-result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    ...options
+                });
+                const data = await response.json();
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+        
+        function showResult(elementId, result, isSuccess = null) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${isSuccess === true ? 'success' : isSuccess === false ? 'error' : ''}`;
+            element.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+        }
+        
+        async function testCreateContractShare() {
+            // First create a test contract share entry
+            const mockShareData = {
+                contractId: 'test-contract-' + Date.now(),
+                shareToken: 'share_' + Math.random().toString(36).substr(2, 12),
+                clientEmail: 'client@example.com',
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                isActive: true
+            };
+            
+            showResult('create-share-result', {
+                message: 'Mock contract share created',
+                shareToken: mockShareData.shareToken,
+                shareUrl: `${window.location.origin}/contracts/${mockShareData.shareToken}/sign`,
+                expiresAt: mockShareData.expiresAt
+            }, true);
+            
+            // Auto-fill the access test
+            document.getElementById('shareToken').value = mockShareData.shareToken;
+        }
+        
+        async function testAccessSharedContract() {
+            const shareToken = document.getElementById('shareToken').value;
+            if (!shareToken) {
+                showResult('access-contract-result', { error: 'Please enter a share token' }, false);
+                return;
+            }
+            
+            const result = await makeRequest(`/api/contracts/shared/${shareToken}`);
+            showResult('access-contract-result', result, result.success);
+            
+            if (result.success) {
+                document.getElementById('signToken').value = shareToken;
+                document.getElementById('authContractId').value = result.data.contract?.id || 'test-contract';
+            }
+        }
+        
+        async function testContractSigning() {
+            const shareToken = document.getElementById('signToken').value;
+            const signature = document.getElementById('signature').value;
+            
+            if (!shareToken || !signature) {
+                showResult('sign-contract-result', { error: 'Please enter share token and signature' }, false);
+                return;
+            }
+            
+            const result = await makeRequest(`/api/contracts/${shareToken}/sign`, {
+                method: 'POST',
+                body: JSON.stringify({ signature })
+            });
+            
+            showResult('sign-contract-result', result, result.success);
+        }
+        
+        async function testPaymentAuthorization() {
+            const contractId = document.getElementById('authContractId').value;
+            const paymentMethod = document.getElementById('paymentMethod').value;
+            const totalAmount = parseFloat(document.getElementById('totalAmount').value);
+            const largestMilestone = parseFloat(document.getElementById('largestMilestone').value);
+            
+            if (!contractId || !totalAmount || !largestMilestone) {
+                showResult('auth-payment-result', { error: 'Please fill all required fields' }, false);
+                return;
+            }
+            
+            const authData = {
+                contractId,
+                paymentMethod,
+                totalAmount,
+                largestMilestone
+            };
+            
+            // Add payment method specific data
+            if (paymentMethod === 'stripe') {
+                authData.stripeSetupIntentId = 'seti_mock_' + Math.random().toString(36).substr(2, 12);
+                authData.stripePaymentMethodId = 'pm_mock_' + Math.random().toString(36).substr(2, 12);
+                authData.stripeCustomerId = 'cus_mock_' + Math.random().toString(36).substr(2, 12);
+            } else if (paymentMethod === 'usdc') {
+                authData.walletAddress = '0x742d35Cc6634C0532925a3b8D6ac9E99999123456';
+                authData.signature = JSON.stringify({ v: 28, r: '0xabc123...', s: '0xdef456...' });
+                authData.message = 'Authorize SmartFlo payments';
+            }
+            
+            const result = await makeRequest('/api/contracts/authorize-payment', {
+                method: 'POST',
+                body: JSON.stringify(authData)
+            });
+            
+            showResult('auth-payment-result', result, result.success);
+        }
+        
+        async function testStripeSetupIntent() {
+            const contractId = document.getElementById('stripeContractId').value;
+            
+            if (!contractId) {
+                showResult('stripe-setup-result', { error: 'Please enter contract ID' }, false);
+                return;
+            }
+            
+            const result = await makeRequest('/api/stripe/create-setup-intent', {
+                method: 'POST',
+                body: JSON.stringify({ contractId })
+            });
+            
+            showResult('stripe-setup-result', result, result.success);
+        }
+    </script>
+</body>
+</html>

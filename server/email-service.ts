@@ -5,7 +5,7 @@ import PaymentPending from '../emails/PaymentPending';
 import PaymentProcessed from '../emails/PaymentProcessed';
 import AuthorizationRevoked from '../emails/AuthorizationRevoked';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 interface EmailAddress {
   email: string;
@@ -98,6 +98,10 @@ export class EmailService {
    */
   async sendContractInvitation(data: ContractInvitationData): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
+      if (!resend) {
+        return { success: false, error: 'Email service not configured' };
+      }
+      
       const result = await resend.emails.send({
         from: this.createFromAddress(),
         to: [this.createToAddress(data.clientEmail, data.clientName)],
@@ -139,6 +143,10 @@ export class EmailService {
    */
   async sendPaymentAuthorized(data: PaymentAuthorizedData): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
+      if (!resend) {
+        return { success: false, error: 'Email service not configured' };
+      }
+      
       const result = await resend.emails.send({
         from: this.createFromAddress(),
         to: [this.createToAddress(data.clientEmail, data.clientName)],
@@ -179,6 +187,10 @@ export class EmailService {
    */
   async sendPaymentPending(data: PaymentPendingData): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
+      if (!resend) {
+        return { success: false, error: 'Email service not configured' };
+      }
+      
       const result = await resend.emails.send({
         from: this.createFromAddress(),
         to: [this.createToAddress(data.clientEmail, data.clientName)],
@@ -225,6 +237,10 @@ export class EmailService {
    */
   async sendPaymentProcessed(data: PaymentProcessedData): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
+      if (!resend) {
+        return { success: false, error: 'Email service not configured' };
+      }
+      
       const result = await resend.emails.send({
         from: this.createFromAddress(),
         to: [this.createToAddress(data.clientEmail, data.clientName)],
@@ -273,6 +289,10 @@ export class EmailService {
    */
   async sendAuthorizationRevoked(data: AuthorizationRevokedData): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
+      if (!resend) {
+        return { success: false, error: 'Email service not configured' };
+      }
+      
       const result = await resend.emails.send({
         from: this.createFromAddress(),
         to: [this.createToAddress(data.clientEmail, data.clientName)],
@@ -314,6 +334,10 @@ export class EmailService {
    */
   async sendTestEmail(toEmail: string, toName?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
+      if (!resend) {
+        return { success: false, error: 'Email service not configured' };
+      }
+      
       const result = await resend.emails.send({
         from: this.createFromAddress(),
         to: [this.createToAddress(toEmail, toName)],

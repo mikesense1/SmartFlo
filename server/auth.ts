@@ -195,3 +195,14 @@ export const getCurrentUser = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to get user information" });
   }
 };
+
+// Middleware to require authentication
+export const requireAuth = (req: Request, res: Response, next: any) => {
+  const userId = (req as any).session?.userId;
+  
+  if (!userId) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+  
+  next();
+};
