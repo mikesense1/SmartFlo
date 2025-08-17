@@ -36,6 +36,8 @@ export default function Dashboard() {
     completedProjects: 12
   });
 
+
+
   // Show loading state while user data is loading
   if (userLoading) {
     return (
@@ -74,7 +76,7 @@ export default function Dashboard() {
     );
   }
 
-  // Fetch user contracts with proper authentication
+  // Fetch user contracts with proper authentication (moved to top for hook order consistency)
   const { data: contracts = [], isLoading: contractsLoading, error: contractsError } = useQuery({
     queryKey: ["/api/contracts", currentUser.id],
     queryFn: async () => {
