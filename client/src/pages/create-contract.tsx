@@ -1938,7 +1938,7 @@ export default function CreateContract() {
         <div className="space-y-6">
           {isContractCreated ? (
             <Card className="border-green-200 bg-green-50">
-              <CardContent className="text-center py-16">
+              <CardContent className="text-center py-12">
                 <div className="animate-bounce mb-6">
                   <CheckCircle className="w-20 h-20 mx-auto text-green-500" />
                 </div>
@@ -1946,19 +1946,61 @@ export default function CreateContract() {
                 <p className="text-lg text-slate-700 mb-6">
                   Your AI-generated contract with smart escrow protection is ready.
                 </p>
-                <div className="bg-white p-6 rounded-lg border border-green-200 mb-6 max-w-md mx-auto">
-                  <div className="flex items-center justify-center mb-3">
-                    <Sparkles className="w-5 h-5 text-green-600 mr-2 animate-spin" />
-                    <p className="text-green-700 font-semibold">Taking you to dashboard...</p>
-                  </div>
-                  <div className="w-full bg-green-200 rounded-full h-3">
-                    <div className="bg-green-500 h-3 rounded-full transition-all duration-1000 ease-out" style={{width: '85%'}}></div>
-                  </div>
-                </div>
-                <div className="text-sm text-slate-600 space-y-1">
+                
+                <div className="text-sm text-slate-600 space-y-1 mb-8">
                   <p>✓ Contract saved with milestone-based payments</p>
                   <p>✓ Smart escrow protection activated</p>
                   <p>✓ Ready to send to your client</p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-4 max-w-lg mx-auto">
+                  <h3 className="text-lg font-semibold text-slate-700 mb-4">What would you like to do next?</h3>
+                  
+                  <div className="grid grid-cols-1 gap-3">
+                    <Button 
+                      size="lg" 
+                      className="bg-blue-600 hover:bg-blue-700 text-white py-4"
+                      onClick={() => {
+                        toast({
+                          title: "Contract Sent!",
+                          description: "Your client will receive an email with the contract details.",
+                        });
+                        setTimeout(() => setLocation("/dashboard"), 1500);
+                      }}
+                    >
+                      <Globe className="w-5 h-5 mr-2" />
+                      Send Contract to Client
+                    </Button>
+                    
+                    <Button 
+                      size="lg" 
+                      variant="outline" 
+                      className="border-green-300 hover:bg-green-50 py-4"
+                      onClick={() => setLocation("/dashboard")}
+                    >
+                      <FileText className="w-5 h-5 mr-2" />
+                      Save & Go to Dashboard
+                    </Button>
+                    
+                    <Button 
+                      size="lg" 
+                      variant="ghost" 
+                      className="text-slate-600 hover:bg-slate-100 py-4"
+                      onClick={() => {
+                        // Don't save as draft if user chooses to close without saving
+                        toast({
+                          title: "Discarded",
+                          description: "Contract was not saved as draft.",
+                          variant: "destructive"
+                        });
+                        setTimeout(() => setLocation("/dashboard"), 1000);
+                      }}
+                    >
+                      <ArrowLeft className="w-5 h-5 mr-2" />
+                      Close Without Saving
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

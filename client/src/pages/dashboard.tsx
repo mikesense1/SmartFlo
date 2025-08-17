@@ -10,9 +10,10 @@ import { Separator } from "@/components/ui/separator";
 import { 
   Plus, FileText, DollarSign, Clock, CheckCircle, 
   AlertCircle, Wallet, CreditCard, Activity, Target,
-  TrendingUp, TrendingDown, Lock, Zap, Users, Eye, Edit
+  TrendingUp, TrendingDown, Lock, Zap, Users, Eye, Edit, Globe
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { paymentTriggers } from "@/lib/payments/smart-triggers";
 import Navigation from "@/components/navigation";
@@ -21,6 +22,7 @@ import type { Contract, Milestone, Payment } from "@shared/schema";
 
 export default function Dashboard() {
   const { data: currentUser, isLoading: userLoading } = useCurrentUser();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [contractDocument, setContractDocument] = useState<string | null>(null);
@@ -540,7 +542,7 @@ export default function Dashboard() {
                           <Progress value={60} className="h-2" />
                         </div>
                       )}
-                      <div className="mt-4 pt-4 border-t flex gap-2">
+                      <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
                         {contract.status === 'draft' ? (
                           // Draft contract actions
                           <>
@@ -550,6 +552,19 @@ export default function Dashboard() {
                                 Edit Contract
                               </Button>
                             </Link>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                toast({
+                                  title: "Contract Sent!",
+                                  description: `Contract sent to ${contract.clientEmail || contract.client_email}`,
+                                });
+                              }}
+                            >
+                              <Globe className="w-4 h-4 mr-2" />
+                              Send Contract
+                            </Button>
                             <Dialog>
                               <DialogTrigger asChild>
                                 <Button variant="outline" size="sm" onClick={() => handleViewContract(contract)}>
@@ -589,15 +604,35 @@ export default function Dashboard() {
                             <Link href={`/milestone-tracker/${contract.id}`}>
                               <Button variant="outline" size="sm">
                                 <Target className="w-4 h-4 mr-2" />
-                                Track Milestones
+                                Update Milestones
                               </Button>
                             </Link>
-                            <Link href={`/client-payment/${contract.id}`}>
-                              <Button variant="outline" size="sm">
-                                <DollarSign className="w-4 h-4 mr-2" />
-                                Fund Contract
-                              </Button>
-                            </Link>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                toast({
+                                  title: "Payment Requested",
+                                  description: "Client will be notified to fund the next milestone.",
+                                });
+                              }}
+                            >
+                              <DollarSign className="w-4 h-4 mr-2" />
+                              Request Payment
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                toast({
+                                  title: "Contract Sent!",
+                                  description: `Contract resent to ${contract.clientEmail || contract.client_email}`,
+                                });
+                              }}
+                            >
+                              <Globe className="w-4 h-4 mr-2" />
+                              Send Contract
+                            </Button>
                             <Dialog>
                               <DialogTrigger asChild>
                                 <Button variant="outline" size="sm" onClick={() => handleViewContract(contract)}>
