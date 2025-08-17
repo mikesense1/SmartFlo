@@ -1672,6 +1672,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Security monitoring endpoints
+  app.get("/api/security/metrics", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { timeframe } = req.query;
+        const { getSecurityMetrics } = await import('./lib/security/monitoring');
+        
+        const metrics = await getSecurityMetrics(timeframe as 'day' | 'week' | 'month');
+        res.json(metrics);
+      });
+    } catch (error: any) {
+      console.error("Error getting security metrics:", error);
+      res.status(500).json({ error: "Failed to get security metrics" });
+    }
+  });
+
+  app.get("/api/security/alerts", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { limit } = req.query;
+        const { getSecurityAlerts } = await import('./lib/security/monitoring');
+        
+        const alerts = await getSecurityAlerts(limit ? parseInt(limit as string) : 50);
+        res.json(alerts);
+      });
+    } catch (error: any) {
+      console.error("Error getting security alerts:", error);
+      res.status(500).json({ error: "Failed to get security alerts" });
+    }
+  });
+
+  app.get("/api/security/events", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { limit } = req.query;
+        const userId = (req as any).session?.userId;
+        
+        // Get security events for this user
+        const activities = await storage.getActivitiesByContract('security-monitoring') || [];
+        const events = activities
+          .filter(activity => 
+            activity.action.startsWith('security_') && 
+            activity.actorEmail === `user_${userId}`
+          )
+          .slice(0, limit ? parseInt(limit as string) : 100)
+          .map(activity => {
+            try {
+              const details = typeof activity.details === 'string' ? 
+                JSON.parse(activity.details) : activity.details;
+              return {
+                id: activity.id,
+                userId,
+                eventType: details.eventType,
+                method: details.method,
+                success: details.success,
+                ipAddress: details.ipAddress,
+                deviceFingerprint: details.deviceFingerprint,
+                amount: details.amount,
+                location: details.location,
+                riskScore: details.riskScore,
+                createdAt: details.timestamp
+              };
+            } catch {
+              return null;
+            }
+          })
+          .filter(Boolean);
+        
+        res.json(events);
+      });
+    } catch (error: any) {
+      console.error("Error getting security events:", error);
+      res.status(500).json({ error: "Failed to get security events" });
+    }
+  });
+
+  app.post("/api/security/export-report", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { timeframe, includeEvents, includeAlerts } = req.body;
+        const userId = (req as any).session?.userId;
+
+        // Generate CSV report
+        let csvContent = "Type,Timestamp,Event,Success,IP Address,Risk Score,Amount,Method\n";
+
+        if (includeEvents) {
+          const activities = await storage.getActivitiesByContract('security-monitoring') || [];
+          activities
+            .filter(activity => 
+              activity.action.startsWith('security_') && 
+              activity.actorEmail === `user_${userId}`
+            )
+            .slice(0, 1000) // Limit to 1000 events
+            .forEach(activity => {
+              try {
+                const details = typeof activity.details === 'string' ? 
+                  JSON.parse(activity.details) : activity.details;
+                csvContent += `Event,${details.timestamp || ''},${details.eventType || ''},${details.success || false},${details.ipAddress || ''},${details.riskScore || 0},${details.amount || ''},${details.method || ''}\n`;
+              } catch {
+                // Skip invalid entries
+              }
+            });
+        }
+
+        if (includeAlerts) {
+          const alertActivities = await storage.getActivitiesByContract('security-alerts') || [];
+          alertActivities
+            .filter(activity => activity.action.startsWith('alert_'))
+            .slice(0, 500) // Limit to 500 alerts
+            .forEach(activity => {
+              try {
+                const details = typeof activity.details === 'string' ? 
+                  JSON.parse(activity.details) : activity.details;
+                csvContent += `Alert,${details.timestamp || ''},${details.alertType || ''},${details.severity || ''},,,${details.metadata?.amount || ''},\n`;
+              } catch {
+                // Skip invalid entries
+              }
+            });
+        }
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="security-report-${timeframe}-${new Date().toISOString().split('T')[0]}.csv"`);
+        res.send(csvContent);
+      });
+    } catch (error: any) {
+      console.error("Error exporting security report:", error);
+      res.status(500).json({ error: "Failed to export security report" });
+    }
+  });
+
   // Get milestone details (for approval page)
   app.get("/api/milestones/:id", async (req, res) => {
     try {

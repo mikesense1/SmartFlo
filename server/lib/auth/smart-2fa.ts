@@ -367,22 +367,114 @@ export async function batchApproveWithOTP(
 }
 
 /**
- * Track 2FA events for analytics
+ * Track 2FA events for analytics with enhanced security monitoring
  */
 export async function track2FAEvent(event: TwoFactorAnalytics): Promise<void> {
   try {
+    // Calculate risk score for the event
+    const riskAssessment = calculateRiskScore({
+      userId: event.userId,
+      amount: event.amount || 0,
+      deviceFingerprint: event.deviceId,
+      isFirstPayment: false,
+      recentFailures: event.type === '2fa_failed' ? 1 : 0
+    });
+
+    // Enhanced security event logging
+    const { logSecurityEvent } = await import('../security/monitoring');
+    await logSecurityEvent({
+      userId: event.userId,
+      eventType: event.type === '2fa_success' ? '2fa_success' : 
+                 event.type === '2fa_failed' ? '2fa_failed' : 
+                 event.type === '2fa_sent' ? '2fa_sent' : '2fa_bypassed',
+      method: event.method,
+      success: event.type === '2fa_success',
+      deviceFingerprint: event.deviceId,
+      amount: event.amount,
+      riskScore: riskAssessment.score,
+      createdAt: new Date().toISOString(),
+      metadata: {
+        timeToComplete: event.timeToComplete,
+        reason: event.reason,
+        riskTriggers: riskAssessment.triggers
+      }
+    });
+
+    // Also store in analytics table
     await storage.createActivity({
       contractId: '2fa-analytics',
       action: `2fa_${event.type}`,
       actorEmail: `user_${event.userId}`,
       details: JSON.stringify({
         ...event,
+        riskScore: riskAssessment.score,
         timestamp: new Date().toISOString()
       })
     });
   } catch (error) {
     console.error('Error tracking 2FA event:', error);
   }
+}
+
+/**
+ * Calculate risk score for a transaction context
+ */
+function calculateRiskScore(context: {
+  userId: string;
+  amount: number;
+  deviceFingerprint?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  isFirstPayment?: boolean;
+  recentFailures?: number;
+  location?: string;
+}): { score: number; triggers: string[] } {
+  let score = 0;
+  const triggers: string[] = [];
+
+  // First payment risk
+  if (context.isFirstPayment) {
+    score += 2;
+    triggers.push('first_payment');
+  }
+
+  // Amount-based risk
+  if (context.amount > 50000) { // $500+
+    score += 3;
+    triggers.push('high_amount');
+  } else if (context.amount > 20000) { // $200+
+    score += 1;
+    triggers.push('elevated_amount');
+  }
+
+  // Device risk
+  if (!context.deviceFingerprint) {
+    score += 2;
+    triggers.push('unknown_device');
+  }
+
+  // Recent failures risk
+  if (context.recentFailures && context.recentFailures > 0) {
+    score += context.recentFailures;
+    triggers.push(`recent_failures_${context.recentFailures}`);
+  }
+
+  // IP/Location risk (simplified)
+  if (context.location?.includes('Unknown') || !context.location) {
+    score += 1;
+    triggers.push('unknown_location');
+  }
+
+  // User agent risk
+  if (!context.userAgent || context.userAgent.includes('bot')) {
+    score += 2;
+    triggers.push('suspicious_user_agent');
+  }
+
+  return {
+    score: Math.min(score, 10), // Cap at 10
+    triggers
+  };
 }
 
 // Helper functions

@@ -306,12 +306,20 @@ export default function Dashboard() {
               <TabsTrigger value="payments">Payments</TabsTrigger>
               <TabsTrigger value="analytics">Analytics</TabsTrigger>
             </TabsList>
-            <Button variant="outline" asChild>
-              <a href="/dashboard/payment-methods">
-                <Shield className="w-4 h-4 mr-2" />
-                Manage Payment Methods
-              </a>
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" asChild>
+                <a href="/dashboard/payment-methods">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Payment Methods
+                </a>
+              </Button>
+              <Button variant="outline" asChild>
+                <a href="/dashboard/security">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Security Dashboard
+                </a>
+              </Button>
+            </div>
           </div>
 
           <TabsContent value="overview" className="space-y-6">

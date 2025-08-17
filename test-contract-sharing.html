@@ -86,7 +86,25 @@
     </div>
 
     <div class="test-section">
-        <h2>7. Test Payment Authorization Management</h2>
+        <h2>7. Test Security Monitoring System</h2>
+        <p>Test the comprehensive security monitoring and alerting system.</p>
+        <select id="securityAction">
+            <option value="metrics">Get Security Metrics</option>
+            <option value="alerts">Get Security Alerts</option>
+            <option value="events">Get Security Events</option>
+            <option value="export">Export Security Report</option>
+        </select>
+        <select id="timeframe">
+            <option value="day">Last 24 hours</option>
+            <option value="week">Last 7 days</option>
+            <option value="month">Last 30 days</option>
+        </select>
+        <button onclick="testSecurityMonitoring()">Test Security System</button>
+        <div id="security-monitoring-result" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>8. Test Payment Authorization Management</h2>
         <p>Test the payment method authorization and monitoring system.</p>
         <select id="authAction">
             <option value="list">List Authorizations</option>
@@ -348,6 +366,41 @@
             }
             
             showResult('tfa-system-result', result, result.success);
+        }
+        
+        async function testSecurityMonitoring() {
+            const action = document.getElementById('securityAction').value;
+            const timeframe = document.getElementById('timeframe').value;
+            
+            let result;
+            switch (action) {
+                case 'metrics':
+                    result = await makeRequest(`/api/security/metrics?timeframe=${timeframe}`);
+                    break;
+                case 'alerts':
+                    result = await makeRequest('/api/security/alerts?limit=10');
+                    break;
+                case 'events':
+                    result = await makeRequest('/api/security/events?limit=20');
+                    break;
+                case 'export':
+                    result = await makeRequest('/api/security/export-report', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            timeframe,
+                            includeEvents: true,
+                            includeAlerts: true
+                        })
+                    });
+                    if (result.ok) {
+                        result = { success: true, message: 'Report export initiated' };
+                    }
+                    break;
+                default:
+                    result = { error: 'Unknown action' };
+            }
+            
+            showResult('security-monitoring-result', result, result.success);
         }
     </script>
 </body>
