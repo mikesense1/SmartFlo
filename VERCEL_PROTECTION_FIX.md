@@ -16,13 +16,22 @@ All API calls return Vercel SSO redirect pages instead of your application respo
 
 ## Immediate Solution Required
 
-### Option 1: Disable Vercel Protection (RECOMMENDED)
+### Step 1: Fix vercel.json Schema Error (COMPLETED)
+- ❌ Removed invalid `cleanDistDir` property
+- ❌ Removed invalid `functions` configuration
+- ✅ vercel.json now uses valid schema
+
+### Step 2: Disable Vercel Protection (CRITICAL)
 1. Go to **Vercel Dashboard** → https://vercel.com/dashboard
 2. Select your **SmartFlo project**
-3. Navigate to **Settings** → **General**
-4. Find **"Vercel Authentication"** or **"Protection"** section
+3. Navigate to **Settings** → **General** or **Security**
+4. Find **"Vercel Authentication"** or **"Password Protection"** section
 5. **DISABLE** the protection setting
 6. Redeploy the project
+
+### Alternative: Check for Environment Protection
+- Look for **"Environment Variables"** → **Protection**
+- Ensure production environment is not password protected
 
 ### Option 2: Alternative Domain
 - Use a custom domain (getsmartflo.com) which typically bypasses Vercel protection

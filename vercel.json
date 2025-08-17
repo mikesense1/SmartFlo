@@ -1,12 +1,6 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist/public",
-  
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "@vercel/node@3.2.23"
-    }
-  },
 
   "rewrites": [
     { "source": "/api/test", "destination": "/api/test" },
@@ -49,7 +43,5 @@
     "VERCEL_URL": "getsmartflo.com",
     "VERCEL_TOKEN_ISSUER": "https://token.vercel.app",
     "VERCEL_TOKEN_AUDIENCE": "smartflo"
-  },
-  
-  "cleanDistDir": true
+  }
 }
