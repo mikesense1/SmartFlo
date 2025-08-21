@@ -1,73 +1,90 @@
-# Vercel Database Debug Guide
+# Database Alignment Guide: Replit → Neon → Vercel
 
-## Current Issue
-- Demo users exist in development database
-- Vercel deployment logs show "User not found in database: client@acmecorp.com"
-- Need to verify if demo users exist in production database
+## Current Setup Issue
+You have **3 different database configurations** that need to be aligned:
+1. **Replit Development** - Uses your Replit DATABASE_URL secret
+2. **Neon SmartFlo Database** - Your main production database
+3. **Vercel Deployment** - May be using a different DATABASE_URL
 
-## Debug Steps Added
+## Step-by-Step Alignment Process
 
-### 1. Health Check Endpoint
-Added `/api/health` endpoint to verify:
-- Database connection status
-- User count in database
-- Environment variables
+### Step 1: Get Your Neon SmartFlo Database URL
+1. Go to https://console.neon.tech
+2. Select your **SmartFlo** database project
+3. Go to **Dashboard** → **Connection Details**
+4. Copy the **Connection String** (starts with `postgresql://`)
+5. It should look like: `postgresql://username:password@ep-xxx.us-east-1.aws.neon.tech/smartflo?sslmode=require`
 
-### 2. Debug Users Endpoint  
-Added `/api/debug/users` endpoint to:
-- List all users in the database
-- Verify demo users exist in production
-- Check user data structure
+### Step 2: Update Replit Environment
+Your Replit already has a DATABASE_URL secret. We need to update it:
 
-### 3. Enhanced Logging
-Added detailed logging to track:
-- Storage import success
-- User lookup attempts
-- Query results
+**Current Replit DATABASE_URL**: `(already exists as secret)`
 
-## Testing the Fix
+**To update it:**
+1. In Replit, go to your project settings
+2. Find the DATABASE_URL secret
+3. Replace it with your Neon SmartFlo connection string
 
-### Step 1: Check Database Health
-Visit: `https://your-vercel-domain.com/api/health`
+### Step 3: Update Vercel Environment Variables
+1. Go to https://vercel.com/dashboard
+2. Select your SmartFlo project
+3. Go to **Settings** → **Environment Variables**
+4. Find `DATABASE_URL` (or add it if missing)
+5. Set it to the **same Neon SmartFlo connection string**
+6. Make sure it's set for **Production**, **Preview**, and **Development**
 
-Expected response:
-```json
-{
-  "status": "healthy",
-  "database": "connected", 
-  "userCount": 2,
-  "env": "production"
-}
+### Step 4: Verify Database Schema
+Once all environments point to the same database, push your schema:
+```bash
+npm run db:push
 ```
 
-### Step 2: Verify Demo Users
-Visit: `https://your-vercel-domain.com/api/debug/users`
+### Step 5: Create Demo Users in Neon SmartFlo Database
+1. Open Neon Console → SQL Editor
+2. Run the script from `CREATE_DEMO_USERS.sql`:
 
-Should show both demo users:
-- `demo@smartflo.com` (freelancer)
-- `client@acmecorp.com` (client)
+```sql
+-- Demo users for SmartFlo
+INSERT INTO users (email, full_name, password_hash, user_type, subscription_tier, total_contracts_value, is_email_verified) 
+VALUES 
+('demo@smartflo.com', 'Sarah Johnson', '$2b$12$sXEcbAKKdnfV7WliKj.fyeVoPlvz8CroO4Da16xCr5.j6/4sNLViG', 'freelancer', 'free', '0', true),
+('client@acmecorp.com', 'Michael Chen', '$2b$12$3yavMwhLmqzt8q0EU73PW.kU3frJA0IsBOPqxftuO2JLQ0BKXPvvi', 'client', 'free', '0', true)
+ON CONFLICT (email) DO NOTHING;
+```
 
-### Step 3: Test Login
-If users exist, login should work with:
-- Email: `client@acmecorp.com`
-- Password: `client123`
+## Verification Steps
 
-## Possible Issues
+### Check Replit Development
+```bash
+# In Replit console
+echo $DATABASE_URL
+```
 
-1. **Different Database**: Vercel might be using a different DATABASE_URL
-2. **Missing Demo Data**: Demo users not seeded in production database
-3. **Connection Issues**: Database timeout or connection problems
-4. **Schema Mismatch**: Field name conflicts between dev and production
+### Check Vercel Production
+Visit: `https://getsmartflo.com/api/health`
+Should show the same database and user count
 
-## Next Actions
+### Check Neon Console
+Run in SQL Editor:
+```sql
+SELECT email, full_name, user_type FROM users;
+```
 
-Based on debug endpoint results:
-- If userCount = 0: Need to seed demo data in production
-- If users missing: Create demo users in production database  
-- If users exist: investigate query/connection issues
+## Result
+After alignment:
+- ✅ Replit development uses Neon SmartFlo database
+- ✅ Vercel production uses Neon SmartFlo database  
+- ✅ All demo users exist in one central database
+- ✅ Login works in both development and production
 
-## Demo User Credentials
+## Troubleshooting
 
-**Updated passwords:**
-- `demo@smartflo.com` / `test123` (freelancer)
-- `client@acmecorp.com` / `client123` (client)
+**If login still fails after alignment:**
+1. Check `https://getsmartflo.com/api/debug/users` - should show demo users
+2. Verify DATABASE_URL format includes `?sslmode=require`
+3. Restart Vercel deployment after updating environment variables
+
+**Database connection issues:**
+- Make sure Neon database is not paused
+- Check connection string has correct credentials
+- Verify SSL mode is enabled
