@@ -89,6 +89,8 @@ export const signup = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   try {
+    console.log('Login attempt:', { email: req.body.email, timestamp: new Date().toISOString() });
+    
     const validatedData = loginSchema.parse(req.body);
     
     // Find user by email
@@ -99,6 +101,7 @@ export const login = async (req: Request, res: Response) => {
       .limit(1);
     
     if (!user) {
+      console.log('User not found:', validatedData.email);
       return res.status(401).json({ 
         error: "Invalid email or password" 
       });
@@ -108,14 +111,32 @@ export const login = async (req: Request, res: Response) => {
     const isValidPassword = await bcrypt.compare(validatedData.password, user.passwordHash);
     
     if (!isValidPassword) {
+      console.log('Invalid password for user:', validatedData.email);
       return res.status(401).json({ 
         error: "Invalid email or password" 
       });
     }
     
-    // Set session properly
-    (req as any).session.userId = user.id;
-    (req as any).session.email = user.email;
+    // Set session properly with better error handling
+    try {
+      (req as any).session.userId = user.id;
+      (req as any).session.email = user.email;
+      
+      // Force session save for Vercel
+      await new Promise((resolve, reject) => {
+        (req as any).session.save((err: any) => {
+          if (err) reject(err);
+          else resolve(true);
+        });
+      });
+      
+      console.log('Session created successfully for user:', user.email);
+    } catch (sessionError) {
+      console.error('Session creation failed:', sessionError);
+      return res.status(500).json({ 
+        error: "Session creation failed" 
+      });
+    }
     
     // Return user data (excluding sensitive info)
     const userResponse = {
