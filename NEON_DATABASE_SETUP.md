@@ -1,98 +1,73 @@
-# Neon PostgreSQL Setup for SmartFlo
+# Neon Database Setup for SmartFlo
 
-## Step 1: Create Neon Account
+## Demo User Configuration
 
-1. Go to **https://neon.tech**
-2. Click "Sign Up" or "Get Started"
-3. Sign up with GitHub, Google, or email
-4. Verify your email if using email signup
+Your SmartFlo user accounts are fully integrated with your Neon PostgreSQL database. Here's how to manage them:
 
-## Step 2: Create Database Project
+### Current Demo Users in Development
 
-1. After login, click **"Create Project"**
-2. Fill in project details:
-   - **Project Name**: `SmartFlo` or `smartflo-production`
-   - **Database Name**: `smartflo` 
-   - **Region**: Choose closest to your users (US East, EU, etc.)
-3. Click **"Create Project"**
+✅ **Freelancer Account:**
+- Email: `demo@smartflo.com`
+- Password: `test123`
+- Full Name: Sarah Johnson
+- Type: freelancer
 
-## Step 3: Get Connection String
+✅ **Client Account:**
+- Email: `client@acmecorp.com`  
+- Password: `client123`
+- Full Name: Michael Chen
+- Type: client
 
-### Option A: From Dashboard
-1. In your project dashboard, find **"Connection Details"**
-2. Select **"Pooled connection"** (recommended for Vercel)
-3. Copy the connection string that looks like:
-   ```
-   postgresql://username:password@hostname/database?sslmode=require
-   ```
+### Setting Up Production Database
 
-### Option B: From Connection Tab
-1. Click **"Connection"** in the left sidebar
-2. Choose **"Pooled connection"**
-3. Select **"Parameters"** or **"Connection string"**
-4. Copy the full connection string
+The Vercel deployment likely uses a different Neon database URL than development. To fix the login issues:
 
-## Step 4: Connection String Format
+#### Option 1: Use Neon Database Console
+1. Go to your Neon console at https://console.neon.tech
+2. Select your production database
+3. Open the SQL Editor
+4. Run the SQL script from `CREATE_DEMO_USERS.sql`
 
-Your Neon connection string will look like:
-```
-postgresql://[username]:[password]@[hostname]/[database]?sslmode=require
-```
+#### Option 2: Environment Variable Check
+Verify your Vercel environment variables:
+- `DATABASE_URL` should point to your production Neon database
+- Make sure it's the same database you want to use
 
-Example:
-```
-postgresql://smartflo_user:AbCdEfGh123456@ep-cool-lab-123456.us-east-1.aws.neon.tech/smartflo?sslmode=require
-```
-
-## Step 5: Set Environment Variable
-
-### For Vercel:
-```bash
-vercel env add DATABASE_URL production
-# Paste your Neon connection string when prompted
-```
-
-### For Replit (current development):
-1. Go to "Secrets" tab in Replit
-2. Add new secret:
-   - **Key**: `DATABASE_URL`
-   - **Value**: Your Neon connection string
-
-## Step 6: Test Connection
-
-```bash
-# Test in your development environment
-npm run dev
-
-# Check if database connects successfully in logs
+### Database Schema
+Your users table structure:
+```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT UNIQUE NOT NULL,
+  full_name TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  user_type TEXT NOT NULL, -- 'freelancer' or 'client'
+  company_name TEXT,
+  freelance_type TEXT DEFAULT 'other',
+  subscription_tier TEXT NOT NULL DEFAULT 'free',
+  total_contracts_value DECIMAL NOT NULL DEFAULT '0',
+  is_email_verified BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMP DEFAULT NOW()
+);
 ```
 
-## Neon Features for SmartFlo
+### Troubleshooting Login Issues
 
-- **Serverless**: Perfect for Vercel deployment
-- **Autoscaling**: Handles traffic spikes automatically  
-- **Branching**: Create database branches for testing
-- **Connection Pooling**: Built-in pooling for better performance
-- **SSL**: Secure connections by default
+1. **Check database connection**: Visit `/api/health` on your Vercel deployment
+2. **Verify users exist**: Visit `/api/debug/users` to see all users in production
+3. **Password hashes**: Make sure password hashes are properly bcrypt encrypted
 
-## Important Notes
+### Manual User Creation
 
-1. **Free Tier**: Neon offers generous free tier perfect for SmartFlo
-2. **Connection Limits**: Use pooled connections for production
-3. **SSL Required**: Always include `?sslmode=require` in connection string
-4. **Branching**: You can create separate branches for development/production
+You can also create users directly in Neon console:
+```sql
+-- Create freelancer
+INSERT INTO users (email, full_name, password_hash, user_type, subscription_tier, total_contracts_value, is_email_verified) 
+VALUES ('demo@smartflo.com', 'Sarah Johnson', '$2b$12$sXEcbAKKdnfV7WliKj.fyeVoPlvz8CroO4Da16xCr5.j6/4sNLViG', 'freelancer', 'free', '0', true);
 
-## Troubleshooting
+-- Create client  
+INSERT INTO users (email, full_name, password_hash, user_type, subscription_tier, total_contracts_value, is_email_verified)
+VALUES ('client@acmecorp.com', 'Michael Chen', '$2b$12$3yavMwhLmqzt8q0EU73PW.kU3frJA0IsBOPqxftuO2JLQ0BKXPvvi', 'client', 'free', '0', true);
+```
 
-### Connection Issues:
-- Ensure `sslmode=require` is in connection string
-- Use **pooled connection** for Vercel deployment
-- Check IP allowlist (Neon allows all by default)
-
-### Performance:
-- Use connection pooling (already configured in SmartFlo)
-- Consider upgrading plan if you hit connection limits
-
----
-
-**Your SmartFlo database will be ready once you complete these steps!**
+The login should work once the demo users exist in your production Neon database!
