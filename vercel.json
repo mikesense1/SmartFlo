@@ -6,6 +6,7 @@
     { "source": "/api/bypass", "destination": "/api/bypass" },
     { "source": "/api/test", "destination": "/api/test" },
     { "source": "/api/health", "destination": "/api/index" },
+    { "source": "/api/debug/users", "destination": "/api/index" },
     { "source": "/api/auth/login", "destination": "/api/index" },
     { "source": "/api/auth/signup", "destination": "/api/index" },
     { "source": "/api/auth/logout", "destination": "/api/index" },

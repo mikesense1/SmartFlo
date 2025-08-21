@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 async function getStorage() {
   try {
     const { storage } = await import('../server/storage.js');
+    console.log('Storage imported successfully');
     return storage;
   } catch (error) {
     console.error('Storage import error:', error);
@@ -129,7 +130,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const storage = await getStorage();
+      console.log('Attempting to find user by email:', email);
       const user = await storage.getUserByEmail(email);
+      console.log('Storage query result:', user ? 'User found' : 'User not found');
       
       if (!user) {
         console.log('User not found in database:', email);
@@ -139,10 +142,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log('User found:', { 
         id: user.id, 
         email: user.email, 
-        hasPassword: !!user.passwordHash || !!user.password_hash 
+        hasPassword: !!user.passwordHash 
       });
 
-      const passwordToCheck = user.passwordHash || user.password_hash;
+      const passwordToCheck = user.passwordHash;
       const passwordValid = await bcrypt.compare(password, passwordToCheck || '');
       
       if (!passwordValid) {
@@ -167,10 +170,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         user: {
           id: user.id,
           email: user.email,
-          fullName: user.fullName || user.full_name, // Handle both camelCase and snake_case
-          userType: user.userType || user.user_type,
-          subscriptionTier: user.subscriptionTier || user.subscription_tier,
-          createdAt: user.createdAt || user.created_at
+          fullName: user.fullName,
+          userType: user.userType,
+          subscriptionTier: user.subscriptionTier,
+          createdAt: user.createdAt
         },
         token
       });
@@ -211,7 +214,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const token = Buffer.from(JSON.stringify({
         userId: user.id,
         email: user.email,
-        userType: user.userType || user.user_type,
+        userType: user.userType,
         projectName: 'smartflo',
         expires: Date.now() + (24 * 60 * 60 * 1000)
       })).toString('base64');
@@ -223,10 +226,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         user: {
           id: user.id,
           email: user.email,
-          fullName: user.fullName || user.full_name,
-          userType: user.userType || user.user_type,
-          subscriptionTier: user.subscriptionTier || user.subscription_tier,
-          createdAt: user.createdAt || user.created_at
+          fullName: user.fullName,
+          userType: user.userType,
+          subscriptionTier: user.subscriptionTier,
+          createdAt: user.createdAt
         },
         token
       });
@@ -265,10 +268,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         user: {
           id: user.id,
           email: user.email,
-          fullName: user.fullName || user.full_name,
-          userType: user.userType || user.user_type,
-          subscriptionTier: user.subscriptionTier || user.subscription_tier,
-          createdAt: user.createdAt || user.created_at
+          fullName: user.fullName,
+          userType: user.userType,
+          subscriptionTier: user.subscriptionTier,
+          createdAt: user.createdAt
         }
       });
     }
@@ -406,6 +409,67 @@ Respond with JSON in this exact format:
             error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
           });
         }
+      }
+    }
+
+    // Health check endpoint
+    if (path === 'health') {
+      if (req.method !== 'GET') {
+        return res.status(405).json({ message: 'Method not allowed' });
+      }
+
+      try {
+        const storage = await getStorage();
+        
+        // Test database connection by counting users
+        const { db } = await import('../server/db.js');
+        const { users } = await import('../shared/schema.js');
+        const userCount = await db.select().from(users);
+        
+        return res.status(200).json({
+          status: 'healthy',
+          timestamp: new Date().toISOString(),
+          database: 'connected',
+          userCount: userCount.length,
+          env: process.env.NODE_ENV,
+          hasDbUrl: !!process.env.DATABASE_URL
+        });
+      } catch (error) {
+        console.error('Health check failed:', error);
+        return res.status(500).json({
+          status: 'unhealthy',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+
+    // Debug users endpoint - for troubleshooting
+    if (path === 'debug/users') {
+      if (req.method !== 'GET') {
+        return res.status(405).json({ message: 'Method not allowed' });
+      }
+
+      try {
+        const { db } = await import('../server/db.js');
+        const { users } = await import('../shared/schema.js');
+        const allUsers = await db.select({
+          id: users.id,
+          email: users.email,
+          fullName: users.fullName,
+          userType: users.userType
+        }).from(users);
+        
+        return res.status(200).json({
+          userCount: allUsers.length,
+          users: allUsers,
+          timestamp: new Date().toISOString()
+        });
+      } catch (error) {
+        console.error('Debug users failed:', error);
+        return res.status(500).json({
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
       }
     }
 
