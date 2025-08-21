@@ -121,22 +121,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const { email, password } = req.body;
+      console.log('Vercel login attempt:', { email, timestamp: new Date().toISOString() });
 
       if (!email || !password) {
+        console.log('Missing email or password');
         return res.status(400).json({ message: 'Email and password are required' });
       }
 
       const storage = await getStorage();
       const user = await storage.getUserByEmail(email);
       
-      if (!user || !await bcrypt.compare(password, user.passwordHash || '')) {
+      if (!user) {
+        console.log('User not found in database:', email);
         return res.status(401).json({ message: 'Invalid email or password' });
       }
+
+      console.log('User found:', { 
+        id: user.id, 
+        email: user.email, 
+        hasPassword: !!user.passwordHash || !!user.password_hash 
+      });
+
+      const passwordToCheck = user.passwordHash || user.password_hash;
+      const passwordValid = await bcrypt.compare(password, passwordToCheck || '');
+      
+      if (!passwordValid) {
+        console.log('Password validation failed for user:', email);
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+
+      console.log('Login successful for user:', email);
 
       const token = Buffer.from(JSON.stringify({
         userId: user.id,
         email: user.email,
-        userType: user.userType,
+        userType: user.userType || user.user_type,
         projectName: 'smartflo',
         expires: Date.now() + (24 * 60 * 60 * 1000)
       })).toString('base64');
@@ -148,10 +167,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         user: {
           id: user.id,
           email: user.email,
-          fullName: user.fullName,
-          userType: user.userType,
-          subscriptionTier: user.subscriptionTier,
-          createdAt: user.createdAt
+          fullName: user.fullName || user.full_name, // Handle both camelCase and snake_case
+          userType: user.userType || user.user_type,
+          subscriptionTier: user.subscriptionTier || user.subscription_tier,
+          createdAt: user.createdAt || user.created_at
         },
         token
       });
@@ -192,7 +211,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const token = Buffer.from(JSON.stringify({
         userId: user.id,
         email: user.email,
-        userType: user.userType,
+        userType: user.userType || user.user_type,
         projectName: 'smartflo',
         expires: Date.now() + (24 * 60 * 60 * 1000)
       })).toString('base64');
@@ -204,10 +223,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         user: {
           id: user.id,
           email: user.email,
-          fullName: user.fullName,
-          userType: user.userType,
-          subscriptionTier: user.subscriptionTier,
-          createdAt: user.createdAt
+          fullName: user.fullName || user.full_name,
+          userType: user.userType || user.user_type,
+          subscriptionTier: user.subscriptionTier || user.subscription_tier,
+          createdAt: user.createdAt || user.created_at
         },
         token
       });
@@ -246,10 +265,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         user: {
           id: user.id,
           email: user.email,
-          fullName: user.fullName,
-          userType: user.userType,
-          subscriptionTier: user.subscriptionTier,
-          createdAt: user.createdAt
+          fullName: user.fullName || user.full_name,
+          userType: user.userType || user.user_type,
+          subscriptionTier: user.subscriptionTier || user.subscription_tier,
+          createdAt: user.createdAt || user.created_at
         }
       });
     }
