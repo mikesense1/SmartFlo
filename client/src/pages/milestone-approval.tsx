@@ -25,6 +25,8 @@ export default function MilestoneApproval() {
   const [approvalStep, setApprovalStep] = useState<'review' | '2fa' | 'processing'>('review');
   const [show2FA, setShow2FA] = useState(false);
   const [otpCode, setOtpCode] = useState('');
+  const [useBackupCode, setUseBackupCode] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   // Fetch milestone details
   const { data: milestone, isLoading: milestoneLoading } = useQuery({
@@ -163,6 +165,47 @@ export default function MilestoneApproval() {
     setApprovalStep('review');
     setShow2FA(false);
     setOtpCode('');
+    setUseBackupCode(false);
+    setResendCooldown(0);
+  };
+
+  const handleResendCode = async () => {
+    if (resendCooldown > 0) return;
+    
+    try {
+      const response = await apiRequest("POST", `/api/milestones/${id}/request-otp`, {});
+      
+      if (response.ok) {
+        toast({
+          title: "New Code Sent",
+          description: "A new verification code has been sent to your email",
+        });
+        
+        setResendCooldown(60);
+        const timer = setInterval(() => {
+          setResendCooldown(prev => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Error",
+          description: error.error || "Failed to resend code",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to resend verification code",
+        variant: "destructive",
+      });
+    }
   };
 
   if (milestoneLoading || contractLoading) {
@@ -421,10 +464,13 @@ export default function MilestoneApproval() {
                 <Shield className="w-6 h-6 text-green-600" />
               </div>
               <DialogTitle className="text-center">
-                Enter Verification Code
+                {useBackupCode ? 'Enter Backup Code' : 'Enter Verification Code'}
               </DialogTitle>
               <DialogDescription className="text-center">
-                Code sent to {currentUser?.email}
+                {useBackupCode 
+                  ? 'Use one of your backup codes to verify payment'
+                  : `Code sent to ${currentUser?.email}`
+                }
               </DialogDescription>
             </DialogHeader>
             
@@ -439,11 +485,11 @@ export default function MilestoneApproval() {
               <div className="text-center">
                 <Input
                   type="text"
-                  placeholder="000000"
+                  placeholder={useBackupCode ? "Enter backup code" : "000000"}
                   value={otpCode}
                   onChange={(e) => handleOtpChange(e.target.value)}
                   className="text-center text-lg tracking-widest font-mono"
-                  maxLength={6}
+                  maxLength={useBackupCode ? 12 : 6}
                   autoFocus
                   data-testid="input-otp-code"
                 />
@@ -451,13 +497,13 @@ export default function MilestoneApproval() {
 
               <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                 <Clock className="w-4 h-4" />
-                <span>Code expires in 10 minutes</span>
+                <span>{useBackupCode ? 'Backup codes do not expire' : 'Code expires in 10 minutes'}</span>
               </div>
 
               <div className="flex gap-2">
                 <Button
                   onClick={handleVerifyOTP}
-                  disabled={otpCode.length !== 6 || processPaymentMutation.isPending}
+                  disabled={(useBackupCode ? otpCode.length < 8 : otpCode.length !== 6) || processPaymentMutation.isPending}
                   className="flex-1"
                   data-testid="button-verify-otp"
                 >
@@ -469,6 +515,26 @@ export default function MilestoneApproval() {
                   data-testid="button-cancel-otp"
                 >
                   Cancel
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between text-sm">
+                <Button
+                  variant="link"
+                  onClick={handleResendCode}
+                  disabled={resendCooldown > 0 || useBackupCode}
+                  className="p-0 h-auto text-blue-600"
+                  data-testid="button-resend-code"
+                >
+                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
+                </Button>
+                <Button
+                  variant="link"
+                  onClick={() => setUseBackupCode(!useBackupCode)}
+                  className="p-0 h-auto text-blue-600"
+                  data-testid="button-backup-code"
+                >
+                  {useBackupCode ? 'Use email code' : 'Use backup code'}
                 </Button>
               </div>
 
