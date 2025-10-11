@@ -55,12 +55,13 @@ export interface IStorage {
   // Payment authorization operations
   createPaymentAuthorization(authorization: InsertPaymentAuthorization): Promise<PaymentAuthorization>;
   getPaymentAuthorizationByContract(contractId: string): Promise<PaymentAuthorization | undefined>;
+  getPaymentAuthorizationById(id: string): Promise<PaymentAuthorization | undefined>;
+  getPaymentAuthorizationsByClient(clientId: string): Promise<PaymentAuthorization[]>;
+  getActiveAuthorization(contractId: string): Promise<PaymentAuthorization | undefined>;
+  updatePaymentAuthorization(id: string, updates: Partial<PaymentAuthorization>): Promise<PaymentAuthorization | undefined>;
   
   // Extended milestone operations
   getMilestones(contractId: string): Promise<Milestone[]>;
-  
-  // Payment authorization updates
-  updatePaymentAuthorization(id: string, updates: Partial<PaymentAuthorization>): Promise<PaymentAuthorization | undefined>;
 }
 
 import { db } from "./db.js";
@@ -276,12 +277,35 @@ export class DatabaseStorage implements IStorage {
     return authorization || undefined;
   }
 
-  // Extended milestone operations
-  async getMilestones(contractId: string): Promise<Milestone[]> {
-    return await db.select().from(milestones).where(eq(milestones.contractId, contractId));
+  async getPaymentAuthorizationById(id: string): Promise<PaymentAuthorization | undefined> {
+    const [authorization] = await db
+      .select()
+      .from(paymentAuthorizations)
+      .where(eq(paymentAuthorizations.id, id));
+    return authorization || undefined;
   }
 
-  // Payment authorization updates
+  async getPaymentAuthorizationsByClient(clientId: string): Promise<PaymentAuthorization[]> {
+    return await db
+      .select()
+      .from(paymentAuthorizations)
+      .where(eq(paymentAuthorizations.clientId, clientId))
+      .orderBy(paymentAuthorizations.authorizedAt);
+  }
+
+  async getActiveAuthorization(contractId: string): Promise<PaymentAuthorization | undefined> {
+    const [authorization] = await db
+      .select()
+      .from(paymentAuthorizations)
+      .where(eq(paymentAuthorizations.contractId, contractId));
+    
+    if (!authorization || !authorization.isActive || authorization.revokedAt) {
+      return undefined;
+    }
+    
+    return authorization;
+  }
+
   async updatePaymentAuthorization(id: string, updates: Partial<PaymentAuthorization>): Promise<PaymentAuthorization | undefined> {
     const [authorization] = await db
       .update(paymentAuthorizations)
@@ -289,6 +313,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(paymentAuthorizations.id, id))
       .returning();
     return authorization || undefined;
+  }
+
+  // Extended milestone operations
+  async getMilestones(contractId: string): Promise<Milestone[]> {
+    return await db.select().from(milestones).where(eq(milestones.contractId, contractId));
   }
 }
 

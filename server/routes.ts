@@ -1170,6 +1170,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New: Get authorization status with formatted details for UI
+  app.get("/api/contracts/:id/authorization-status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const authorization = await storage.getActiveAuthorization(id);
+      const contract = await storage.getContract(id);
+      
+      if (!authorization || !contract) {
+        return res.json({ 
+          hasAuthorization: false,
+          status: 'not_configured',
+          message: 'Payment method not configured'
+        });
+      }
+
+      // Format payment method display
+      let paymentMethodDisplay = '';
+      if (authorization.paymentMethod === 'stripe') {
+        // For Stripe, we'd need to fetch the actual payment method details
+        // For now, show a generic message
+        paymentMethodDisplay = authorization.stripePaymentMethodId 
+          ? `Card •••• ${authorization.stripePaymentMethodId.slice(-4)}` 
+          : 'Stripe Payment Method';
+      } else if (authorization.paymentMethod === 'usdc') {
+        const addr = authorization.walletAddress || '';
+        paymentMethodDisplay = `USDC Wallet ${addr.slice(0, 4)}...${addr.slice(-4)}`;
+      }
+
+      // Check if expired or revoked
+      const isExpired = authorization.revokedAt !== null;
+      const status = !authorization.isActive ? 'revoked' : isExpired ? 'expired' : 'active';
+
+      res.json({
+        hasAuthorization: true,
+        status,
+        paymentMethod: authorization.paymentMethod,
+        paymentMethodDisplay,
+        maxPerMilestone: authorization.maxPerMilestone,
+        totalAuthorized: authorization.totalAuthorized,
+        authorizedAt: authorization.authorizedAt,
+        revokedAt: authorization.revokedAt,
+        isActive: authorization.isActive,
+        authorizationId: authorization.id
+      });
+    } catch (error) {
+      console.error("Error fetching authorization status:", error);
+      res.status(500).json({ error: "Failed to fetch authorization status" });
+    }
+  });
+
+  // New: Get all authorizations for client
+  app.get("/api/payment/authorizations", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const userId = (req as any).session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: "Authentication required" });
+        }
+
+        const authorizations = await storage.getPaymentAuthorizationsByClient(userId);
+        
+        // Enhance with contract details
+        const authorizationsWithDetails = await Promise.all(
+          authorizations.map(async (auth) => {
+            const contract = await storage.getContract(auth.contractId);
+            const milestones = await storage.getMilestones(auth.contractId);
+            
+            return {
+              ...auth,
+              contractTitle: contract?.title || 'Unknown Contract',
+              contractStatus: contract?.status,
+              milestoneCount: milestones.length,
+              completedMilestones: milestones.filter(m => m.status === 'paid').length
+            };
+          })
+        );
+
+        res.json({ authorizations: authorizationsWithDetails });
+      });
+    } catch (error) {
+      console.error("Error fetching authorizations:", error);
+      res.status(500).json({ error: "Failed to fetch authorizations" });
+    }
+  });
+
+  // New: Update authorization (change payment method)
+  app.patch("/api/payment/authorizations/:id", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { id } = req.params;
+        const userId = (req as any).session?.userId;
+        
+        if (!userId) {
+          return res.status(401).json({ error: "Authentication required" });
+        }
+
+        const authorization = await storage.getPaymentAuthorizationById(id);
+        if (!authorization) {
+          return res.status(404).json({ error: "Authorization not found" });
+        }
+
+        // Verify user owns this authorization
+        if (authorization.clientId !== userId) {
+          return res.status(403).json({ error: "Unauthorized" });
+        }
+
+        // Update authorization
+        const updates = req.body;
+        const updatedAuth = await storage.updatePaymentAuthorization(id, updates);
+
+        // Log activity
+        await storage.createActivity({
+          contractId: authorization.contractId,
+          action: "payment_authorization_updated",
+          actorEmail: (req as any).session?.user?.email || 'unknown',
+          details: { updates }
+        });
+
+        res.json({ authorization: updatedAuth });
+      });
+    } catch (error) {
+      console.error("Error updating authorization:", error);
+      res.status(500).json({ error: "Failed to update authorization" });
+    }
+  });
+
   app.get("/api/contracts/:id/milestones", async (req, res) => {
     try {
       const { id } = req.params;
