@@ -467,7 +467,7 @@ Contact support with:
 - **Languages**: English (additional languages coming)
 
 #### Email Support
-- **General**: support@smartflo.com
+- **General**: support@getsmartflo.com
 - **Response Time**: 4 hours (business hours)
 - **Best For**: Complex issues requiring detailed explanation
 - **Include**: Screenshots, error messages, steps taken
@@ -577,7 +577,7 @@ Contact support with:
 
 **Emergency**: +1-800-SMARTFLO (762-7835)  
 **Live Chat**: smartflo.com (24/7)  
-**Email**: support@smartflo.com
+**Email**: support@getsmartflo.com
 
 ---
 

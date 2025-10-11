@@ -313,7 +313,7 @@
 
 ### Contact Our Support Team
 - **Live Chat**: Available 24/7 on smartflo.com
-- **Email**: support@smartflo.com (4-hour response time)
+- **Email**: support@getsmartflo.com (4-hour response time)
 - **Phone**: +1-800-SMARTFLO (762-7835)
 - **Help Center**: help.smartflo.com
 

@@ -413,7 +413,7 @@ A: Check our status page at status.smartflo.com for real-time updates. Critical 
 ## Contact Information
 
 ### Customer Support
-- **Email**: support@smartflo.com
+- **Email**: support@getsmartflo.com
 - **Phone**: +1-800-SMARTFLO (762-7835)
 - **Live Chat**: Available 24/7 on smartflo.com
 - **Help Center**: help.smartflo.com
