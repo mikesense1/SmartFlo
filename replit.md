@@ -16,6 +16,10 @@ Preferred communication style: Simple, everyday language.
 - **2FA API Endpoints**: POST /api/milestones/:id/request-otp (generates & sends OTP) and POST /api/milestones/:id/verify-and-approve (verifies OTP & processes payment)
 - **Payment Verification Email**: Professional HTML email template with security notices, expiration warnings, and contract/milestone details
 - **OTP Security**: Cryptographically secure random generation (crypto.randomInt), bcrypt hashing, DESC ordering for recent code verification, automatic cleanup of expired OTPs
+- **Security Monitoring Dashboard**: Comprehensive 2FA monitoring with dedicated tabs for analytics, failed attempts, device tracking, and security alerts. Real-time metrics include success rates, completion times, and risk analysis
+- **2FA Monitoring API**: Four new endpoints for security monitoring: GET /api/security/2fa-analytics (comprehensive 2FA metrics), GET /api/security/failed-attempts (grouped by user), GET /api/security/device-changes (device tracking), POST /api/security/send-alert (automated alert system)
+- **Automated Alert System**: Email alerts for suspicious activity including multiple failed 2FA attempts (3+ triggers high-risk alert), new device payments, and unusual payment patterns with severity-based notifications
+- **Device Fingerprint Tracking**: Complete device management with trust status, last used timestamps, IP address tracking, and automatic new device detection for enhanced security monitoring
 - **Payment Authorization Management**: Enhanced payment methods dashboard with active authorization display, contract-specific authorization tracking, and revoke functionality with confirmation dialogs
 - **Authorization Status Display**: Prominent authorization status cards in milestone views with three states (Active/Revoked/Not Configured) using color-coded badges (green/red/orange) for instant visual feedback
 - **Authorization Monitoring Service**: Automated monitoring for card expiration (30-day warnings), auto-deactivation of expired cards, and tracking of inactive authorizations for active contracts

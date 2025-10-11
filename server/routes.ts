@@ -1644,7 +1644,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Check if 2FA verification is required and valid
         if (otpId !== 'no_2fa_required') {
           // Additional verification that OTP was used for this milestone
-          const activities = await storage.getActivitiesByContract(milestoneId) || [];
+          const activities = await storage.getActivityByContract(milestoneId) || [];
           const otpUsed = activities.some((activity: any) => {
             if (activity.action !== 'payment_otp_used') return false;
             try {
@@ -1964,7 +1964,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userId = (req as any).session?.userId;
         
         // Get security events for this user
-        const activities = await storage.getActivitiesByContract('security-monitoring') || [];
+        const activities = await storage.getActivityByContract('security-monitoring') || [];
         const events = activities
           .filter(activity => 
             activity.action.startsWith('security_') && 
@@ -2013,7 +2013,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let csvContent = "Type,Timestamp,Event,Success,IP Address,Risk Score,Amount,Method\n";
 
         if (includeEvents) {
-          const activities = await storage.getActivitiesByContract('security-monitoring') || [];
+          const activities = await storage.getActivityByContract('security-monitoring') || [];
           activities
             .filter(activity => 
               activity.action.startsWith('security_') && 
@@ -2032,7 +2032,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         if (includeAlerts) {
-          const alertActivities = await storage.getActivitiesByContract('security-alerts') || [];
+          const alertActivities = await storage.getActivityByContract('security-alerts') || [];
           alertActivities
             .filter(activity => activity.action.startsWith('alert_'))
             .slice(0, 500) // Limit to 500 alerts
@@ -2062,7 +2062,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { requireAuth } = await import("./auth");
       requireAuth(req, res, async () => {
-        const { db } = await import("@db");
+        const { db } = await import("./db");
         const { tfaAnalytics } = await import("@shared/schema");
         const { desc, eq, gte } = await import("drizzle-orm");
         
@@ -2107,7 +2107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { requireAuth } = await import("./auth");
       requireAuth(req, res, async () => {
-        const { db } = await import("@db");
+        const { db } = await import("./db");
         const { paymentOTPs, tfaAnalytics, users } = await import("@shared/schema");
         const { desc, eq, gte, sql } = await import("drizzle-orm");
         
@@ -2154,7 +2154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { requireAuth } = await import("./auth");
       requireAuth(req, res, async () => {
-        const { db } = await import("@db");
+        const { db } = await import("./db");
         const { trustedDevices } = await import("@shared/schema");
         const { desc, eq } = await import("drizzle-orm");
         
