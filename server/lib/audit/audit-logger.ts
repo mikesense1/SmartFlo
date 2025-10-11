@@ -264,7 +264,7 @@ export class AuditLogger {
     }
   ): Promise<AuditEvent[]> {
     try {
-      const activities = await storage.getActivitiesByContract('audit-system') || [];
+      const activities = await storage.getActivityByContract('audit-system') || [];
       
       return activities
         .filter(activity => {
@@ -338,7 +338,7 @@ export class AuditLogger {
           break;
       }
 
-      const activities = await storage.getActivitiesByContract('audit-system') || [];
+      const activities = await storage.getActivityByContract('audit-system') || [];
       const relevantEvents = activities
         .filter(activity => {
           if (!activity.action.startsWith('audit_')) return false;
@@ -393,7 +393,7 @@ export class AuditLogger {
       const twoYearsAgo = new Date();
       twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
 
-      const activities = await storage.getActivitiesByContract('audit-system') || [];
+      const activities = await storage.getActivityByContract('audit-system') || [];
       let cleanedCount = 0;
 
       for (const activity of activities) {
@@ -437,7 +437,7 @@ export class AuditLogger {
    */
   async verifyEventIntegrity(auditId: string): Promise<boolean> {
     try {
-      const activities = await storage.getActivitiesByContract('audit-system') || [];
+      const activities = await storage.getActivityByContract('audit-system') || [];
       const activity = activities.find(a => {
         try {
           const details = typeof a.details === 'string' ? JSON.parse(a.details) : a.details;
