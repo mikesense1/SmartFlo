@@ -8,8 +8,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { TwoFactorModal } from "@/components/TwoFactorModal";
-import { CheckCircle, Clock, Shield, CreditCard, Wallet, AlertTriangle, ArrowLeft, DollarSign } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { CheckCircle, Clock, Shield, CreditCard, Wallet, AlertTriangle, ArrowLeft, DollarSign, Mail } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 // Helper function since shared pricing may not be available
@@ -24,6 +24,7 @@ export default function MilestoneApproval() {
   const { toast } = useToast();
   const [approvalStep, setApprovalStep] = useState<'review' | '2fa' | 'processing'>('review');
   const [show2FA, setShow2FA] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
 
   // Fetch milestone details
   const { data: milestone, isLoading: milestoneLoading } = useQuery({
@@ -59,17 +60,15 @@ export default function MilestoneApproval() {
     enabled: !!milestone?.contractId
   });
 
-  // Process payment after 2FA with device trust
+  // Process payment after 2FA verification
   const processPaymentMutation = useMutation({
-    mutationFn: async ({ otpId, trustDevice }: { otpId: string; trustDevice?: boolean }) => {
-      const response = await apiRequest("POST", "/api/milestones/verify-and-pay", {
-        milestoneId: id,
-        otpId,
-        trustDevice
+    mutationFn: async ({ otpCode }: { otpCode: string }) => {
+      const response = await apiRequest("POST", `/api/milestones/${id}/verify-and-approve`, {
+        otpCode
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Payment processing failed');
+        throw new Error(error.error || 'Payment processing failed');
       }
       return response.json();
     },
@@ -97,54 +96,73 @@ export default function MilestoneApproval() {
     }
   });
 
-  // Initiate approval process with smart 2FA checking
+  // Initiate approval process - request OTP for 2FA
   const initiateApproval = async () => {
     if (!milestone || !currentUser) return;
 
     try {
-      // Check if 2FA is required using smart triggers
-      const response = await apiRequest("POST", "/api/payment/send-otp", {
-        milestoneId: id,
-        amount: milestone.amount
-      });
+      // Request OTP for this milestone approval
+      const response = await apiRequest("POST", `/api/milestones/${id}/request-otp`, {});
 
       if (response.ok) {
         const data = await response.json();
+        setApprovalStep('2fa');
+        setShow2FA(true);
         
-        if (data.require2FA) {
-          setApprovalStep('2fa');
-          setShow2FA(true);
-        } else {
-          // Process payment directly without 2FA
-          setApprovalStep('processing');
-          processPaymentMutation.mutate({ otpId: 'no_2fa_required' });
-        }
+        toast({
+          title: "Verification Code Sent",
+          description: `A 6-digit code has been sent to ${currentUser.email}`,
+        });
       } else {
         const error = await response.json();
         toast({
           title: "Error",
-          description: error.message || "Failed to initiate approval",
+          description: error.error || "Failed to send verification code",
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Error", 
-        description: "Failed to check 2FA requirements",
+        description: "Failed to initiate payment approval",
         variant: "destructive",
       });
     }
   };
 
-  const handleTwoFactorVerified = (otpId: string, trustDevice?: boolean) => {
+  const handleVerifyOTP = () => {
+    if (otpCode.length !== 6) {
+      toast({
+        title: "Invalid Code",
+        description: "Please enter a 6-digit code",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setApprovalStep('processing');
     setShow2FA(false);
-    processPaymentMutation.mutate({ otpId, trustDevice });
+    processPaymentMutation.mutate({ otpCode });
+  };
+
+  const handleOtpChange = (value: string) => {
+    const cleanValue = value.replace(/\D/g, '').slice(0, 6);
+    setOtpCode(cleanValue);
+    
+    // Auto-verify when 6 digits entered
+    if (cleanValue.length === 6) {
+      setTimeout(() => {
+        setApprovalStep('processing');
+        setShow2FA(false);
+        processPaymentMutation.mutate({ otpCode: cleanValue });
+      }, 300);
+    }
   };
 
   const handleCancel2FA = () => {
     setApprovalStep('review');
     setShow2FA(false);
+    setOtpCode('');
   };
 
   if (milestoneLoading || contractLoading) {
@@ -395,16 +413,74 @@ export default function MilestoneApproval() {
           </div>
         )}
 
-        {/* Enhanced 2FA Modal */}
-        <TwoFactorModal
-          open={show2FA}
-          amount={milestone.amount}
-          milestoneIds={[id!]}
-          userEmail={currentUser?.email || ''}
-          reason="Payment security verification required"
-          onSuccess={handleTwoFactorVerified}
-          onCancel={handleCancel2FA}
-        />
+        {/* OTP Verification Dialog */}
+        <Dialog open={show2FA} onOpenChange={(open) => !open && handleCancel2FA()}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-6 h-6 text-green-600" />
+              </div>
+              <DialogTitle className="text-center">
+                Enter Verification Code
+              </DialogTitle>
+              <DialogDescription className="text-center">
+                Code sent to {currentUser?.email}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <Alert>
+                <Shield className="w-4 h-4" />
+                <AlertDescription>
+                  <strong>Payment Amount: {formatCurrency(milestone?.amount || 0)}</strong>
+                </AlertDescription>
+              </Alert>
+              
+              <div className="text-center">
+                <Input
+                  type="text"
+                  placeholder="000000"
+                  value={otpCode}
+                  onChange={(e) => handleOtpChange(e.target.value)}
+                  className="text-center text-lg tracking-widest font-mono"
+                  maxLength={6}
+                  autoFocus
+                  data-testid="input-otp-code"
+                />
+              </div>
+
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                <Clock className="w-4 h-4" />
+                <span>Code expires in 10 minutes</span>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleVerifyOTP}
+                  disabled={otpCode.length !== 6 || processPaymentMutation.isPending}
+                  className="flex-1"
+                  data-testid="button-verify-otp"
+                >
+                  {processPaymentMutation.isPending ? "Verifying..." : "Verify & Approve Payment"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleCancel2FA}
+                  data-testid="button-cancel-otp"
+                >
+                  Cancel
+                </Button>
+              </div>
+
+              <Alert>
+                <Shield className="w-4 h-4" />
+                <AlertDescription className="text-xs">
+                  Never share verification codes. SmartFlo will never ask for your codes via phone or email.
+                </AlertDescription>
+              </Alert>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Processing State */}
         {approvalStep === 'processing' && (

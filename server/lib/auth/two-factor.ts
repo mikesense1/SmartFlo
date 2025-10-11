@@ -29,8 +29,9 @@ interface SecurityEvent {
 export async function sendPaymentOTP(options: SendOTPOptions): Promise<{ sent: boolean; expiresAt: string; otpId: string }> {
   const { userId, milestoneId, amount, ipAddress, userAgent } = options;
   
-  // Generate 6-digit OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  // Generate 6-digit OTP using cryptographically secure RNG
+  const randomValue = crypto.randomInt(100000, 1000000);
+  const otp = randomValue.toString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
   const hashedOTP = await bcrypt.hash(otp, 10);
 
@@ -64,18 +65,22 @@ export async function sendPaymentOTP(options: SendOTPOptions): Promise<{ sent: b
     const { EmailService } = await import('../../email-service');
     const emailService = EmailService.getInstance();
     
-    // Use the payment pending template for OTP delivery
-    await emailService.sendPaymentPending({
+    // Get contract data for email template
+    const { contracts } = await import('@shared/schema');
+    const { db } = await import('../../db');
+    const { eq } = await import('drizzle-orm');
+    
+    const [contract] = await db.select().from(contracts).where(eq(contracts.id, milestone.contractId)).limit(1);
+    
+    // Send payment verification email with OTP
+    await emailService.sendPaymentVerification({
       clientName: user.fullName,
       clientEmail: user.email,
-      contractTitle: 'Payment Security Verification',
-      milestoneTitle: milestone.title,
+      verificationCode: otp,
       amount: `$${(amount / 100).toFixed(2)}`,
-      paymentMethod: 'Security Code',
-      contractId: milestone.contractId,
-      milestoneId: milestoneId,
-      chargeDate: 'Verification Required',
-      timeRemaining: `Code: ${otp} (expires in 10 minutes)`
+      milestoneTitle: milestone.title,
+      contractTitle: contract?.title || 'Unknown Contract',
+      expiresInMinutes: 10
     });
 
     // Log security event
@@ -107,6 +112,7 @@ export async function sendPaymentOTP(options: SendOTPOptions): Promise<{ sent: b
 export async function verifyPaymentOTP(userId: string, milestoneId: string, otpCode: string): Promise<{ valid: boolean; otpId?: string; error?: string }> {
   try {
     // Find the most recent unused OTP for this user and milestone
+    const { desc } = await import('drizzle-orm');
     const otpRecords = await db
       .select()
       .from(paymentOTPs)
@@ -116,7 +122,7 @@ export async function verifyPaymentOTP(userId: string, milestoneId: string, otpC
         eq(paymentOTPs.used, false),
         gte(paymentOTPs.expiresAt, new Date())
       ))
-      .orderBy(paymentOTPs.createdAt)
+      .orderBy(desc(paymentOTPs.createdAt))
       .limit(1);
 
     if (otpRecords.length === 0) {

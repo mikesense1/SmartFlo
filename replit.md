@@ -7,7 +7,12 @@ SmartFlo is a comprehensive freelance escrow platform featuring AI-generated con
 Preferred communication style: Simple, everyday language.
 
 ### Recent Changes (October 2024)
-- **Payment Authorization Management (NEW)**: Enhanced payment methods dashboard with active authorization display, contract-specific authorization tracking, and revoke functionality with confirmation dialogs
+- **Two-Factor Authentication for Payments (NEW)**: Secure 2FA system for milestone payment approvals with cryptographically secure 6-digit OTP codes, email delivery via professional template, 10-minute expiration, brute-force protection (max 3 failed attempts), and complete security event logging
+- **2FA Database Schema**: New payment_otps table storing hashed OTPs with userId, milestoneId, amount, expiresAt, failedAttempts, and usage tracking fields
+- **2FA API Endpoints**: POST /api/milestones/:id/request-otp (generates & sends OTP) and POST /api/milestones/:id/verify-and-approve (verifies OTP & processes payment)
+- **Payment Verification Email**: Professional HTML email template (PaymentVerification.tsx) with security notices, expiration warnings, and contract/milestone details
+- **OTP Security**: Uses crypto.randomInt() for secure random generation, bcrypt hashing for storage, sorts by createdAt DESC to verify most recent code, automatic cleanup of expired OTPs
+- **Payment Authorization Management**: Enhanced payment methods dashboard with active authorization display, contract-specific authorization tracking, and revoke functionality with confirmation dialogs
 - **Authorization Status Display**: Prominent authorization status cards in milestone views with three states (Active/Revoked/Not Configured) using color-coded badges (green/red/orange) for instant visual feedback
 - **Authorization Monitoring Service**: Automated monitoring for card expiration (30-day warnings), auto-deactivation of expired cards, and tracking of inactive authorizations for active contracts
 - **Milestone Gating Logic**: Enhanced milestone submission controls that check authorization validity including expiration date verification, blocking submissions for expired/revoked authorizations with clear warning messages

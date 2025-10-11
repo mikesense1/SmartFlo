@@ -4,6 +4,7 @@ import PaymentAuthorized from '../emails/PaymentAuthorized';
 import PaymentPending from '../emails/PaymentPending';
 import PaymentProcessed from '../emails/PaymentProcessed';
 import AuthorizationRevoked from '../emails/AuthorizationRevoked';
+import PaymentVerificationEmail from '../emails/PaymentVerification';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -65,6 +66,16 @@ interface AuthorizationRevokedData {
   contractId: string;
   remainingBalance?: string;
   reason?: string;
+}
+
+interface PaymentVerificationData {
+  clientName: string;
+  clientEmail: string;
+  verificationCode: string;
+  amount: string;
+  milestoneTitle: string;
+  contractTitle: string;
+  expiresInMinutes?: number;
 }
 
 export class EmailService {
@@ -325,6 +336,51 @@ export class EmailService {
       return { success: true, messageId: result.data?.id };
     } catch (error) {
       console.error('Error sending authorization revoked email:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  /**
+   * Send payment verification code (2FA)
+   */
+  async sendPaymentVerification(data: PaymentVerificationData): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      if (!resend) {
+        console.log('[Email] Resend not configured, displaying code in console');
+        console.log(`[2FA] Verification code for ${data.clientEmail}: ${data.verificationCode}`);
+        return { success: true, messageId: 'console-only' };
+      }
+      
+      const result = await resend.emails.send({
+        from: this.createFromAddress(),
+        to: [this.createToAddress(data.clientEmail, data.clientName)],
+        subject: `🔐 Payment Verification Code: ${data.verificationCode}`,
+        react: PaymentVerificationEmail({
+          clientName: data.clientName,
+          verificationCode: data.verificationCode,
+          amount: data.amount,
+          milestoneTitle: data.milestoneTitle,
+          contractTitle: data.contractTitle,
+          expiresInMinutes: data.expiresInMinutes || 10
+        }),
+        headers: {
+          'X-SmartFlo-Email-Type': 'payment-verification',
+          'X-Priority': '1'
+        },
+        tags: [
+          { name: 'type', value: 'payment-verification' },
+          { name: 'client', value: data.clientEmail }
+        ]
+      });
+
+      if (result.error) {
+        console.error('Failed to send payment verification email:', result.error);
+        return { success: false, error: result.error.message };
+      }
+
+      return { success: true, messageId: result.data?.id };
+    } catch (error) {
+      console.error('Error sending payment verification email:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
