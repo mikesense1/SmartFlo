@@ -7,11 +7,15 @@ SmartFlo is a comprehensive freelance escrow platform featuring AI-generated con
 Preferred communication style: Simple, everyday language.
 
 ### Recent Changes (October 2024)
-- **Two-Factor Authentication for Payments (NEW)**: Secure 2FA system for milestone payment approvals with cryptographically secure 6-digit OTP codes, email delivery via professional template, 10-minute expiration, brute-force protection (max 3 failed attempts), and complete security event logging
-- **2FA Database Schema**: New payment_otps table storing hashed OTPs with userId, milestoneId, amount, expiresAt, failedAttempts, and usage tracking fields
+- **Smart 2FA System (ENHANCED)**: Intelligent 2FA with context-aware triggers, trusted device tracking, and unusual activity detection. System automatically determines when 2FA is required based on amount thresholds, first payment status, user preferences, and risk patterns
+- **2FA User Experience Optimization**: Streamlined UI with resend code (60s cooldown), backup code support, auto-verify on code entry, and real-time validation feedback
+- **2FA Database Schema**: Extended with user_security_settings (preferences, thresholds), trusted_devices (device tracking), tfa_analytics (usage monitoring), and payment_otps tables
+- **Smart 2FA Triggers**: Amount-based ($100+ default), first payment detection, unusual activity patterns (late night, rapid payments, new IPs), trusted device bypass, and user-configurable always-2FA mode
+- **Batch Milestone Approval**: Single OTP verification for approving multiple milestones simultaneously with consolidated amount calculation
+- **2FA Analytics & Monitoring**: Comprehensive event tracking (sent, success, failed, skipped) with risk scoring, completion time metrics, and security dashboard integration
 - **2FA API Endpoints**: POST /api/milestones/:id/request-otp (generates & sends OTP) and POST /api/milestones/:id/verify-and-approve (verifies OTP & processes payment)
-- **Payment Verification Email**: Professional HTML email template (PaymentVerification.tsx) with security notices, expiration warnings, and contract/milestone details
-- **OTP Security**: Uses crypto.randomInt() for secure random generation, bcrypt hashing for storage, sorts by createdAt DESC to verify most recent code, automatic cleanup of expired OTPs
+- **Payment Verification Email**: Professional HTML email template with security notices, expiration warnings, and contract/milestone details
+- **OTP Security**: Cryptographically secure random generation (crypto.randomInt), bcrypt hashing, DESC ordering for recent code verification, automatic cleanup of expired OTPs
 - **Payment Authorization Management**: Enhanced payment methods dashboard with active authorization display, contract-specific authorization tracking, and revoke functionality with confirmation dialogs
 - **Authorization Status Display**: Prominent authorization status cards in milestone views with three states (Active/Revoked/Not Configured) using color-coded badges (green/red/orange) for instant visual feedback
 - **Authorization Monitoring Service**: Automated monitoring for card expiration (30-day warnings), auto-deactivation of expired cards, and tracking of inactive authorizations for active contracts
