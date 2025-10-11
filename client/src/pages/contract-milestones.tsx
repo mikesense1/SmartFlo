@@ -167,6 +167,9 @@ export default function ContractMilestones() {
     }
   };
 
+  const hasActiveAuthorization = authorization && authorization.isActive && !authorization.expiresAt;
+  const authorizationExpired = authorization && !authorization.isActive;
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -182,40 +185,87 @@ export default function ContractMilestones() {
         </Button>
       </div>
 
-      {/* Payment Authorization Status */}
-      <Card>
+      {/* Payment Authorization Status - Enhanced */}
+      <Card className={hasActiveAuthorization ? "border-green-200 bg-green-50/30" : "border-orange-200 bg-orange-50/30"}>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-blue-600" />
-              Payment Authorization Status
-            </CardTitle>
+            <div className="flex items-center gap-3">
+              <CardTitle className="flex items-center gap-2">
+                <Shield className={`h-5 w-5 ${hasActiveAuthorization ? 'text-green-600' : 'text-orange-600'}`} />
+                Payment Authorization
+              </CardTitle>
+              {hasActiveAuthorization ? (
+                <Badge className="bg-green-100 text-green-800 border-green-300">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Active
+                </Badge>
+              ) : authorizationExpired ? (
+                <Badge variant="destructive">
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  Revoked
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="border-orange-500 text-orange-700">
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  Not Configured
+                </Badge>
+              )}
+            </div>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/dashboard/payment-methods">Manage Payment Methods</Link>
+              <Link href="/dashboard/payment-methods">Manage</Link>
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {authorization && authorization.isActive ? (
-            <div className="space-y-3">
-              {formatPaymentMethodDisplay()}
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <span>Max per milestone: {formatCurrency(parseInt(authorization.maxPerMilestone))}</span>
-                <span>Total authorized: {formatCurrency(parseInt(authorization.totalAuthorized))}</span>
-                <span>Authorized: {new Date(authorization.authorizedAt).toLocaleDateString()}</span>
+          {hasActiveAuthorization ? (
+            <div className="space-y-4">
+              <div className="p-3 bg-white rounded-lg border border-green-200">
+                {formatPaymentMethodDisplay()}
               </div>
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/dashboard/payment-methods">Change Payment Method</Link>
-              </Button>
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-600">Max Per Milestone</span>
+                  <div className="font-semibold text-lg">{formatCurrency(parseInt(authorization.maxPerMilestone))}</div>
+                </div>
+                <div>
+                  <span className="text-gray-600">Total Authorized</span>
+                  <div className="font-semibold text-lg">{formatCurrency(parseInt(authorization.totalAuthorized))}</div>
+                </div>
+                <div>
+                  <span className="text-gray-600">Authorized On</span>
+                  <div className="font-semibold text-lg">{new Date(authorization.authorizedAt).toLocaleDateString()}</div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/dashboard/payment-methods">
+                    Change Payment Method
+                  </Link>
+                </Button>
+              </div>
             </div>
-          ) : (
-            <Alert>
+          ) : authorizationExpired ? (
+            <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                Payment authorization required before milestone work can begin. 
-                <Button variant="link" className="p-0 h-auto ml-2" asChild>
-                  <Link href={`/contracts/${contract?.id}/authorize-payment`}>Set up payment method</Link>
-                </Button>
+                <strong>Payment authorization has been revoked.</strong> Work cannot continue until payment method is reauthorized.
+                <div className="mt-2">
+                  <Button variant="destructive" size="sm" asChild>
+                    <Link href="/dashboard/payment-methods">Reauthorize Payment</Link>
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert className="border-orange-200">
+              <AlertTriangle className="h-4 w-4 text-orange-600" />
+              <AlertDescription className="text-orange-800">
+                <strong>Action Required:</strong> Payment method not configured. Client must authorize payment before milestone work can begin.
+                <div className="mt-2">
+                  <Button variant="outline" size="sm" className="border-orange-500 text-orange-700 hover:bg-orange-100" asChild>
+                    <Link href="/dashboard/payment-methods">Set Up Payment Method</Link>
+                  </Button>
+                </div>
               </AlertDescription>
             </Alert>
           )}
