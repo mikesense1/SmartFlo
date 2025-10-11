@@ -129,10 +129,12 @@ export const paymentAuthorizations = pgTable("payment_authorizations", {
   authorizationMessage: text("authorization_message"),
   maxPerMilestone: decimal("max_per_milestone").notNull(),
   totalAuthorized: decimal("total_authorized").notNull(),
+  totalCharged: decimal("total_charged").notNull().default("0"), // Track actual charges
   termsVersion: text("terms_version").notNull().default("1.0"),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   isActive: boolean("is_active").notNull().default(true),
+  lastUsedAt: timestamp("last_used_at"), // Track when authorization was last used
   authorizedAt: timestamp("authorized_at").defaultNow(),
   revokedAt: timestamp("revoked_at"),
 });
@@ -328,3 +330,62 @@ export const insertTFAAnalyticsSchema = createInsertSchema(tfaAnalytics).omit({
   createdAt: true,
 });
 export type InsertTFAAnalytics = z.infer<typeof insertTFAAnalyticsSchema>;
+
+// Audit logs for comprehensive compliance tracking
+export const auditLogs = pgTable("audit_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id),
+  eventType: text("event_type").notNull(), // 'authorization_created', 'payment_attempt', 'payment_success', 'payment_failed', 'dispute_opened', etc.
+  entityType: text("entity_type").notNull(), // 'authorization', 'payment', 'milestone', 'dispute', etc.
+  entityId: text("entity_id").notNull(), // ID of the entity affected
+  action: text("action").notNull(), // Human-readable action description
+  details: jsonb("details"), // Additional event details
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  severity: text("severity").notNull().default("info"), // 'info', 'warning', 'error', 'critical'
+  complianceRelevant: boolean("compliance_relevant").notNull().default(false),
+  retentionYears: decimal("retention_years").notNull().default("7"), // Default 7 years for financial records
+  eventHash: text("event_hash"), // Cryptographic hash for integrity verification
+  timestamp: timestamp("timestamp").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type SelectAuditLog = typeof auditLogs.$inferSelect;
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  timestamp: true,
+  createdAt: true,
+});
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+
+// Disputes table for handling payment disputes
+export const disputes = pgTable("disputes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contractId: uuid("contract_id").notNull().references(() => contracts.id),
+  milestoneId: uuid("milestone_id").references(() => milestones.id),
+  paymentId: uuid("payment_id").references(() => payments.id),
+  disputedBy: uuid("disputed_by").notNull().references(() => users.id),
+  reason: text("reason").notNull(),
+  description: text("description").notNull(),
+  amount: decimal("amount").notNull(),
+  status: text("status").notNull().default("open"), // 'open', 'under_review', 'resolved', 'closed'
+  resolution: text("resolution"), // 'refunded', 'rejected', 'partial_refund'
+  resolutionDetails: text("resolution_details"),
+  resolvedBy: uuid("resolved_by").references(() => users.id),
+  refundAmount: decimal("refund_amount"),
+  stripeDisputeId: text("stripe_dispute_id"),
+  evidenceUrl: text("evidence_url"),
+  openedAt: timestamp("opened_at").defaultNow(),
+  deadline: timestamp("deadline").notNull(), // 48 hours from openedAt
+  resolvedAt: timestamp("resolved_at"),
+  closedAt: timestamp("closed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type SelectDispute = typeof disputes.$inferSelect;
+export const insertDisputeSchema = createInsertSchema(disputes).omit({
+  id: true,
+  openedAt: true,
+  createdAt: true,
+});
+export type InsertDispute = z.infer<typeof insertDisputeSchema>;
