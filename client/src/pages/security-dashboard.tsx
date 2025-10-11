@@ -94,6 +94,36 @@ export default function SecurityDashboard() {
     }
   });
 
+  // 2FA Analytics
+  const { data: tfaAnalytics } = useQuery({
+    queryKey: ['2fa-analytics', timeframe],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/security/2fa-analytics?timeframe=${timeframe}&limit=100`);
+      if (!response.ok) throw new Error('Failed to fetch 2FA analytics');
+      return response.json();
+    }
+  });
+
+  // Failed 2FA Attempts
+  const { data: failedAttempts } = useQuery({
+    queryKey: ['failed-attempts', timeframe],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/security/failed-attempts?timeframe=${timeframe}`);
+      if (!response.ok) throw new Error('Failed to fetch failed attempts');
+      return response.json();
+    }
+  });
+
+  // Device Changes
+  const { data: deviceChanges } = useQuery({
+    queryKey: ['device-changes'],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/security/device-changes");
+      if (!response.ok) throw new Error('Failed to fetch device changes');
+      return response.json();
+    }
+  });
+
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'critical': return 'bg-red-100 text-red-800 border-red-200';
@@ -275,9 +305,10 @@ export default function SecurityDashboard() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="2fa">2FA Analytics</TabsTrigger>
             <TabsTrigger value="alerts">Security Alerts</TabsTrigger>
             <TabsTrigger value="events">Recent Events</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="devices">Device Tracking</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -456,6 +487,164 @@ export default function SecurityDashboard() {
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="2fa" className="space-y-6">
+            {/* 2FA Analytics Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-sm text-slate-600 mb-2">Total 2FA Events</div>
+                  <div className="text-3xl font-bold">{tfaAnalytics?.total || 0}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-sm text-slate-600 mb-2">Success Rate</div>
+                  <div className="text-3xl font-bold text-green-600">
+                    {tfaAnalytics && tfaAnalytics.total > 0 
+                      ? Math.round((tfaAnalytics.successful / tfaAnalytics.total) * 100) 
+                      : 0}%
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-sm text-slate-600 mb-2">Avg Completion Time</div>
+                  <div className="text-3xl font-bold">
+                    {tfaAnalytics?.avgCompletionTime 
+                      ? `${(tfaAnalytics.avgCompletionTime / 1000).toFixed(1)}s`
+                      : 'N/A'}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Failed Attempts by User */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Failed 2FA Attempts</CardTitle>
+                <CardDescription>Users with multiple failed verification attempts</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {failedAttempts && failedAttempts.length > 0 ? (
+                  <div className="space-y-3">
+                    {failedAttempts.map((userAttempts: any) => (
+                      <div key={userAttempts.userId} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <div className="font-medium">User ID: {userAttempts.userId.substring(0, 8)}...</div>
+                          <div className="text-sm text-slate-500">
+                            {userAttempts.count} failed attempts
+                          </div>
+                        </div>
+                        <Badge variant={userAttempts.count >= 3 ? "destructive" : "secondary"}>
+                          {userAttempts.count >= 3 ? 'High Risk' : 'Moderate'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-500">
+                    <Shield className="w-12 h-12 mx-auto mb-4 text-green-300" />
+                    <p>No failed attempts detected</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* 2FA Events Timeline */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent 2FA Events</CardTitle>
+                <CardDescription>Timeline of verification attempts and outcomes</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {tfaAnalytics?.events && tfaAnalytics.events.length > 0 ? (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {tfaAnalytics.events.slice(0, 20).map((event: any) => (
+                      <div key={event.id} className="flex items-center justify-between p-3 border-l-4 pl-4"
+                        style={{ borderLeftColor: 
+                          event.eventType === '2fa_success' ? '#10b981' : 
+                          event.eventType === '2fa_failed' ? '#ef4444' : '#6b7280'
+                        }}>
+                        <div className="flex items-center gap-3">
+                          {getEventTypeIcon(event.eventType)}
+                          <div>
+                            <div className="font-medium text-sm">
+                              {event.eventType === '2fa_success' ? 'Verification Successful' :
+                               event.eventType === '2fa_failed' ? 'Verification Failed' :
+                               event.eventType === '2fa_skipped' ? 'Verification Skipped' : 
+                               event.eventType}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {event.reason && `Reason: ${event.reason}`}
+                              {event.amount && ` • Amount: $${(Number(event.amount) / 100).toFixed(2)}`}
+                            </div>
+                            <div className="text-xs text-slate-400">
+                              {new Date(event.createdAt).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                        <Badge variant={
+                          event.eventType === '2fa_success' ? 'default' : 
+                          event.eventType === '2fa_failed' ? 'destructive' : 'secondary'
+                        }>
+                          {event.method || 'email'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-500">
+                    <Clock className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                    <p>No 2FA events found</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="devices" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Device Tracking</CardTitle>
+                <CardDescription>Monitor devices used for payment approvals</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {deviceChanges && deviceChanges.length > 0 ? (
+                  <div className="space-y-3">
+                    {deviceChanges.map((device: any) => (
+                      <div key={device.id} className="p-4 border rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Smartphone className="w-5 h-5 text-blue-500" />
+                            <div>
+                              <div className="font-medium">
+                                {device.deviceName || device.deviceType || 'Unknown Device'}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                IP: {device.ipAddress || 'Unknown'}
+                              </div>
+                              <div className="text-xs text-slate-400">
+                                Last used: {new Date(device.lastUsedAt).toLocaleString()}
+                              </div>
+                            </div>
+                          </div>
+                          <Badge variant={device.isTrusted ? 'default' : 'secondary'}>
+                            {device.isTrusted ? 'Trusted' : 'Not Trusted'}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-500">
+                    <Smartphone className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                    <p>No devices tracked yet</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">

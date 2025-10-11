@@ -2057,6 +2057,177 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 2FA Security Monitoring endpoints
+  app.get("/api/security/2fa-analytics", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { db } = await import("@db");
+        const { tfaAnalytics } = await import("@shared/schema");
+        const { desc, eq, gte } = await import("drizzle-orm");
+        
+        const userId = (req as any).session?.userId;
+        const { timeframe = 'week', limit = 100 } = req.query;
+        
+        // Calculate date range
+        const now = new Date();
+        const startDate = new Date();
+        if (timeframe === 'day') startDate.setDate(now.getDate() - 1);
+        else if (timeframe === 'week') startDate.setDate(now.getDate() - 7);
+        else if (timeframe === 'month') startDate.setMonth(now.getMonth() - 1);
+        
+        // Get analytics data
+        const analytics = await db.query.tfaAnalytics.findMany({
+          where: eq(tfaAnalytics.userId, userId),
+          orderBy: desc(tfaAnalytics.createdAt),
+          limit: parseInt(limit as string)
+        });
+        
+        // Calculate metrics
+        const metrics = {
+          total: analytics.length,
+          successful: analytics.filter(a => a.eventType === '2fa_success').length,
+          failed: analytics.filter(a => a.eventType === '2fa_failed').length,
+          skipped: analytics.filter(a => a.eventType === '2fa_skipped').length,
+          avgCompletionTime: analytics
+            .filter(a => a.timeToComplete)
+            .reduce((sum, a) => sum + Number(a.timeToComplete || 0), 0) / analytics.filter(a => a.timeToComplete).length || 0,
+          events: analytics
+        };
+        
+        res.json(metrics);
+      });
+    } catch (error: any) {
+      console.error("Error getting 2FA analytics:", error);
+      res.status(500).json({ error: "Failed to get 2FA analytics" });
+    }
+  });
+  
+  app.get("/api/security/failed-attempts", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { db } = await import("@db");
+        const { paymentOTPs, tfaAnalytics, users } = await import("@shared/schema");
+        const { desc, eq, gte, sql } = await import("drizzle-orm");
+        
+        const { timeframe = 'week' } = req.query;
+        
+        // Calculate date range
+        const now = new Date();
+        const startDate = new Date();
+        if (timeframe === 'day') startDate.setDate(now.getDate() - 1);
+        else if (timeframe === 'week') startDate.setDate(now.getDate() - 7);
+        else if (timeframe === 'month') startDate.setMonth(now.getMonth() - 1);
+        
+        // Get failed attempts grouped by user
+        const failedAttempts = await db.query.tfaAnalytics.findMany({
+          where: eq(tfaAnalytics.eventType, '2fa_failed'),
+          orderBy: desc(tfaAnalytics.createdAt),
+          limit: 100
+        });
+        
+        // Group by user
+        const attemptsByUser = failedAttempts.reduce((acc: any, attempt) => {
+          const key = attempt.userId;
+          if (!acc[key]) {
+            acc[key] = {
+              userId: attempt.userId,
+              attempts: [],
+              count: 0
+            };
+          }
+          acc[key].attempts.push(attempt);
+          acc[key].count++;
+          return acc;
+        }, {});
+        
+        res.json(Object.values(attemptsByUser));
+      });
+    } catch (error: any) {
+      console.error("Error getting failed attempts:", error);
+      res.status(500).json({ error: "Failed to get failed attempts" });
+    }
+  });
+  
+  app.get("/api/security/device-changes", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { db } = await import("@db");
+        const { trustedDevices } = await import("@shared/schema");
+        const { desc, eq } = await import("drizzle-orm");
+        
+        const userId = (req as any).session?.userId;
+        
+        // Get device changes
+        const devices = await db.query.trustedDevices.findMany({
+          where: eq(trustedDevices.userId, userId),
+          orderBy: desc(trustedDevices.lastUsedAt),
+          limit: 50
+        });
+        
+        res.json(devices);
+      });
+    } catch (error: any) {
+      console.error("Error getting device changes:", error);
+      res.status(500).json({ error: "Failed to get device changes" });
+    }
+  });
+  
+  app.post("/api/security/send-alert", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { alertType, severity, message, metadata } = req.body;
+        const userId = (req as any).session?.userId;
+        
+        // Get user details
+        const user = await storage.getUser(userId);
+        if (!user) {
+          return res.status(404).json({ error: "User not found" });
+        }
+        
+        // Send alert email based on type
+        const { sendEmail } = await import("./email-service");
+        let subject = "Security Alert";
+        let body = message;
+        
+        if (alertType === 'failed_attempts') {
+          subject = "Security Alert: Multiple Failed Verification Attempts";
+          body = `We detected ${metadata.attempts} failed payment verification attempts on your account. If this wasn't you, please secure your account immediately.`;
+        } else if (alertType === 'new_device') {
+          subject = "Security Alert: Payment Approved from New Device";
+          body = `A payment was approved from a new device (${metadata.deviceType || 'Unknown'}). IP: ${metadata.ipAddress}. If this wasn't you, please contact support immediately.`;
+        } else if (alertType === 'unusual_payment') {
+          subject = "Security Alert: Unusual Payment Pattern Detected";
+          body = `We detected unusual payment activity on your account. ${message}`;
+        }
+        
+        await sendEmail(user.email, subject, body);
+        
+        // Log the alert
+        await storage.createActivity({
+          contractId: 'security-alerts',
+          action: `alert_${alertType}`,
+          actorEmail: `user_${userId}`,
+          details: JSON.stringify({
+            alertType,
+            severity,
+            message,
+            metadata,
+            timestamp: new Date().toISOString()
+          })
+        });
+        
+        res.json({ success: true, message: "Alert sent successfully" });
+      });
+    } catch (error: any) {
+      console.error("Error sending security alert:", error);
+      res.status(500).json({ error: "Failed to send security alert" });
+    }
+  });
+
   // Compliance and audit endpoints
   app.get("/api/compliance/pci-status", async (req, res) => {
     try {
