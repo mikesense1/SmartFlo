@@ -77,7 +77,7 @@ export default function PaymentPending({
                 <strong>Milestone:</strong> {milestoneTitle}
               </Text>
               <Text style={detail}>
-                <strong>Amount:</strong> <span style={amount}>{amount}</span>
+                <strong>Amount:</strong> <span style={amountStyle}>{amount}</span>
               </Text>
               <Text style={detail}>
                 <strong>Payment Method:</strong> {paymentMethod}
@@ -286,7 +286,7 @@ const detail = {
   margin: "8px 0",
 };
 
-const amount = {
+const amountStyle = {
   color: "#dc2626",
   fontWeight: "bold",
   fontSize: "18px",
