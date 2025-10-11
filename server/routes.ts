@@ -2365,6 +2365,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/compliance/failed-payments", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { timeframe = 'month' } = req.query;
+        const { AuditLogger } = await import('./lib/audit/audit-logger');
+        const auditLogger = AuditLogger.getInstance();
+        
+        // Calculate date range
+        const endDate = new Date();
+        const startDate = new Date();
+        
+        switch (timeframe) {
+          case 'quarter':
+            startDate.setMonth(startDate.getMonth() - 3);
+            break;
+          case 'year':
+            startDate.setFullYear(startDate.getFullYear() - 1);
+            break;
+          default:
+            startDate.setMonth(startDate.getMonth() - 1);
+        }
+        
+        // Get audit trail for failed payments
+        const failedPayments = await auditLogger.getAuditTrail('', {
+          eventType: 'payment_failed',
+          startDate,
+          endDate,
+          limit: 100
+        });
+        
+        // Format failed payments for frontend
+        const formattedPayments = failedPayments.map(event => ({
+          id: event.id || crypto.randomUUID(),
+          contractId: event.details.contractId || '',
+          amount: event.details.amount || 0,
+          reason: event.details.reason || event.details.error || 'Unknown error',
+          timestamp: event.timestamp,
+          clientEmail: event.details.clientEmail || 'Unknown'
+        }));
+        
+        res.json(formattedPayments);
+      });
+    } catch (error: any) {
+      console.error("Error getting failed payments:", error);
+      res.status(500).json({ error: "Failed to get failed payments" });
+    }
+  });
+
+  app.get("/api/compliance/revenue-by-state", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { timeframe = 'month' } = req.query;
+        const { ComplianceManager } = await import('./lib/compliance/compliance-manager');
+        const complianceManager = ComplianceManager.getInstance();
+        
+        // Calculate date range
+        const endDate = new Date();
+        const startDate = new Date();
+        
+        switch (timeframe) {
+          case 'quarter':
+            startDate.setMonth(startDate.getMonth() - 3);
+            break;
+          case 'year':
+            startDate.setFullYear(startDate.getFullYear() - 1);
+            break;
+          default:
+            startDate.setMonth(startDate.getMonth() - 1);
+        }
+        
+        const revenueByState = await complianceManager.getRevenueByState(startDate, endDate);
+        
+        // Format for frontend
+        const formattedRevenue = revenueByState.map(state => ({
+          state: state.state,
+          revenue: state.revenue,
+          transactions: state.transactionCount
+        }));
+        
+        res.json(formattedRevenue);
+      });
+    } catch (error: any) {
+      console.error("Error getting revenue by state:", error);
+      res.status(500).json({ error: "Failed to get revenue by state" });
+    }
+  });
+
+  app.get("/api/compliance/authorization-metrics", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { timeframe = 'month' } = req.query;
+        const { ComplianceManager } = await import('./lib/compliance/compliance-manager');
+        const complianceManager = ComplianceManager.getInstance();
+        
+        const authorizations = await complianceManager.getAuthorizationRecords();
+        
+        // Calculate metrics
+        const activeAuths = authorizations.filter(a => a.status === 'active');
+        const revokedAuths = authorizations.filter(a => a.status === 'revoked');
+        const expiredAuths = authorizations.filter(a => a.status === 'expired');
+        
+        const totalAuthorized = authorizations.reduce((sum, a) => sum + a.totalAuthorized, 0);
+        const totalCharged = authorizations.reduce((sum, a) => sum + a.totalCharged, 0);
+        const utilizationRate = totalAuthorized > 0 ? (totalCharged / totalAuthorized) * 100 : 0;
+        
+        res.json({
+          totalAuthorizations: authorizations.length,
+          activeAuthorizations: activeAuths.length,
+          revokedAuthorizations: revokedAuths.length,
+          expiredAuthorizations: expiredAuths.length,
+          totalAuthorized,
+          totalCharged,
+          utilizationRate
+        });
+      });
+    } catch (error: any) {
+      console.error("Error getting authorization metrics:", error);
+      res.status(500).json({ error: "Failed to get authorization metrics" });
+    }
+  });
+
   app.post("/api/compliance/export-report", async (req, res) => {
     try {
       const { requireAuth } = await import("./auth");
