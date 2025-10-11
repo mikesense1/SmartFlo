@@ -26,6 +26,9 @@ import NotFound from "@/pages/not-found";
 import ContractSign from "@/pages/contract-sign";
 import ContractMilestones from "@/pages/contract-milestones";
 import PaymentMethods from "@/pages/payment-methods";
+import MilestoneApproval from "@/pages/milestone-approval";
+import SecurityDashboard from "@/pages/security-dashboard";
+import ComplianceDashboard from "@/pages/compliance-dashboard";
 
 function Router() {
   return (
@@ -53,9 +56,9 @@ function Router() {
       <Route path="/contracts/:shareToken/sign" component={ContractSign} />
       <Route path="/dashboard/contracts/:id/milestones" component={ContractMilestones} />
       <Route path="/dashboard/payment-methods" component={PaymentMethods} />
-      <Route path="/dashboard/security" component={() => import("./pages/security-dashboard")} />
-      <Route path="/dashboard/compliance" component={() => import("./pages/compliance-dashboard")} />
-      <Route path="/milestone-approval/:id" component={() => import("./pages/milestone-approval")} />
+      <Route path="/dashboard/security" component={SecurityDashboard} />
+      <Route path="/dashboard/compliance" component={ComplianceDashboard} />
+      <Route path="/milestone-approval/:id" component={MilestoneApproval} />
       <Route component={NotFound} />
     </Switch>
   );
