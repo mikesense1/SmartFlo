@@ -239,3 +239,26 @@ export type InsertPaymentAuthorization = z.infer<typeof insertPaymentAuthorizati
 export type PaymentAuthorization = typeof paymentAuthorizations.$inferSelect;
 export type InsertContractShare = z.infer<typeof insertContractShareSchema>;
 export type ContractShare = typeof contractShares.$inferSelect;
+
+// Payment OTP (2FA) table for secure milestone approvals
+export const paymentOTPs = pgTable("payment_otps", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  milestoneId: uuid("milestone_id").references(() => milestones.id),
+  code: text("code").notNull(), // Hashed OTP code
+  amount: decimal("amount").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").notNull().default(false),
+  usedAt: timestamp("used_at"),
+  failedAttempts: decimal("failed_attempts").notNull().default("0"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type SelectPaymentOTP = typeof paymentOTPs.$inferSelect;
+export const insertPaymentOTPSchema = createInsertSchema(paymentOTPs).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertPaymentOTP = z.infer<typeof insertPaymentOTPSchema>;
