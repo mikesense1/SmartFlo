@@ -262,3 +262,69 @@ export const insertPaymentOTPSchema = createInsertSchema(paymentOTPs).omit({
   createdAt: true,
 });
 export type InsertPaymentOTP = z.infer<typeof insertPaymentOTPSchema>;
+
+// User security settings for smart 2FA
+export const userSecuritySettings = pgTable("user_security_settings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().unique().references(() => users.id),
+  always2FA: boolean("always_2fa").notNull().default(false),
+  tfaThreshold: decimal("tfa_threshold").notNull().default("10000"), // in cents, default $100
+  enabledMethods: text("enabled_methods").array().notNull().default(["email"]), // 'email', 'sms', 'authenticator'
+  backupCodes: text("backup_codes").array(), // Hashed backup codes
+  trustedDevicesEnabled: boolean("trusted_devices_enabled").notNull().default(true),
+  sessionTimeout: decimal("session_timeout").notNull().default("30"), // minutes
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type SelectUserSecuritySettings = typeof userSecuritySettings.$inferSelect;
+export const insertUserSecuritySettingsSchema = createInsertSchema(userSecuritySettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertUserSecuritySettings = z.infer<typeof insertUserSecuritySettingsSchema>;
+
+// Trusted devices for smart 2FA
+export const trustedDevices = pgTable("trusted_devices", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  deviceId: text("device_id").notNull(), // Browser fingerprint or device identifier
+  deviceName: text("device_name"),
+  deviceType: text("device_type"), // 'desktop', 'mobile', 'tablet'
+  userAgent: text("user_agent"),
+  ipAddress: text("ip_address"),
+  lastUsedAt: timestamp("last_used_at").defaultNow(),
+  isTrusted: boolean("is_trusted").notNull().default(false),
+  trustedAt: timestamp("trusted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type SelectTrustedDevice = typeof trustedDevices.$inferSelect;
+export const insertTrustedDeviceSchema = createInsertSchema(trustedDevices).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTrustedDevice = z.infer<typeof insertTrustedDeviceSchema>;
+
+// 2FA analytics for monitoring and optimization
+export const tfaAnalytics = pgTable("tfa_analytics", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  milestoneId: uuid("milestone_id").references(() => milestones.id),
+  eventType: text("event_type").notNull(), // '2fa_sent', '2fa_success', '2fa_failed', '2fa_skipped'
+  method: text("method").notNull(), // 'email', 'sms', 'authenticator', 'backup_code'
+  amount: decimal("amount"),
+  timeToComplete: decimal("time_to_complete"), // milliseconds
+  deviceId: text("device_id"),
+  ipAddress: text("ip_address"),
+  reason: text("reason"), // Why 2FA was triggered or skipped
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type SelectTFAAnalytics = typeof tfaAnalytics.$inferSelect;
+export const insertTFAAnalyticsSchema = createInsertSchema(tfaAnalytics).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTFAAnalytics = z.infer<typeof insertTFAAnalyticsSchema>;
