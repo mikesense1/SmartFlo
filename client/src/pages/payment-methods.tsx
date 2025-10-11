@@ -55,10 +55,27 @@ interface PaymentMethod {
   isExpired: boolean;
 }
 
+interface PaymentAuthorization {
+  id: string;
+  contractId: string;
+  contractTitle: string;
+  contractStatus: string;
+  paymentMethod: "stripe" | "usdc";
+  maxPerMilestone: string;
+  totalAuthorized: string;
+  authorizedAt: string;
+  isActive: boolean;
+  revokedAt?: string;
+  milestoneCount: number;
+  completedMilestones: number;
+}
+
 export default function PaymentMethodsPage() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
+  const [revokeConfirmOpen, setRevokeConfirmOpen] = useState(false);
+  const [selectedAuth, setSelectedAuth] = useState<PaymentAuthorization | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -69,6 +86,12 @@ export default function PaymentMethodsPage() {
   const { data: expiringMethods = [] } = useQuery<PaymentMethod[]>({
     queryKey: ["/api/payment-methods/expiring"],
   });
+
+  const { data: authorizationsData, isLoading: authLoading } = useQuery<{ authorizations: PaymentAuthorization[] }>({
+    queryKey: ["/api/payment/authorizations"],
+  });
+
+  const authorizations = authorizationsData?.authorizations || [];
 
   const updateMethodMutation = useMutation({
     mutationFn: (data: { id: string; updates: any }) =>
@@ -102,6 +125,28 @@ export default function PaymentMethodsPage() {
       toast({
         title: "Removal Failed",
         description: error.message || "Failed to remove payment method.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const revokeAuthorizationMutation = useMutation({
+    mutationFn: (data: { authorizationId: string; reason: string }) =>
+      apiRequest("POST", "/api/payment/revoke-authorization", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/payment/authorizations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payment-methods"] });
+      toast({
+        title: "Authorization Revoked",
+        description: "Payment authorization has been revoked successfully.",
+      });
+      setRevokeConfirmOpen(false);
+      setSelectedAuth(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Revocation Failed",
+        description: error.message || "Failed to revoke authorization.",
         variant: "destructive",
       });
     },
@@ -177,14 +222,24 @@ export default function PaymentMethodsPage() {
   }
 
   const hasExpiringCards = expiringMethods.length > 0;
+  const activeAuthorizations = authorizations.filter(auth => auth.isActive);
+  const revokedAuthorizations = authorizations.filter(auth => !auth.isActive);
+
+  const handleRevokeAuthorization = () => {
+    if (!selectedAuth) return;
+    revokeAuthorizationMutation.mutate({
+      authorizationId: selectedAuth.id,
+      reason: "Revoked by client via payment methods dashboard"
+    });
+  };
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Payment Methods</h1>
+          <h1 className="text-3xl font-bold">Payment Methods & Authorizations</h1>
           <p className="text-muted-foreground mt-1">
-            Manage your saved payment methods and authorizations
+            Manage your saved payment methods and active contract authorizations
           </p>
         </div>
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
@@ -197,6 +252,86 @@ export default function PaymentMethodsPage() {
           <AddPaymentMethodDialog onClose={() => setAddDialogOpen(false)} />
         </Dialog>
       </div>
+
+      {/* Active Authorizations Section */}
+      {!authLoading && activeAuthorizations.length > 0 && (
+        <Card className="mb-6 border-blue-200 bg-blue-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-blue-600" />
+              Active Payment Authorizations
+            </CardTitle>
+            <CardDescription>
+              You have {activeAuthorizations.length} active authorization{activeAuthorizations.length > 1 ? "s" : ""} for milestone-based payments
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {activeAuthorizations.map((auth) => (
+              <div key={auth.id} className="p-4 bg-white rounded-lg border border-blue-100">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h4 className="font-semibold">{auth.contractTitle}</h4>
+                      <Badge variant="outline" className="border-green-500 text-green-700">
+                        <Check className="h-3 w-3 mr-1" />
+                        Active
+                      </Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                      <div>
+                        <span className="text-muted-foreground">Payment Method:</span>
+                        <div className="font-medium mt-1">
+                          {auth.paymentMethod === 'stripe' ? (
+                            <div className="flex items-center gap-2">
+                              <CreditCard className="h-4 w-4" />
+                              Card/Bank Payment
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Wallet className="h-4 w-4" />
+                              USDC Wallet
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Total Authorized:</span>
+                        <div className="font-medium mt-1">${parseFloat(auth.totalAuthorized).toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Max Per Milestone:</span>
+                        <div className="font-medium mt-1">${parseFloat(auth.maxPerMilestone).toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Milestones:</span>
+                        <div className="font-medium mt-1">{auth.completedMilestones}/{auth.milestoneCount} completed</div>
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                      Authorized on {new Date(auth.authorizedAt).toLocaleDateString()}
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => {
+                      setSelectedAuth(auth);
+                      setRevokeConfirmOpen(true);
+                    }}
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Revoke
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {hasExpiringCards && (
         <Alert className="mb-6 border-orange-200 bg-orange-50">
@@ -329,6 +464,75 @@ export default function PaymentMethodsPage() {
           }}
         />
       )}
+
+      {/* Revoke Authorization Confirmation Dialog */}
+      <Dialog open={revokeConfirmOpen} onOpenChange={setRevokeConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Revoke Payment Authorization?
+            </DialogTitle>
+            <DialogDescription>
+              This will revoke your payment authorization for the contract. You will need to re-authorize if you want to resume work.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedAuth && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="font-medium mb-2">{selectedAuth.contractTitle}</div>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <div>Total Authorized: ${parseFloat(selectedAuth.totalAuthorized).toLocaleString()}</div>
+                  <div>Milestones: {selectedAuth.completedMilestones}/{selectedAuth.milestoneCount} completed</div>
+                </div>
+              </div>
+
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  <strong>Warning:</strong> Revoking this authorization will:
+                  <ul className="list-disc ml-5 mt-2 space-y-1">
+                    <li>Prevent automatic milestone payments</li>
+                    <li>Pause work on this contract</li>
+                    <li>Require you to set up a new payment method to resume</li>
+                  </ul>
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setRevokeConfirmOpen(false);
+                    setSelectedAuth(null);
+                  }}
+                  disabled={revokeAuthorizationMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleRevokeAuthorization}
+                  disabled={revokeAuthorizationMutation.isPending}
+                >
+                  {revokeAuthorizationMutation.isPending ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                      Revoking...
+                    </>
+                  ) : (
+                    <>
+                      <X className="h-4 w-4 mr-2" />
+                      Revoke Authorization
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
