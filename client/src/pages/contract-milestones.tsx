@@ -167,8 +167,13 @@ export default function ContractMilestones() {
     }
   };
 
-  const hasActiveAuthorization = authorization && authorization.isActive && !authorization.expiresAt;
-  const authorizationExpired = authorization && !authorization.isActive;
+  const hasActiveAuthorization = authorization && authorization.isActive && (
+    !authorization.expiresAt || new Date(authorization.expiresAt) > new Date()
+  );
+  const authorizationExpired = authorization && (
+    !authorization.isActive || 
+    (authorization.expiresAt && new Date(authorization.expiresAt) <= new Date())
+  );
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -330,11 +335,13 @@ export default function ContractMilestones() {
                 <div className="flex gap-2">
                   {milestone.status === 'pending' || milestone.status === 'in_progress' ? (
                     <>
-                      {!authorization || !authorization.isActive ? (
+                      {!hasActiveAuthorization ? (
                         <Alert className="flex-1">
                           <AlertTriangle className="h-4 w-4" />
                           <AlertDescription className="text-sm">
-                            Client payment method not configured. Milestone work is paused.
+                            {authorizationExpired 
+                              ? "Payment authorization has expired or been revoked. Milestone work is paused."
+                              : "Client payment method not configured. Milestone work is paused."}
                           </AlertDescription>
                         </Alert>
                       ) : (
