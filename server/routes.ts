@@ -2228,6 +2228,281 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payment Methods Management
+  app.get("/api/payment-methods", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const userId = (req as any).session?.userId;
+        
+        // Get all payment methods for user
+        const paymentMethods = await storage.getPaymentMethodsByUser(userId);
+        
+        // Get contract usage for each payment method
+        const methodsWithContracts = await Promise.all(
+          paymentMethods.map(async (method) => {
+            const contracts = await storage.getContractsUsingPaymentMethod(method.id);
+            
+            // Check if card is expiring (within 30 days) or expired
+            let isExpiring = false;
+            let isExpired = false;
+            
+            if (method.type === 'stripe_card' && method.cardExpMonth && method.cardExpYear) {
+              const expDate = new Date(parseInt(`20${method.cardExpYear}`), parseInt(method.cardExpMonth) - 1);
+              const now = new Date();
+              const thirtyDaysFromNow = new Date();
+              thirtyDaysFromNow.setDate(now.getDate() + 30);
+              
+              isExpired = expDate < now;
+              isExpiring = expDate <= thirtyDaysFromNow && !isExpired;
+            }
+            
+            return {
+              ...method,
+              contractCount: contracts.length,
+              contracts: contracts.map(c => ({
+                contractId: c.id,
+                contractTitle: c.title,
+                totalAuthorized: c.totalValue
+              })),
+              isExpiring,
+              isExpired
+            };
+          })
+        );
+        
+        res.json(methodsWithContracts);
+      });
+    } catch (error: any) {
+      console.error("Error getting payment methods:", error);
+      res.status(500).json({ error: "Failed to get payment methods" });
+    }
+  });
+
+  app.post("/api/payment-methods", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const userId = (req as any).session?.userId;
+        const { type, isDefault, stripePaymentMethodId, walletAddress, walletType } = req.body;
+        
+        // If setting as default, unset other defaults
+        if (isDefault) {
+          await storage.unsetDefaultPaymentMethods(userId);
+        }
+        
+        // Create payment method
+        const paymentMethod = await storage.createPaymentMethod({
+          userId,
+          type,
+          isDefault,
+          stripePaymentMethodId,
+          walletAddress,
+          walletType,
+          isActive: true,
+          expiryNotificationSent: false
+        });
+        
+        // Log in audit trail
+        const { AuditLogger } = await import('./lib/audit/audit-logger');
+        const auditLogger = AuditLogger.getInstance();
+        await auditLogger.logEvent(
+          'payment_method_added',
+          userId,
+          {
+            paymentMethodId: paymentMethod.id,
+            type,
+            isDefault,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent']
+          }
+        );
+        
+        res.json(paymentMethod);
+      });
+    } catch (error: any) {
+      console.error("Error creating payment method:", error);
+      res.status(500).json({ error: "Failed to create payment method" });
+    }
+  });
+
+  app.patch("/api/payment-methods/:id", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const userId = (req as any).session?.userId;
+        const { id } = req.params;
+        const { isDefault, cardExpMonth, cardExpYear, password } = req.body;
+        
+        // Verify payment method belongs to user
+        const existingMethod = await storage.getPaymentMethod(id);
+        if (!existingMethod || existingMethod.userId !== userId) {
+          return res.status(404).json({ error: "Payment method not found" });
+        }
+        
+        // If updating card details, require re-authentication
+        if (cardExpMonth || cardExpYear) {
+          if (!password) {
+            return res.status(400).json({ error: "Re-authentication required" });
+          }
+          
+          // Verify password
+          const user = await storage.getUser(userId);
+          const bcrypt = await import('bcrypt');
+          const isValid = await bcrypt.compare(password, user.password);
+          
+          if (!isValid) {
+            return res.status(401).json({ error: "Invalid password" });
+          }
+        }
+        
+        // If setting as default, unset other defaults
+        if (isDefault) {
+          await storage.unsetDefaultPaymentMethods(userId);
+        }
+        
+        // Update payment method
+        const updates: any = {
+          updatedAt: new Date()
+        };
+        
+        if (isDefault !== undefined) updates.isDefault = isDefault;
+        if (cardExpMonth) updates.cardExpMonth = cardExpMonth;
+        if (cardExpYear) updates.cardExpYear = cardExpYear;
+        if (cardExpMonth || cardExpYear) updates.expiryNotificationSent = false;
+        
+        await storage.updatePaymentMethod(id, updates);
+        
+        // Update all active authorizations using this method
+        const contracts = await storage.getContractsUsingPaymentMethod(id);
+        for (const contract of contracts) {
+          await storage.updateActivity({
+            contractId: contract.id,
+            action: 'payment_method_updated',
+            actorEmail: `user_${userId}`,
+            details: JSON.stringify({
+              paymentMethodId: id,
+              updates: Object.keys(updates),
+              timestamp: new Date().toISOString()
+            })
+          });
+        }
+        
+        // Send confirmation email
+        const user = await storage.getUser(userId);
+        const { sendEmail } = await import('./email-service');
+        await sendEmail(
+          user.email,
+          "Payment Method Updated",
+          `Your payment method has been successfully updated. If you didn't make this change, please contact support immediately.`
+        );
+        
+        // Log in audit trail
+        const { AuditLogger } = await import('./lib/audit/audit-logger');
+        const auditLogger = AuditLogger.getInstance();
+        await auditLogger.logEvent(
+          'payment_method_updated',
+          userId,
+          {
+            paymentMethodId: id,
+            updates,
+            contractsAffected: contracts.length,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent']
+          }
+        );
+        
+        const updatedMethod = await storage.getPaymentMethod(id);
+        res.json(updatedMethod);
+      });
+    } catch (error: any) {
+      console.error("Error updating payment method:", error);
+      res.status(500).json({ error: "Failed to update payment method" });
+    }
+  });
+
+  app.delete("/api/payment-methods/:id", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const userId = (req as any).session?.userId;
+        const { id } = req.params;
+        
+        // Verify payment method belongs to user
+        const existingMethod = await storage.getPaymentMethod(id);
+        if (!existingMethod || existingMethod.userId !== userId) {
+          return res.status(404).json({ error: "Payment method not found" });
+        }
+        
+        // Check if used in active contracts
+        const contracts = await storage.getContractsUsingPaymentMethod(id);
+        const activeContracts = contracts.filter(c => c.status === 'active');
+        
+        if (activeContracts.length > 0) {
+          return res.status(400).json({ 
+            error: "Cannot delete payment method used in active contracts",
+            contractCount: activeContracts.length
+          });
+        }
+        
+        // Mark as inactive instead of deleting
+        await storage.updatePaymentMethod(id, {
+          isActive: false,
+          updatedAt: new Date()
+        });
+        
+        // Log in audit trail
+        const { AuditLogger } = await import('./lib/audit/audit-logger');
+        const auditLogger = AuditLogger.getInstance();
+        await auditLogger.logEvent(
+          'payment_method_removed',
+          userId,
+          {
+            paymentMethodId: id,
+            type: existingMethod.type,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent']
+          }
+        );
+        
+        res.json({ success: true });
+      });
+    } catch (error: any) {
+      console.error("Error deleting payment method:", error);
+      res.status(500).json({ error: "Failed to delete payment method" });
+    }
+  });
+
+  app.post("/api/payment-methods/:id/set-default", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const userId = (req as any).session?.userId;
+        const { id } = req.params;
+        
+        // Verify payment method belongs to user
+        const existingMethod = await storage.getPaymentMethod(id);
+        if (!existingMethod || existingMethod.userId !== userId) {
+          return res.status(404).json({ error: "Payment method not found" });
+        }
+        
+        // Unset other defaults
+        await storage.unsetDefaultPaymentMethods(userId);
+        
+        // Set as default
+        await storage.updatePaymentMethod(id, {
+          isDefault: true,
+          updatedAt: new Date()
+        });
+        
+        res.json({ success: true });
+      });
+    } catch (error: any) {
+      console.error("Error setting default payment method:", error);
+      res.status(500).json({ error: "Failed to set default payment method" });
+    }
+  });
+
   // Compliance and audit endpoints
   app.get("/api/compliance/pci-status", async (req, res) => {
     try {
