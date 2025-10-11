@@ -1,17 +1,15 @@
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
-import { storage } from '../../storage';
-import type { Activity } from '../../../shared/schema';
+import { db } from '../../db';
+import { paymentOTPs, users, milestones } from '@shared/schema';
+import { eq, and, gte, lt } from 'drizzle-orm';
 
-interface PaymentOTP {
-  id: string;
+interface SendOTPOptions {
   userId: string;
-  code: string;
-  amount: number;
   milestoneId: string;
-  expiresAt: string;
-  used: boolean;
-  createdAt: string;
+  amount: number;
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 interface SecurityEvent {
@@ -28,30 +26,38 @@ interface SecurityEvent {
 /**
  * Generate and send OTP for payment approval
  */
-export async function sendPaymentOTP(userId: string, milestoneId: string, amount: number): Promise<{ sent: boolean; expiresAt: string; otpId: string }> {
+export async function sendPaymentOTP(options: SendOTPOptions): Promise<{ sent: boolean; expiresAt: string; otpId: string }> {
+  const { userId, milestoneId, amount, ipAddress, userAgent } = options;
+  
   // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
   const hashedOTP = await bcrypt.hash(otp, 10);
 
-  // Store OTP in database (using activities table as temporary storage)
-  const otpRecord = await storage.createActivity({
-    contractId: milestoneId, // Using contractId field for milestoneId
-    action: 'payment_otp_generated',
-    actorEmail: `user_${userId}`,
-    details: JSON.stringify({
-      hashedCode: hashedOTP,
-      amount,
-      expiresAt: expiresAt.toISOString(),
-      used: false
-    })
-  });
-
   // Get user info for email
-  const user = await storage.getUser(parseInt(userId));
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) {
     throw new Error('User not found');
   }
+
+  // Get milestone info
+  const [milestone] = await db.select().from(milestones).where(eq(milestones.id, milestoneId)).limit(1);
+  if (!milestone) {
+    throw new Error('Milestone not found');
+  }
+
+  // Store OTP in database
+  const [otpRecord] = await db.insert(paymentOTPs).values({
+    userId,
+    milestoneId,
+    code: hashedOTP,
+    amount: amount.toString(),
+    expiresAt,
+    used: false,
+    failedAttempts: "0",
+    ipAddress,
+    userAgent,
+  }).returning();
 
   // Send email with OTP
   try {
@@ -60,14 +66,14 @@ export async function sendPaymentOTP(userId: string, milestoneId: string, amount
     
     // Use the payment pending template for OTP delivery
     await emailService.sendPaymentPending({
-      clientName: user.username,
+      clientName: user.fullName,
       clientEmail: user.email,
       contractTitle: 'Payment Security Verification',
-      milestoneTitle: '2FA Verification Code',
+      milestoneTitle: milestone.title,
       amount: `$${(amount / 100).toFixed(2)}`,
       paymentMethod: 'Security Code',
-      contractId: milestoneId,
-      milestoneId: otpRecord.id,
+      contractId: milestone.contractId,
+      milestoneId: milestoneId,
       chargeDate: 'Verification Required',
       timeRemaining: `Code: ${otp} (expires in 10 minutes)`
     });
@@ -80,6 +86,8 @@ export async function sendPaymentOTP(userId: string, milestoneId: string, amount
       amount,
       timestamp: new Date().toISOString()
     });
+
+    console.log(`[2FA] Generated OTP for ${user.email}: ${otp} (expires in 10 min)`);
 
     return {
       sent: true,
@@ -96,67 +104,59 @@ export async function sendPaymentOTP(userId: string, milestoneId: string, amount
 /**
  * Verify OTP for payment approval
  */
-export async function verifyPaymentOTP(userId: string, milestoneId: string, otpCode: string): Promise<{ valid: boolean; otpId?: string }> {
+export async function verifyPaymentOTP(userId: string, milestoneId: string, otpCode: string): Promise<{ valid: boolean; otpId?: string; error?: string }> {
   try {
-    // Get recent OTP records for this user and milestone
-    const activities = await storage.getActivitiesByContract(milestoneId) || [];
-    
-    // Find the most recent unused OTP for this user
-    const otpRecord = activities
-      .filter(activity => {
-        if (activity.action !== 'payment_otp_generated' || activity.actorEmail !== `user_${userId}`) {
-          return false;
-        }
-        try {
-          const details = typeof activity.details === 'string' ? JSON.parse(activity.details) : activity.details;
-          return details.used === false;
-        } catch {
-          return false;
-        }
-      })
-      .sort((a: any, b: any) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime())[0];
+    // Find the most recent unused OTP for this user and milestone
+    const otpRecords = await db
+      .select()
+      .from(paymentOTPs)
+      .where(and(
+        eq(paymentOTPs.userId, userId),
+        eq(paymentOTPs.milestoneId, milestoneId),
+        eq(paymentOTPs.used, false),
+        gte(paymentOTPs.expiresAt, new Date())
+      ))
+      .orderBy(paymentOTPs.createdAt)
+      .limit(1);
 
-    if (!otpRecord) {
+    if (otpRecords.length === 0) {
       await logSecurityEvent({
         type: 'payment_2fa_failed',
         userId,
         milestoneId,
-        error: 'No valid OTP found',
+        error: 'No valid OTP found or OTP has expired',
         timestamp: new Date().toISOString()
       });
-      return { valid: false };
+      return { valid: false, error: 'No valid OTP found or OTP has expired' };
     }
 
-    // Parse OTP details
-    const otpDetails = typeof otpRecord.details === 'string' ? JSON.parse(otpRecord.details) : otpRecord.details;
+    const otpRecord = otpRecords[0];
 
-    // Check if OTP has expired
-    const expiresAt = new Date(otpDetails.expiresAt);
-    if (new Date() > expiresAt) {
+    // Check if OTP has too many failed attempts
+    const failedAttempts = parseInt(otpRecord.failedAttempts);
+    if (failedAttempts >= 3) {
       await logSecurityEvent({
         type: 'payment_2fa_failed',
         userId,
         milestoneId,
-        error: 'OTP expired',
+        error: 'Too many failed attempts',
         timestamp: new Date().toISOString()
       });
-      return { valid: false };
+      return { valid: false, error: 'Too many failed attempts. Please request a new code.' };
     }
 
     // Verify OTP code
-    const isValid = await bcrypt.compare(otpCode, otpDetails.hashedCode);
+    const isValid = await bcrypt.compare(otpCode, otpRecord.code);
     
     if (isValid) {
       // Mark OTP as used
-      await storage.createActivity({
-        contractId: milestoneId,
-        action: 'payment_otp_used',
-        actorEmail: `user_${userId}`,
-        details: JSON.stringify({
-          otpId: otpRecord.id,
-          usedAt: new Date().toISOString()
+      await db
+        .update(paymentOTPs)
+        .set({
+          used: true,
+          usedAt: new Date()
         })
-      });
+        .where(eq(paymentOTPs.id, otpRecord.id));
 
       await logSecurityEvent({
         type: 'payment_2fa_success',
@@ -167,6 +167,12 @@ export async function verifyPaymentOTP(userId: string, milestoneId: string, otpC
 
       return { valid: true, otpId: otpRecord.id };
     } else {
+      // Increment failed attempts
+      await db
+        .update(paymentOTPs)
+        .set({ failedAttempts: (failedAttempts + 1).toString() })
+        .where(eq(paymentOTPs.id, otpRecord.id));
+
       await logSecurityEvent({
         type: 'payment_2fa_failed',
         userId,
@@ -175,7 +181,7 @@ export async function verifyPaymentOTP(userId: string, milestoneId: string, otpC
         timestamp: new Date().toISOString()
       });
 
-      return { valid: false };
+      return { valid: false, error: 'Invalid code. Please try again.' };
     }
 
   } catch (error: any) {
@@ -187,7 +193,7 @@ export async function verifyPaymentOTP(userId: string, milestoneId: string, otpC
       error: error?.message || 'Unknown error',
       timestamp: new Date().toISOString()
     });
-    return { valid: false };
+    return { valid: false, error: 'Failed to verify OTP' };
   }
 }
 
@@ -196,7 +202,7 @@ export async function verifyPaymentOTP(userId: string, milestoneId: string, otpC
  */
 export async function is2FARequired(userId: string, amount: number): Promise<boolean> {
   try {
-    const user = await storage.getUser(parseInt(userId));
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     if (!user) return false;
 
     // For now, require 2FA for all payments over $100
@@ -223,15 +229,8 @@ export function generateDeviceFingerprint(userAgent: string, ip: string): string
  */
 export async function logSecurityEvent(event: SecurityEvent): Promise<void> {
   try {
-    await storage.createActivity({
-      contractId: event.milestoneId || 'security-event',
-      action: `security_${event.type}`,
-      actorEmail: `user_${event.userId}`,
-      details: JSON.stringify({
-        ...event,
-        timestamp: event.timestamp
-      })
-    });
+    console.log('[Security Event]', event);
+    // TODO: Integrate with proper security monitoring/logging system
   } catch (error) {
     console.error('Error logging security event:', error);
   }

@@ -1738,6 +1738,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate OTP for milestone payment approval
+  app.post("/api/milestones/:milestoneId/request-otp", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { milestoneId } = req.params;
+        const userId = (req as any).session?.userId;
+
+        if (!userId || !milestoneId) {
+          return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        // Get milestone data
+        const milestone = await storage.getMilestone(milestoneId);
+        if (!milestone) {
+          return res.status(404).json({ error: "Milestone not found" });
+        }
+
+        // Convert amount to cents
+        const amountInCents = Math.round(parseFloat(milestone.amount) * 100);
+
+        // Generate and send OTP
+        const { sendPaymentOTP } = await import('./lib/auth/two-factor');
+        const result = await sendPaymentOTP({
+          userId,
+          milestoneId,
+          amount: amountInCents,
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent']
+        });
+
+        res.json({
+          success: true,
+          expiresAt: result.expiresAt,
+          message: "Verification code sent to your email"
+        });
+      });
+    } catch (error: any) {
+      console.error("Error generating OTP:", error);
+      res.status(500).json({ error: error.message || "Failed to send verification code" });
+    }
+  });
+
+  // Verify OTP and approve milestone with payment
+  app.post("/api/milestones/:milestoneId/verify-and-approve", async (req, res) => {
+    try {
+      const { requireAuth } = await import("./auth");
+      requireAuth(req, res, async () => {
+        const { milestoneId } = req.params;
+        const { otpCode } = req.body;
+        const userId = (req as any).session?.userId;
+
+        if (!userId || !milestoneId || !otpCode) {
+          return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        // Verify OTP
+        const { verifyPaymentOTP } = await import('./lib/auth/two-factor');
+        const verification = await verifyPaymentOTP(userId, milestoneId, otpCode);
+
+        if (!verification.valid) {
+          return res.status(400).json({ 
+            error: verification.error || "Invalid verification code" 
+          });
+        }
+
+        // Get milestone and contract data
+        const milestone = await storage.getMilestone(milestoneId);
+        if (!milestone) {
+          return res.status(404).json({ error: "Milestone not found" });
+        }
+
+        const contract = await storage.getContract(milestone.contractId);
+        if (!contract) {
+          return res.status(404).json({ error: "Contract not found" });
+        }
+
+        // Check authorization is still valid
+        const authorization = await storage.getActivePaymentAuthorization(milestone.contractId);
+        if (!authorization) {
+          return res.status(400).json({ 
+            error: "Payment authorization has expired or been revoked" 
+          });
+        }
+
+        // Process payment
+        const { processAuthorizedPayment } = await import('./lib/payments');
+        const payment = await processAuthorizedPayment(milestone, authorization, contract);
+
+        // Update milestone status
+        await storage.updateMilestone(milestoneId, {
+          status: "approved",
+          paymentReleased: true,
+          approvedAt: new Date(),
+          approvedBy: userId,
+          paymentTx: payment.id
+        });
+
+        // Log activity
+        await storage.createActivity({
+          contractId: milestone.contractId,
+          action: "milestone_approved",
+          actorEmail: userId,
+          details: JSON.stringify({
+            milestoneId,
+            amount: milestone.amount,
+            paymentId: payment.id,
+            otpVerified: true
+          })
+        });
+
+        res.json({
+          success: true,
+          paymentId: payment.id,
+          message: "Payment approved and processed successfully"
+        });
+      });
+    } catch (error: any) {
+      console.error("Error verifying and approving:", error);
+      res.status(500).json({ error: error.message || "Failed to process payment approval" });
+    }
+  });
+
   // Batch milestone approval
   app.post("/api/milestones/batch-approve", async (req, res) => {
     try {
