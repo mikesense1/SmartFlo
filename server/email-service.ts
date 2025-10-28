@@ -386,6 +386,61 @@ export class EmailService {
   }
 
   /**
+   * Send contact form submission email
+   */
+  async sendContactFormSubmission(data: {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+  }): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      if (!resend) {
+        return { success: false, error: 'Email service not configured' };
+      }
+
+      const submittedAt = new Date().toLocaleString('en-US', {
+        dateStyle: 'full',
+        timeStyle: 'long'
+      });
+
+      const ContactFormSubmission = await import('../emails/ContactFormSubmission');
+      
+      const result = await resend.emails.send({
+        from: this.createFromAddress(),
+        to: ['support@getsmartflo.com'],
+        reply_to: data.email,
+        subject: `Contact Form: ${data.subject}`,
+        react: ContactFormSubmission.default({
+          name: data.name,
+          email: data.email,
+          subject: data.subject,
+          message: data.message,
+          submittedAt
+        }),
+        headers: {
+          'X-SmartFlo-Email-Type': 'contact-form',
+          'X-Priority': '3'
+        },
+        tags: [
+          { name: 'type', value: 'contact-form' },
+          { name: 'from', value: data.email }
+        ]
+      });
+
+      if (result.error) {
+        console.error('Failed to send contact form email:', result.error);
+        return { success: false, error: result.error.message };
+      }
+
+      return { success: true, messageId: result.data?.id };
+    } catch (error) {
+      console.error('Error sending contact form email:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  /**
    * Send test email to verify Resend integration
    */
   async sendTestEmail(toEmail: string, toName?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {

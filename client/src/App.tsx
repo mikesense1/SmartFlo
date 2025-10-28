@@ -29,6 +29,7 @@ import PaymentMethods from "@/pages/payment-methods";
 import MilestoneApproval from "@/pages/milestone-approval";
 import SecurityDashboard from "@/pages/security-dashboard";
 import ComplianceDashboard from "@/pages/compliance-dashboard";
+import Contact from "@/pages/Contact";
 
 function Router() {
   return (
@@ -43,6 +44,7 @@ function Router() {
       <Route path="/pricing" component={Pricing} />
       <Route path="/features" component={Features} />
       <Route path="/about" component={About} />
+      <Route path="/contact" component={Contact} />
       <Route path="/terms-of-service" component={TermsOfService} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/payment-authorization" component={PaymentAuthorization} />

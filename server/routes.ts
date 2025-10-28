@@ -2821,6 +2821,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Contact form submission
+  app.post("/api/contact", async (req, res) => {
+    try {
+      const { name, email, subject, message } = req.body;
+
+      // Validate required fields
+      if (!name || !email || !subject || !message) {
+        return res.status(400).json({ error: "All fields are required" });
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: "Invalid email address" });
+      }
+
+      // Send email using email service
+      const { emailService } = await import('./email-service');
+      const result = await emailService.sendContactFormSubmission({
+        name,
+        email,
+        subject,
+        message
+      });
+
+      if (!result.success) {
+        return res.status(500).json({ 
+          error: result.error || "Failed to send contact form email" 
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Your message has been sent successfully. We'll get back to you soon!",
+        messageId: result.messageId
+      });
+    } catch (error: any) {
+      console.error("Error processing contact form:", error);
+      res.status(500).json({ error: "Failed to process contact form submission" });
+    }
+  });
+
   // Get milestone details (for approval page)
   app.get("/api/milestones/:id", async (req, res) => {
     try {
