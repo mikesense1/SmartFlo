@@ -6,6 +6,13 @@ SmartFlo is a comprehensive freelance escrow platform featuring AI-generated con
 ### User Preferences
 Preferred communication style: Simple, everyday language.
 
+### Recent Changes (January 2025)
+- **Contract Email Integration**: Fully functional "Send Contract" button in freelancer dashboard now sends professional email invitations to clients using Resend. Contract status only updates to "sent" after successful email delivery, ensuring atomic operations and preventing data inconsistency.
+- **Cryptographic Security**: All contract share tokens now generated using crypto.randomBytes(32) for production-grade security, replacing previous non-cryptographic Math.random() implementation.
+- **Contact Form Email System**: Professional contact form at /contact with email delivery to support@getsmartflo.com, proper reply-to header configuration, and comprehensive DNS/email infrastructure documentation.
+- **Contract Management UX**: Complete freelancer dashboard workflow with Edit Contract (links to editor), Preview Contract (modal dialog with document view), and Send to Client (email delivery with confirmation toast).
+- **Email Infrastructure Documentation**: Comprehensive guides covering DNS configuration (SPF/DKIM/DMARC), Resend setup, email templates, testing procedures, and production deployment checklist.
+
 ### Recent Changes (October 2024)
 - **Smart 2FA System (ENHANCED)**: Intelligent 2FA with context-aware triggers, trusted device tracking, and unusual activity detection. System automatically determines when 2FA is required based on amount thresholds, first payment status, user preferences, and risk patterns
 - **2FA User Experience Optimization**: Streamlined UI with resend code (60s cooldown), backup code support, auto-verify on code entry, and real-time validation feedback

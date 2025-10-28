@@ -149,10 +149,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Contract not found" });
       }
 
-      // Update contract status to 'sent' and set sentAt timestamp
+      // Get the freelancer (creator) information
+      const freelancer = await storage.getUser(userId);
+      if (!freelancer) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Generate cryptographically secure share token for client to view contract
+      const crypto = await import('crypto');
+      const shareToken = crypto.randomBytes(32).toString('hex');
+
+      // Send contract invitation email to client FIRST
+      const { emailService } = await import('./email-service');
+      const emailResult = await emailService.sendContractInvitation({
+        clientName: contract.clientName,
+        clientEmail: contract.clientEmail,
+        freelancerName: freelancer.fullName,
+        contractTitle: contract.title,
+        totalValue: `$${parseFloat(contract.totalValue).toLocaleString()}`,
+        contractId: contract.id,
+        paymentMethod: contract.paymentMethod || 'Not specified'
+      });
+
+      // Only update contract status if email was sent successfully
+      if (!emailResult.success) {
+        console.error("Failed to send contract invitation email:", emailResult.error);
+        return res.status(500).json({ 
+          message: "Failed to send contract invitation email",
+          error: emailResult.error 
+        });
+      }
+
+      // Update contract status to 'sent' after successful email send
       await storage.updateContract(req.params.id, {
         status: "sent",
-        sentAt: new Date()
+        sentAt: new Date(),
+        shareToken: shareToken
       });
 
       // Log activity
@@ -163,7 +195,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date()
       });
 
-      res.json({ message: "Contract sent successfully" });
+      res.json({ 
+        message: "Contract sent successfully",
+        emailSent: true,
+        messageId: emailResult.messageId 
+      });
     } catch (error) {
       console.error("Failed to send contract:", error);
       res.status(500).json({ message: "Failed to send contract" });

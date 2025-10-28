@@ -121,17 +121,18 @@ export default function FreelancerDashboard() {
       });
       
       if (response.ok) {
+        const result = await response.json();
         toast({
-          title: "Contract Sent",
-          description: `Contract "${contract.title}" has been sent to ${contract.clientEmail}`,
+          title: "Contract Sent Successfully! 📧",
+          description: `Email invitation sent to ${contract.clientEmail}. The client can now review and authorize payment for "${contract.title}".`,
         });
         // Refresh contracts data
-        window.location.reload();
+        setTimeout(() => window.location.reload(), 1500);
       } else {
         const error = await response.json();
         toast({
           title: "Failed to Send Contract",
-          description: error.message || "Please try again",
+          description: error.message || error.error || "Please try again",
           variant: "destructive",
         });
       }
